@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/stack-platform", "crates/stack-schema"]
+members = ["crates/stack-core", "crates/stack-platform", "crates/stack-schema"]
 resolver = "2"
 
 [workspace.package]
