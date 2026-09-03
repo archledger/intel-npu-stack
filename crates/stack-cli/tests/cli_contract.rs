@@ -218,7 +218,7 @@ fn malformed_profile_returns_exit_two_without_panic() {
 }
 
 #[test]
-fn experimental_channel_requires_acknowledge_risk() {
+fn experimental_channel_requires_accept_experimental_risk() {
     let profile = profile_toml("experimental");
     let fixture = Fixture::new(Some(&profile));
     let (code, stdout, stderr) = invoke(
@@ -227,7 +227,7 @@ fn experimental_channel_requires_acknowledge_risk() {
     );
     assert_eq!(code, ExitCode::from(2));
     assert_eq!(stdout, "");
-    assert!(stderr.contains("--acknowledge-risk"));
+    assert!(stderr.contains("--accept-experimental-risk"));
 
     let (code, stdout, stderr) = invoke(
         &fixture,
@@ -236,7 +236,7 @@ fn experimental_channel_requires_acknowledge_risk() {
             "status",
             "--channel",
             "experimental",
-            "--acknowledge-risk",
+            "--accept-experimental-risk",
             "--json",
         ],
     );
@@ -246,6 +246,19 @@ fn experimental_channel_requires_acknowledge_risk() {
         "passed"
     );
     assert_eq!(stderr, "");
+}
+
+#[test]
+fn stable_channel_rejects_accept_experimental_risk() {
+    let profile = profile_toml("qualified");
+    let fixture = Fixture::new(Some(&profile));
+    let (code, stdout, stderr) = invoke(
+        &fixture,
+        &["intel-npu-stack", "status", "--accept-experimental-risk"],
+    );
+    assert_eq!(code, ExitCode::from(2));
+    assert_eq!(stdout, "");
+    assert!(stderr.contains("only valid with --channel experimental"));
 }
 
 #[test]

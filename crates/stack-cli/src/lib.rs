@@ -49,9 +49,9 @@ struct DiagnosticArgs {
     /// Select only profiles admitted by this channel.
     #[arg(long, value_enum, default_value_t = CliChannel::Stable)]
     channel: CliChannel,
-    /// Explicitly acknowledge that experimental profiles are not stable.
+    /// Explicitly accept that experimental profiles are not stable.
     #[arg(long)]
-    acknowledge_risk: bool,
+    accept_experimental_risk: bool,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -112,8 +112,17 @@ fn run_diagnostic(
     stderr: &mut dyn Write,
 ) -> ExitCode {
     let channel = Channel::from(args.channel);
-    if channel == Channel::Experimental && !args.acknowledge_risk {
-        return write_cli_error(stderr, "experimental channel requires --acknowledge-risk");
+    if channel == Channel::Stable && args.accept_experimental_risk {
+        return write_cli_error(
+            stderr,
+            "--accept-experimental-risk is only valid with --channel experimental",
+        );
+    }
+    if channel == Channel::Experimental && !args.accept_experimental_risk {
+        return write_cli_error(
+            stderr,
+            "experimental channel requires --accept-experimental-risk",
+        );
     }
 
     let facts = match detect_platform(&context.platform_paths, &context.arch) {
@@ -126,7 +135,7 @@ fn run_diagnostic(
     };
     let policy = SelectionPolicy {
         channel,
-        acknowledge_risk: args.acknowledge_risk,
+        acknowledge_risk: args.accept_experimental_risk,
     };
 
     let selection = select_profile(&profiles, &facts, &policy);
@@ -155,7 +164,10 @@ fn run_diagnostic(
             });
         }
         Err(SelectionError::RiskAcknowledgementRequired) => {
-            return write_cli_error(stderr, "experimental channel requires --acknowledge-risk");
+            return write_cli_error(
+                stderr,
+                "experimental channel requires --accept-experimental-risk",
+            );
         }
         Err(SelectionError::AmbiguousProfiles(ids)) => {
             return write_cli_error(
