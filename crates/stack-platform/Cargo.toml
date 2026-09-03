@@ -1,0 +1,13 @@
+[package]
+name = "stack-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+stack-schema = { path = "../stack-schema" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
