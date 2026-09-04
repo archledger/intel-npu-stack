@@ -13,6 +13,7 @@ const MAX_SOURCE_LOCK_BYTES: usize = 1_048_576;
 const MAX_SCALAR_BYTES: usize = 4096;
 const MAX_SOURCES: usize = 256;
 const MAX_LICENSE_FILES: usize = 64;
+const MAX_GITLINKS: usize = 256;
 
 /// Lifecycle state for a provider source lock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,6 +58,39 @@ pub struct SourceTarget {
     pub pci_device: String,
 }
 
+/// One gitlink declared by a parent source record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceGitlinkDisposition {
+    /// The gitlink is supplied by another source record and archive.
+    Bundled,
+    /// The gitlink is replaced by one exact Fedora package build dependency.
+    System,
+    /// The gitlink belongs to a component disabled by the recorded build option.
+    Disabled,
+}
+
+/// One exact Fedora binary package used to replace a source gitlink.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceSystemPackage {
+    pub name: String,
+    pub nevr: String,
+}
+
+/// One gitlink declared by a parent source record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceGitlink {
+    pub path: PathBuf,
+    pub commit: String,
+    pub disposition: SourceGitlinkDisposition,
+    pub source: Option<String>,
+    #[serde(default)]
+    pub packages: Vec<SourceSystemPackage>,
+    pub build_option: Option<String>,
+}
+
 /// One exact source input and its reviewed license evidence.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -73,6 +107,8 @@ pub struct SourceRecord {
     pub license_files: Vec<PathBuf>,
     pub license_evidence_sha256: String,
     pub redistribution: SourceRedistribution,
+    #[serde(default)]
+    pub gitlinks: Vec<SourceGitlink>,
 }
 
 /// Validated source lock safe for later acquisition or packaging policy checks.
@@ -264,7 +300,85 @@ fn validate_source(source: &SourceRecord, repository_root: &Path) -> Result<(), 
             format!("license evidence digest mismatch for {}", source.name),
         ));
     }
+    validate_gitlinks(&source.gitlinks)?;
     Ok(())
+}
+
+fn validate_gitlinks(gitlinks: &[SourceGitlink]) -> Result<(), SourceLockError> {
+    if gitlinks.len() > MAX_GITLINKS {
+        return Err(SourceLockError::new(
+            "SOURCE_LOCK_RESOURCE_LIMIT",
+            "source record has more than 256 gitlinks",
+        ));
+    }
+    let mut previous: Option<&Path> = None;
+    for gitlink in gitlinks {
+        if gitlink.path.is_absolute()
+            || gitlink
+                .path
+                .components()
+                .any(|component| !matches!(component, Component::Normal(_)))
+            || previous.is_some_and(|value| value >= gitlink.path.as_path())
+        {
+            return Err(SourceLockError::new(
+                "SOURCE_LOCK_GITLINK_INVALID",
+                "gitlink paths must be sorted, unique, relative normal paths",
+            ));
+        }
+        if !is_lower_hex(&gitlink.commit, 40) {
+            return Err(SourceLockError::new(
+                "SOURCE_LOCK_GITLINK_INVALID",
+                "gitlink commit is invalid",
+            ));
+        }
+        validate_gitlink_disposition(gitlink)?;
+        previous = Some(&gitlink.path);
+    }
+    Ok(())
+}
+
+fn validate_gitlink_disposition(gitlink: &SourceGitlink) -> Result<(), SourceLockError> {
+    let valid = match gitlink.disposition {
+        SourceGitlinkDisposition::Bundled => {
+            gitlink.source.as_deref().is_some_and(is_identifier)
+                && gitlink.packages.is_empty()
+                && gitlink.build_option.is_none()
+        }
+        SourceGitlinkDisposition::System => {
+            gitlink.source.is_none()
+                && valid_system_packages(&gitlink.packages)
+                && gitlink.build_option.is_none()
+        }
+        SourceGitlinkDisposition::Disabled => {
+            gitlink.source.is_none()
+                && gitlink.packages.is_empty()
+                && gitlink.build_option.as_deref().is_some_and(is_build_option)
+        }
+    };
+    if !valid {
+        return Err(SourceLockError::new(
+            "SOURCE_LOCK_GITLINK_INVALID",
+            "gitlink disposition fields are incomplete or ambiguous",
+        ));
+    }
+    Ok(())
+}
+
+fn valid_system_packages(packages: &[SourceSystemPackage]) -> bool {
+    if packages.is_empty() || packages.len() > 16 {
+        return false;
+    }
+    let mut previous: Option<&str> = None;
+    for package in packages {
+        if !is_package_name(&package.name)
+            || !is_nevr(&package.nevr)
+            || previous.is_some_and(|name| name >= package.name.as_str())
+        {
+            return false;
+        }
+        previous = Some(&package.name);
+    }
+    true
 }
 
 fn validate_git_identity(source: &SourceRecord) -> Result<(), SourceLockError> {
@@ -390,6 +504,39 @@ fn is_identifier(value: &str) -> bool {
         && value.bytes().all(|byte| {
             byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-' || byte == b'_'
         })
+}
+
+fn is_package_name(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= MAX_SCALAR_BYTES
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase()
+                || byte.is_ascii_digit()
+                || matches!(byte, b'-' | b'_' | b'.' | b'+')
+        })
+}
+
+fn is_nevr(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= MAX_SCALAR_BYTES
+        && value.contains(':')
+        && value.contains('-')
+        && value.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric()
+                || matches!(byte, b':' | b'-' | b'_' | b'.' | b'+' | b'~' | b'^')
+        })
+}
+
+fn is_build_option(value: &str) -> bool {
+    let Some((name, setting)) = value.split_once('=') else {
+        return false;
+    };
+    !name.is_empty()
+        && name.len() <= MAX_SCALAR_BYTES
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+        && setting == "OFF"
 }
 
 fn is_https_url(value: &str) -> bool {

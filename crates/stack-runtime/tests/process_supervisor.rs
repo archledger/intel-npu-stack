@@ -46,6 +46,7 @@ fn request(executable: impl Into<PathBuf>) -> ProcessRequest {
         timeout: Duration::from_secs(3),
         stdout_limit: 65_536,
         stderr_limit: 16_384,
+        environment: Vec::new(),
     }
 }
 
@@ -61,6 +62,28 @@ fn reject_relative_executable() {
 fn clear_environment_and_set_only_c_locale() {
     let output = SystemProcessRunner
         .run(&request("/usr/bin/env"))
+        .expect("run environment inspection");
+    assert_eq!(output.termination, Termination::Exit(0));
+    assert_eq!(output.stdout, b"LC_ALL=C\n");
+}
+
+#[test]
+fn adds_only_explicit_environment_after_clearing_the_parent() {
+    let mut request = request("/usr/bin/env");
+    request.environment = vec![(OsString::from("GIT_CONFIG_NOSYSTEM"), OsString::from("1"))];
+    let output = SystemProcessRunner
+        .run(&request)
+        .expect("run environment inspection");
+    assert_eq!(output.termination, Termination::Exit(0));
+    assert_eq!(output.stdout, b"GIT_CONFIG_NOSYSTEM=1\nLC_ALL=C\n");
+}
+
+#[test]
+fn explicit_environment_cannot_override_the_c_locale() {
+    let mut request = request("/usr/bin/env");
+    request.environment = vec![(OsString::from("LC_ALL"), OsString::from("en_US.UTF-8"))];
+    let output = SystemProcessRunner
+        .run(&request)
         .expect("run environment inspection");
     assert_eq!(output.termination, Termination::Exit(0));
     assert_eq!(output.stdout, b"LC_ALL=C\n");

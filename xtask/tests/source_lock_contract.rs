@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use tempfile::TempDir;
-use xtask::source_lock::{SourceLockStatus, validate};
+use xtask::source_lock::{SourceGitlinkDisposition, SourceLockStatus, validate};
 
 const EVIDENCE_SHA256: &str = "a7c6bf8df7d8fb707af606599f275e0eb192cd28492c95593b0608ca966c8df1";
 
@@ -190,6 +190,94 @@ fn rejects_unknown_fields_and_unreviewed_redistribution_values() {
     assert_eq!(
         validate_text(&unreviewed),
         Err("SOURCE_LOCK_TOML_INVALID".to_owned())
+    );
+}
+
+#[test]
+fn accepts_exactly_one_reviewed_gitlink_disposition() {
+    let system = valid_lock().replace(
+        "redistribution = \"allowed\"",
+        r#"redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/yaml-cpp"
+commit = "abcdef0123456789abcdef0123456789abcdef01"
+disposition = "system"
+packages = [
+  { name = "gmock-devel", nevr = "0:1.17.0-2.fc44" },
+  { name = "gtest-devel", nevr = "0:1.17.0-2.fc44" },
+]"#,
+    );
+    let validated = validate_text(&system).expect("system replacement is explicit");
+    assert_eq!(
+        validated.sources[0].gitlinks[0].disposition,
+        SourceGitlinkDisposition::System
+    );
+    assert_eq!(validated.sources[0].gitlinks[0].packages.len(), 2);
+
+    let disabled = valid_lock().replace(
+        "redistribution = \"allowed\"",
+        r#"redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_gpu/thirdparty/onednn_gpu"
+commit = "abcdef0123456789abcdef0123456789abcdef01"
+disposition = "disabled"
+build_option = "ENABLE_INTEL_GPU=OFF""#,
+    );
+    let validated = validate_text(&disabled).expect("disabled source is explicit");
+    assert_eq!(
+        validated.sources[0].gitlinks[0].disposition,
+        SourceGitlinkDisposition::Disabled
+    );
+}
+
+#[test]
+fn rejects_ambiguous_or_incomplete_gitlink_dispositions() {
+    let incomplete = valid_lock().replace(
+        "redistribution = \"allowed\"",
+        r#"redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/yaml-cpp"
+commit = "abcdef0123456789abcdef0123456789abcdef01"
+disposition = "system"
+packages = []"#,
+    );
+    assert_eq!(
+        validate_text(&incomplete),
+        Err("SOURCE_LOCK_GITLINK_INVALID".to_owned())
+    );
+
+    let ambiguous = valid_lock().replace(
+        "redistribution = \"allowed\"",
+        r#"redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/yaml-cpp"
+commit = "abcdef0123456789abcdef0123456789abcdef01"
+disposition = "system"
+packages = [{ name = "yaml-cpp-devel", nevr = "0:0.8.0-5.fc44" }]
+source = "yaml-cpp""#,
+    );
+    assert_eq!(
+        validate_text(&ambiguous),
+        Err("SOURCE_LOCK_GITLINK_INVALID".to_owned())
+    );
+
+    let enabled = valid_lock().replace(
+        "redistribution = \"allowed\"",
+        r#"redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/tests"
+commit = "abcdef0123456789abcdef0123456789abcdef01"
+disposition = "disabled"
+build_option = "ENABLE_TESTS=ON""#,
+    );
+    assert_eq!(
+        validate_text(&enabled),
+        Err("SOURCE_LOCK_GITLINK_INVALID".to_owned())
     );
 }
 

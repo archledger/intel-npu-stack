@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+
+License-evidence decision for Fedora packaging reference snapshots
+
+The following Fedora dist-git commits were inspected as packaging references:
+
+- rpms/intel-npu-driver: 5be7fe271ac3bee5b8e35f5dc8bbb5717f919e90
+- rpms/oneapi-level-zero: 0233f1e834c74b9502de978b6f4ee03e4e6b7c56
+- rpms/openvino: 08ab9288ee2c15ff1a48c133eeb7d39c5349dc06
+
+None of these three committed trees contains a LICENSE, LICENCE, COPYING,
+COPYRIGHT, or NOTICE file that establishes redistribution terms for the
+dist-git metadata itself. Their source-lock records therefore use SPDX
+`NOASSERTION` and `external_only`. They may be inspected as references but are
+not published in intel-npu-stack source bundles or copied into RPM sources.

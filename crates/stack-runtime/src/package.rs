@@ -65,6 +65,7 @@ impl<'a> RpmPackageInspector<'a> {
             timeout: QUERY_TIMEOUT,
             stdout_limit: STDOUT_LIMIT,
             stderr_limit: STDERR_LIMIT,
+            environment: Vec::new(),
         })
     }
 

@@ -392,6 +392,7 @@ impl<'a> RuntimeInspector<'a> {
                 timeout,
                 stdout_limit: PROBE_STDOUT_LIMIT,
                 stderr_limit: PROBE_STDERR_LIMIT,
+                environment: Vec::new(),
             })
             .map_err(ProbeFailure::from_process)?;
         if output.stdout_overflow || output.stderr_overflow {

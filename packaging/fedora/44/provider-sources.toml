@@ -1,7 +1,6 @@
 schema_version = 1
-status = "draft"
+status = "sealed"
 profile_id = "fedora-44-x86_64-8086-643e-candidate"
-sources = []
 
 [target]
 distribution_id = "fedora"
@@ -9,3 +8,425 @@ version_id = "44"
 architecture = "x86_64"
 pci_vendor = "8086"
 pci_device = "643e"
+
+[[sources]]
+name = "fedora-intel-npu-driver"
+role = "packaging_reference"
+kind = "git_commit"
+url = "https://src.fedoraproject.org/rpms/intel-npu-driver.git"
+commit = "5be7fe271ac3bee5b8e35f5dc8bbb5717f919e90"
+archive_sha256 = "5b09fc9c4818091fda0c66cb92a870d93c11ecab69b5560bf064e721285f9ece"
+license_expression = "NOASSERTION"
+license_files = ["packaging/fedora/44/licenses/fedora-dist-git-NOASSERTION.txt"]
+license_evidence_sha256 = "5a694fc273a47276a04f7ed3149b6977f7a0bdd4adce492c7d04351b7a6fd121"
+redistribution = "external_only"
+
+[[sources]]
+name = "fedora-oneapi-level-zero"
+role = "packaging_reference"
+kind = "git_commit"
+url = "https://src.fedoraproject.org/rpms/oneapi-level-zero.git"
+commit = "0233f1e834c74b9502de978b6f4ee03e4e6b7c56"
+archive_sha256 = "eef5a66af6d18205be974c39ea43f1df94368ebac2c283b708ca687b76e8b26f"
+license_expression = "NOASSERTION"
+license_files = ["packaging/fedora/44/licenses/fedora-dist-git-NOASSERTION.txt"]
+license_evidence_sha256 = "5a694fc273a47276a04f7ed3149b6977f7a0bdd4adce492c7d04351b7a6fd121"
+redistribution = "external_only"
+
+[[sources]]
+name = "fedora-openvino"
+role = "packaging_reference"
+kind = "git_commit"
+url = "https://src.fedoraproject.org/rpms/openvino.git"
+commit = "08ab9288ee2c15ff1a48c133eeb7d39c5349dc06"
+archive_sha256 = "068b91dc58d16fe90b2e0a061e12e63a98ec54c799dccd1509cb235e325524f7"
+license_expression = "NOASSERTION"
+license_files = ["packaging/fedora/44/licenses/fedora-dist-git-NOASSERTION.txt"]
+license_evidence_sha256 = "5a694fc273a47276a04f7ed3149b6977f7a0bdd4adce492c7d04351b7a6fd121"
+redistribution = "external_only"
+
+[[sources]]
+name = "intel-npu-compiler-llvm"
+role = "compiler_dependency"
+kind = "git_commit"
+url = "https://github.com/intel-staging/npu-compiler-llvm.git"
+commit = "0f0abce229bce226ff686f0c14c38747a1572c35"
+archive_sha256 = "f1b87a16b89c80726681585b9077af53b60def64cf1872c700e32ad4af433621"
+license_expression = "Apache-2.0 WITH LLVM-exception OR NCSA"
+license_files = ["packaging/fedora/44/licenses/intel-npu-compiler-llvm-LICENSE.TXT"]
+license_evidence_sha256 = "8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee"
+redistribution = "allowed"
+
+[[sources]]
+name = "intel-npu-nn-cost-model"
+role = "compiler_dependency"
+kind = "git_commit"
+url = "https://github.com/intel/npu-nn-cost-model.git"
+commit = "48ece58b9e3244ad586f38721c9ecede86ac5c4a"
+archive_sha256 = "2aff0c389a09d87ad3578172ae8fc64f8a6a1ef9e60d00c3f12a0aaa41b4b14d"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/intel-npu-nn-cost-model-LICENSE"]
+license_evidence_sha256 = "9afa5adb0423aa8b2a23a691fd3cf2d968e158baa9f45104d3fda0c1c291851f"
+redistribution = "allowed"
+
+[[sources]]
+name = "level-zero"
+role = "compatibility_reference"
+kind = "git_tag"
+url = "https://github.com/oneapi-src/level-zero.git"
+tag = "v1.28.2"
+commit = "6369d8d642e9c7625e67f38664267f171b8e42dc"
+archive_sha256 = "2abb0291b8f18f89d963cd4a1d6066414ca382a821815ee254fbd53b5cf315b2"
+license_expression = "MIT"
+license_files = ["packaging/fedora/44/licenses/level-zero-LICENSE"]
+license_evidence_sha256 = "d0f94ca605360602ef6c6a6fa14b6c48790e9b99100c129e9ff96e8d6c7ee939"
+redistribution = "allowed"
+
+[[sources]]
+name = "level-zero-npu-extensions"
+role = "provider_dependency"
+kind = "git_commit"
+url = "https://github.com/intel/level-zero-npu-extensions.git"
+commit = "f9ad3bf89c2418d714aef2e6b96a5aafb12a1971"
+archive_sha256 = "4ddb39b526e605a147c8a06ac9fd9e9b91db32873631a897d61012e1de0f2f58"
+license_expression = "MIT"
+license_files = ["packaging/fedora/44/licenses/level-zero-npu-extensions-LICENSE.txt"]
+license_evidence_sha256 = "26b4648e279bf9f4f7ea3e1f1c9948ccaf41a73727f13e01b766fd26ce288d98"
+redistribution = "allowed"
+
+[[sources]]
+name = "linux-npu-driver"
+role = "npu_userspace_driver"
+kind = "git_tag"
+url = "https://github.com/intel/linux-npu-driver.git"
+tag = "v1.35.0"
+commit = "fd49947db934dc67dda6f4287cec2664a303df27"
+archive_sha256 = "555cb411208c94542fc88f62f77797cf021e70edca2b6c9df6350e5259f25c04"
+license_expression = "MIT AND LicenseRef-Intel-NPU-Firmware"
+license_files = [
+  "packaging/fedora/44/licenses/linux-npu-driver-LICENSE.md",
+  "packaging/fedora/44/licenses/linux-npu-driver-firmware-COPYRIGHT",
+]
+license_evidence_sha256 = "675d4dc9cd2cc41e32556fdb44003774aba867450c286d70b83d2f484cf26b1e"
+redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/googletest"
+commit = "b514bdc898e2951020cbdca1304b75f5950d1f59"
+disposition = "system"
+packages = [
+  { name = "gmock-devel", nevr = "0:1.17.0-2.fc44" },
+  { name = "gtest-devel", nevr = "0:1.17.0-2.fc44" },
+]
+
+[[sources.gitlinks]]
+path = "third_party/level-zero-npu-extensions"
+commit = "f9ad3bf89c2418d714aef2e6b96a5aafb12a1971"
+disposition = "bundled"
+source = "level-zero-npu-extensions"
+
+[[sources.gitlinks]]
+path = "third_party/npu_compiler_elf"
+commit = "a301d97e0717fb797c79ec51f8cdc13152878700"
+disposition = "bundled"
+source = "npu-compiler-elf-driver"
+
+[[sources.gitlinks]]
+path = "third_party/yaml-cpp"
+commit = "f7320141120f720aecc4c32be25586e7da9eb978"
+disposition = "system"
+packages = [{ name = "yaml-cpp-devel", nevr = "0:0.8.0-5.fc44" }]
+
+[[sources]]
+name = "npu-compiler"
+role = "npu_compiler"
+kind = "git_annotated_tag"
+url = "https://github.com/openvinotoolkit/npu_compiler.git"
+tag = "npu_ud_2026_28_rc1"
+tag_object = "77a77b017875b42ba41f4ffeba2a742f495c0c88"
+commit = "6a7a7c531f54baed1dddfda1b80299413c4c6943"
+archive_sha256 = "e8e23e1c66de83756466b646f315fa0a163bbed3340d0343c5e1b66b5c665dfd"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/npu-compiler-LICENSE"]
+license_evidence_sha256 = "0a83a892e9b2050be9008f7f06bc8f85003a18f45585c93b7cf995fe2e665303"
+redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "thirdparty/elf"
+commit = "0c96256285114a596988bfa6e4face817165396c"
+disposition = "bundled"
+source = "npu-compiler-elf-openvino"
+
+[[sources.gitlinks]]
+path = "thirdparty/gtest-parallel"
+commit = "f4d65b555894b301699c7c3c52906f72ea052e83"
+disposition = "disabled"
+build_option = "ENABLE_PRIVATE_TESTS=OFF"
+
+[[sources.gitlinks]]
+path = "thirdparty/llvm-project"
+commit = "0f0abce229bce226ff686f0c14c38747a1572c35"
+disposition = "bundled"
+source = "intel-npu-compiler-llvm"
+
+[[sources.gitlinks]]
+path = "thirdparty/vpucostmodel"
+commit = "48ece58b9e3244ad586f38721c9ecede86ac5c4a"
+disposition = "bundled"
+source = "intel-npu-nn-cost-model"
+
+[[sources]]
+name = "npu-compiler-elf-driver"
+role = "driver_dependency"
+kind = "git_commit"
+url = "https://github.com/openvinotoolkit/npu_compiler_elf.git"
+commit = "a301d97e0717fb797c79ec51f8cdc13152878700"
+archive_sha256 = "72cd7144d65f737e65cbe8953c70344efc2fcb250e892c4a7f5e8f11fe7ec49c"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/npu-compiler-elf-LICENCE"]
+license_evidence_sha256 = "48bf40d54713b0bb05709c7cbddff894f012cb344e8e8a806c10efe966e93ff0"
+redistribution = "allowed"
+
+[[sources]]
+name = "npu-compiler-elf-openvino"
+role = "compiler_dependency"
+kind = "git_commit"
+url = "https://github.com/openvinotoolkit/npu_compiler_elf.git"
+commit = "0c96256285114a596988bfa6e4face817165396c"
+archive_sha256 = "75b9ca77011938d5ca0c2018472eeed2a0d0daaa06eb7f074122708c628d3880"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/npu-compiler-elf-LICENCE"]
+license_evidence_sha256 = "48bf40d54713b0bb05709c7cbddff894f012cb344e8e8a806c10efe966e93ff0"
+redistribution = "allowed"
+
+[[sources]]
+name = "openvino"
+role = "inference_runtime"
+kind = "git_tag"
+url = "https://github.com/openvinotoolkit/openvino.git"
+tag = "2026.2.0"
+commit = "52ddc07385712456dd9f8c5ecf05d7e49c6da329"
+archive_sha256 = "17c12aef94919e9a70a33a02fe7c93d51f9017cba10ea218c4624ac94d45d099"
+license_expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
+license_files = [
+  "packaging/fedora/44/licenses/openvino-LICENSE",
+  "packaging/fedora/44/licenses/openvino-third-party-programs.txt",
+]
+license_evidence_sha256 = "38983e471d276830f44a6124550c50d73e9a326f69fe1ddd3b57f44e8de0925e"
+redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "cmake/developer_package/ncc_naming_style/ncc"
+commit = "63e59ed312ba7a946779596e86124c1633f67607"
+disposition = "disabled"
+build_option = "ENABLE_NCC_STYLE=OFF"
+
+[[sources.gitlinks]]
+path = "src/bindings/python/thirdparty/pybind11"
+commit = "45fab4087eaaff234227a10cf7845e8b07f28a98"
+disposition = "system"
+packages = [{ name = "pybind11-devel", nevr = "0:3.0.4-2.fc44" }]
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_cpu/thirdparty/ComputeLibrary"
+commit = "c245aa08b328fe7ef1d356f40b89ebc587524dae"
+disposition = "disabled"
+build_option = "ENABLE_ARM_COMPUTE_CMAKE=OFF"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_cpu/thirdparty/kleidiai"
+commit = "7d82645ca2f3c3d58a5c0b1a96905e53916c8ff8"
+disposition = "disabled"
+build_option = "ENABLE_KLEIDIAI_FOR_CPU=OFF"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_cpu/thirdparty/libxsmm"
+commit = "13df674c4b73a1b84f6456de8595903ebfbb43e0"
+disposition = "disabled"
+build_option = "ENABLE_SNIPPETS_LIBXSMM_TPP=OFF"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_cpu/thirdparty/mlas"
+commit = "d1bc25ec4660cddd87804fcf03b2411b5dfb2e94"
+disposition = "bundled"
+source = "openvino-mlas"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_cpu/thirdparty/onednn"
+commit = "87f65fdd1927b1d0cbdf0ea37728146abfbffb52"
+disposition = "bundled"
+source = "openvino-onednn-cpu"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_cpu/thirdparty/xbyak_riscv"
+commit = "07139a6df3942e4afa447c0885c50f3dacfab2f3"
+disposition = "disabled"
+build_option = "RISCV64=OFF"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_gpu/thirdparty/onednn_gpu"
+commit = "20db47e2d3c4df1b66e93bed2e97d30da175512d"
+disposition = "bundled"
+source = "openvino-onednn-gpu"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_npu/thirdparty/level-zero-ext"
+commit = "f9ad3bf89c2418d714aef2e6b96a5aafb12a1971"
+disposition = "bundled"
+source = "level-zero-npu-extensions"
+
+[[sources.gitlinks]]
+path = "src/plugins/intel_npu/thirdparty/yaml-cpp"
+commit = "da82fd982c260e7f335ce5acbceff24b270544d1"
+disposition = "disabled"
+build_option = "ENABLE_INTEL_NPU_PROTOPIPE=OFF"
+
+[[sources.gitlinks]]
+path = "thirdparty/flatbuffers/flatbuffers"
+commit = "595bf0007ab1929570c7671f091313c8fc20644e"
+disposition = "bundled"
+source = "openvino-flatbuffers"
+
+[[sources.gitlinks]]
+path = "thirdparty/gflags/gflags"
+commit = "e171aa2d15ed9eb17054558e0b3a6a413bb01067"
+disposition = "system"
+packages = [{ name = "gflags-devel", nevr = "0:2.2.2-19.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/gtest/gtest"
+commit = "03e2ed1291b40062be24df240f597d995aaaa962"
+disposition = "disabled"
+build_option = "ENABLE_TESTS=OFF"
+
+[[sources.gitlinks]]
+path = "thirdparty/ittapi/ittapi"
+commit = "ca45fef1a12cef3316e6ff362a4d36571270e392"
+disposition = "disabled"
+build_option = "ENABLE_PROFILING_ITT=OFF"
+
+[[sources.gitlinks]]
+path = "thirdparty/json/nlohmann_json"
+commit = "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03"
+disposition = "system"
+packages = [{ name = "json-devel", nevr = "0:3.12.0-2.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/level_zero/level-zero"
+commit = "d562046e7266120e8be3533597b65f34a00524c1"
+disposition = "system"
+packages = [{ name = "oneapi-level-zero-devel", nevr = "0:1.28.6-1.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/ocl/cl_headers"
+commit = "4ea6df132107e3b4b9407f903204b5522fdffcd6"
+disposition = "system"
+packages = [{ name = "opencl-headers", nevr = "0:3.0-35.20250708git8a97ebc.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/ocl/clhpp_headers"
+commit = "c7b4aded1cab9560b226041dd962f63375a9a384"
+disposition = "system"
+packages = [{ name = "opencl-headers", nevr = "0:3.0-35.20250708git8a97ebc.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/ocl/icd_loader"
+commit = "5907ac1114079de4383cecddf1c8640e3f52f92b"
+disposition = "system"
+packages = [{ name = "ocl-icd-devel", nevr = "0:2.3.4-2.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/onnx/onnx"
+commit = "e709452ef2bbc1d113faf678c24e6d3467696e83"
+disposition = "system"
+packages = [{ name = "onnx-devel", nevr = "0:1.17.0-12.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/protobuf/protobuf"
+commit = "f0dc78d7e6e331b8c6bb2d5283e06aa26883ca7c"
+disposition = "system"
+packages = [{ name = "protobuf-devel", nevr = "0:3.19.6-20.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/pugixml"
+commit = "ee86beb30e4973f5feffe3ce63bfa4fbadf72f38"
+disposition = "system"
+packages = [{ name = "pugixml-devel", nevr = "0:1.16-1.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/snappy"
+commit = "2c94e11145f0b7b184b831577c93e5a41c4c0346"
+disposition = "system"
+packages = [{ name = "snappy-devel", nevr = "0:1.2.2-4.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/telemetry"
+commit = "8abddc3dbc8beb04a39b5ea40cbba5020317102f"
+disposition = "disabled"
+build_option = "ENABLE_PYTHON_PACKAGING=OFF"
+
+[[sources.gitlinks]]
+path = "thirdparty/xbyak"
+commit = "0d67fd1530016b7c56f3cd74b3fca920f4c3e2b4"
+disposition = "system"
+packages = [{ name = "xbyak-devel", nevr = "0:7.24.2-3.fc44" }]
+
+[[sources.gitlinks]]
+path = "thirdparty/zlib/zlib"
+commit = "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf"
+disposition = "system"
+packages = [{ name = "zlib-ng-compat-devel", nevr = "0:2.3.3-3.fc44" }]
+
+[[sources]]
+name = "openvino-flatbuffers"
+role = "compiler_dependency"
+kind = "git_commit"
+url = "https://github.com/google/flatbuffers.git"
+commit = "595bf0007ab1929570c7671f091313c8fc20644e"
+archive_sha256 = "8ecaef746626e181e92164a08fb620c4fbe31b3c0944163a2ee302f1b37595d0"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/openvino-flatbuffers-LICENSE"]
+license_evidence_sha256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+redistribution = "allowed"
+
+[[sources]]
+name = "openvino-mlas"
+role = "openvino_dependency"
+kind = "git_commit"
+url = "https://github.com/openvinotoolkit/mlas.git"
+commit = "d1bc25ec4660cddd87804fcf03b2411b5dfb2e94"
+archive_sha256 = "4a4643e37fc7f0d302a01400eac989830810deabfd611243faa4214aca59af4f"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/openvino-mlas-LICENSE"]
+license_evidence_sha256 = "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+redistribution = "allowed"
+
+[[sources]]
+name = "openvino-onednn-cpu"
+role = "openvino_dependency"
+kind = "git_commit"
+url = "https://github.com/openvinotoolkit/oneDNN.git"
+commit = "87f65fdd1927b1d0cbdf0ea37728146abfbffb52"
+archive_sha256 = "e04d5d03b2133a5f4feba4b998435cb62d1c830d1159af0ca664f362b8172223"
+license_expression = "Apache-2.0 AND BSL-1.0 AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND MIT"
+license_files = [
+  "packaging/fedora/44/licenses/openvino-onednn-cpu-LICENSE",
+  "packaging/fedora/44/licenses/openvino-onednn-cpu-THIRD-PARTY-PROGRAMS",
+]
+license_evidence_sha256 = "a815d76a7f96f4595efae97a6f2d7c916760310e0dd2db88b99ba66f2baf603b"
+redistribution = "allowed"
+
+[[sources]]
+name = "openvino-onednn-gpu"
+role = "openvino_dependency"
+kind = "git_commit"
+url = "https://github.com/oneapi-src/oneDNN.git"
+commit = "20db47e2d3c4df1b66e93bed2e97d30da175512d"
+archive_sha256 = "7caf7dcd7c26a10a377723ab5d6089c9d60ae53dab6d2fb95e70f430edff827c"
+license_expression = "Apache-2.0 AND BSL-1.0 AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND MIT"
+license_files = [
+  "packaging/fedora/44/licenses/openvino-onednn-gpu-LICENSE",
+  "packaging/fedora/44/licenses/openvino-onednn-gpu-THIRD-PARTY-PROGRAMS",
+]
+license_evidence_sha256 = "b5488044ec47b7f8c470dd546ef25ad161d7812c2eb518530dacaea71c64aef6"
+redistribution = "allowed"

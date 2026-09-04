@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use xtask::{source_lock, validate_profiles_dir};
+use xtask::{source_bundle, source_lock, validate_profiles_dir};
 
 #[derive(Debug, Parser)]
 #[command(name = "xtask")]
@@ -22,6 +22,26 @@ enum Command {
     ValidateSourceLock {
         #[arg(long)]
         path: PathBuf,
+    },
+    /// Bundle already-cached, source-locked Git repositories deterministically.
+    BundleSources {
+        #[arg(long)]
+        lock: PathBuf,
+        #[arg(long)]
+        cache: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Create and hash one explicit archive from an offline source cache.
+    HashCachedSource {
+        #[arg(long)]
+        repository: PathBuf,
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        commit: String,
+        #[arg(long)]
+        output: PathBuf,
     },
 }
 
@@ -61,5 +81,43 @@ fn main() -> ExitCode {
                 }
             }
         }
+        Command::BundleSources {
+            lock,
+            cache,
+            output,
+        } => {
+            let repository_root = match std::env::current_dir() {
+                Ok(path) => path,
+                Err(error) => {
+                    eprintln!("error: cannot read current directory: {error}");
+                    return ExitCode::from(2);
+                }
+            };
+            match source_bundle::bundle_sources(&lock, &repository_root, &cache, &output) {
+                Ok(manifest) => {
+                    println!("bundled {} source archives", manifest.artifacts.len());
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(error.exit_code())
+                }
+            }
+        }
+        Command::HashCachedSource {
+            repository,
+            name,
+            commit,
+            output,
+        } => match source_bundle::hash_cached_source(&repository, &name, &commit, &output) {
+            Ok(digest) => {
+                println!("{digest}  {}", output.display());
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(error.exit_code())
+            }
+        },
     }
 }

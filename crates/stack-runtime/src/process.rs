@@ -16,6 +16,7 @@ pub struct ProcessRequest {
     pub timeout: Duration,
     pub stdout_limit: usize,
     pub stderr_limit: usize,
+    pub environment: Vec<(OsString, OsString)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,6 +71,12 @@ impl ProcessRunner for SystemProcessRunner {
         let mut child = Command::new(&request.executable)
             .args(&request.args)
             .env_clear()
+            .envs(
+                request
+                    .environment
+                    .iter()
+                    .map(|(key, value)| (key.as_os_str(), value.as_os_str())),
+            )
             .env("LC_ALL", "C")
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
