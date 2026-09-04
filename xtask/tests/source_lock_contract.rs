@@ -223,13 +223,36 @@ packages = [
 path = "src/plugins/intel_gpu/thirdparty/onednn_gpu"
 commit = "abcdef0123456789abcdef0123456789abcdef01"
 disposition = "disabled"
-build_option = "ENABLE_INTEL_GPU=OFF""#,
+build_option = "protobuf_BUILD_TESTS=OFF""#,
     );
     let validated = validate_text(&disabled).expect("disabled source is explicit");
     assert_eq!(
         validated.sources[0].gitlinks[0].disposition,
         SourceGitlinkDisposition::Disabled
     );
+}
+
+#[test]
+fn rejects_malformed_cmake_build_option_names() {
+    for build_option in ["1ENABLE_TESTS=OFF", "ENABLE-TESTS=OFF", "ENABLE_TESTS=ON"] {
+        let invalid = valid_lock().replace(
+            "redistribution = \"allowed\"",
+            &format!(
+                r#"redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/tests"
+commit = "abcdef0123456789abcdef0123456789abcdef01"
+disposition = "disabled"
+build_option = "{build_option}""#
+            ),
+        );
+        assert_eq!(
+            validate_text(&invalid),
+            Err("SOURCE_LOCK_GITLINK_INVALID".to_owned()),
+            "accepted malformed option {build_option}"
+        );
+    }
 }
 
 #[test]

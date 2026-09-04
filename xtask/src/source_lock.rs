@@ -531,11 +531,12 @@ fn is_build_option(value: &str) -> bool {
     let Some((name, setting)) = value.split_once('=') else {
         return false;
     };
-    !name.is_empty()
+    let mut bytes = name.bytes();
+    bytes
+        .next()
+        .is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
         && name.len() <= MAX_SCALAR_BYTES
-        && name
-            .bytes()
-            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
         && setting == "OFF"
 }
 

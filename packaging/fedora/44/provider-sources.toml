@@ -344,8 +344,8 @@ packages = [{ name = "onnx-devel", nevr = "0:1.17.0-12.fc44" }]
 [[sources.gitlinks]]
 path = "thirdparty/protobuf/protobuf"
 commit = "f0dc78d7e6e331b8c6bb2d5283e06aa26883ca7c"
-disposition = "system"
-packages = [{ name = "protobuf-devel", nevr = "0:3.19.6-20.fc44" }]
+disposition = "bundled"
+source = "openvino-protobuf"
 
 [[sources.gitlinks]]
 path = "thirdparty/pugixml"
@@ -430,3 +430,30 @@ license_files = [
 ]
 license_evidence_sha256 = "b5488044ec47b7f8c470dd546ef25ad161d7812c2eb518530dacaea71c64aef6"
 redistribution = "allowed"
+
+[[sources]]
+name = "openvino-protobuf"
+role = "openvino_dependency"
+kind = "git_commit"
+url = "https://github.com/protocolbuffers/protobuf.git"
+commit = "f0dc78d7e6e331b8c6bb2d5283e06aa26883ca7c"
+archive_sha256 = "d672ef60a9d0973e017d072f802fa1630c9daaea1cbf24f76550c5da2850f6cb"
+license_expression = "BSD-3-Clause AND MIT"
+license_files = [
+  "packaging/fedora/44/licenses/openvino-protobuf-LICENSE",
+  "packaging/fedora/44/licenses/openvino-protobuf-utf8_range-LICENSE",
+]
+license_evidence_sha256 = "0e93570185f4bef280467f6c2551d7b9aa8207025545ed5ca820e948b831d71a"
+redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/benchmark"
+commit = "5b7683f49e1e9223cf9927b24f6fd3d6bd82e3f8"
+disposition = "disabled"
+build_option = "protobuf_BUILD_TESTS=OFF"
+
+[[sources.gitlinks]]
+path = "third_party/googletest"
+commit = "5ec7f0c4a113e2f18ac2c6cc7df51ad6afc24081"
+disposition = "disabled"
+build_option = "protobuf_BUILD_TESTS=OFF"

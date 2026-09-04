@@ -458,7 +458,7 @@ fn create_archive_from_commit(
     let raw_archive_text = raw_archive.to_str().ok_or_else(|| {
         SourceBundleError::new("SOURCE_BUNDLE_OUTPUT_INVALID", "archive path is not UTF-8")
     })?;
-    let archive_result = run_git(
+    let archive_result = run_git_with_timeout(
         repository,
         &[
             "archive",
@@ -469,6 +469,7 @@ fn create_archive_from_commit(
             raw_archive_text,
             commit,
         ],
+        Duration::from_secs(15 * 60),
     );
     if let Err(error) = archive_result {
         let _ = fs::remove_file(&raw_archive);
@@ -782,6 +783,14 @@ fn run_git(
     repository: &Path,
     args: &[&str],
 ) -> Result<stack_runtime::ProcessOutput, SourceBundleError> {
+    run_git_with_timeout(repository, args, Duration::from_secs(30))
+}
+
+fn run_git_with_timeout(
+    repository: &Path,
+    args: &[&str],
+    timeout: Duration,
+) -> Result<stack_runtime::ProcessOutput, SourceBundleError> {
     let mut git_args = vec![
         OsString::from("-c"),
         OsString::from("core.hooksPath=/dev/null"),
@@ -796,7 +805,7 @@ fn run_git(
     let request = ProcessRequest {
         executable: PathBuf::from(GIT),
         args: git_args,
-        timeout: Duration::from_secs(30),
+        timeout,
         stdout_limit: MAX_GIT_OUTPUT_BYTES,
         stderr_limit: MAX_GIT_OUTPUT_BYTES,
         environment: vec![
