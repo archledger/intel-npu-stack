@@ -7,8 +7,11 @@ license.workspace = true
 
 [dependencies]
 clap.workspace = true
+serde.workspace = true
+sha2.workspace = true
 stack-schema = { path = "../crates/stack-schema" }
 thiserror.workspace = true
+toml.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -1,0 +1,23 @@
+schema_version = 1
+status = "sealed"
+profile_id = "fedora-44-x86_64-8086-643e-candidate"
+
+[target]
+distribution_id = "fedora"
+version_id = "44"
+architecture = "x86_64"
+pci_vendor = "8086"
+pci_device = "643e"
+
+[[sources]]
+name = "intel-linux-npu-driver"
+role = "npu_userspace_driver"
+kind = "git_tag"
+url = "https://example.invalid/intel-linux-npu-driver.git"
+tag = "v1.2.3"
+commit = "0123456789abcdef0123456789abcdef01234567"
+archive_sha256 = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+license_expression = "MIT"
+license_files = ["fixtures/source-lock/LICENSE.fixture"]
+license_evidence_sha256 = "a7c6bf8df7d8fb707af606599f275e0eb192cd28492c95593b0608ca966c8df1"
+redistribution = "allowed"

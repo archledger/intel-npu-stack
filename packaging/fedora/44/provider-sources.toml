@@ -1,0 +1,11 @@
+schema_version = 1
+status = "draft"
+profile_id = "fedora-44-x86_64-8086-643e-candidate"
+sources = []
+
+[target]
+distribution_id = "fedora"
+version_id = "44"
+architecture = "x86_64"
+pci_vendor = "8086"
+pci_device = "643e"

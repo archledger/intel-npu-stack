@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #![forbid(unsafe_code)]
 
+pub mod source_lock;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;

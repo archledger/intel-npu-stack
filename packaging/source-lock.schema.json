@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "SPDX-License-Identifier: Apache-2.0",
+  "$id": "https://intel-npu-stack.invalid/schema/source-lock-v1.json",
+  "title": "Intel NPU Stack provider source lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "profile_id", "target", "sources"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "enum": ["draft", "sealed"] },
+    "profile_id": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distribution_id", "version_id", "architecture", "pci_vendor", "pci_device"],
+      "properties": {
+        "distribution_id": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "version_id": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "architecture": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "pci_vendor": { "type": "string", "pattern": "^[0-9a-f]{4}$" },
+        "pci_device": { "type": "string", "pattern": "^[0-9a-f]{4}$" }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "role", "kind", "url", "commit", "archive_sha256", "license_expression", "license_files", "license_evidence_sha256", "redistribution"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+          "role": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+          "kind": { "enum": ["git_tag", "git_annotated_tag", "git_commit"] },
+          "url": { "type": "string", "pattern": "^https://" },
+          "tag": { "type": "string", "minLength": 1, "maxLength": 4096 },
+          "tag_object": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "archive_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "license_expression": { "type": "string", "minLength": 1, "maxLength": 4096 },
+          "license_files": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": { "type": "string", "minLength": 1, "maxLength": 4096 }
+          },
+          "license_evidence_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "redistribution": { "enum": ["allowed", "external_only"] }
+        }
+      }
+    }
+  }
+}

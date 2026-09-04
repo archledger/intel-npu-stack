@@ -566,9 +566,12 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "serde",
+ "sha2",
  "stack-schema",
  "tempfile",
  "thiserror",
+ "toml",
 ]
 
 [[package]]
