@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 #![forbid(unsafe_code)]
 
+mod process;
 mod protocol;
 mod strict_json;
 
+pub use process::{
+    ProcessError, ProcessOutput, ProcessRequest, ProcessRunner, SystemProcessRunner, Termination,
+};
 pub use protocol::{
     LevelZeroDevice, LevelZeroObservation, MAX_PROBE_STDOUT, OpenVinoEnumerateObservation,
     OpenVinoInferObservation, ProbeErrorCode, ProbeKind, ProbeMode, ProbeObservations,
