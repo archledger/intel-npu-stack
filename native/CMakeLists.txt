@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.25)
 
 project(intel_npu_stack_native LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Hardening)
 
@@ -63,6 +65,20 @@ find_package(
   PATHS "${INTEL_NPU_OPENVINO_CONFIG_DIR}"
   NO_DEFAULT_PATH
 )
+get_target_property(
+  INTEL_NPU_OPENVINO_RUNTIME
+  openvino::runtime
+  IMPORTED_LOCATION_RELEASE
+)
+if(NOT INTEL_NPU_OPENVINO_RUNTIME)
+  message(FATAL_ERROR "OpenVINO runtime has no Release library")
+endif()
+intel_npu_require_in_sdk("${INTEL_NPU_OPENVINO_RUNTIME}" "OpenVINO runtime")
+get_filename_component(
+  INTEL_NPU_OPENVINO_RUNTIME_DIR
+  "${INTEL_NPU_OPENVINO_RUNTIME}"
+  DIRECTORY
+)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
@@ -87,6 +103,24 @@ target_link_libraries(
 )
 intel_npu_harden_target(intel_npu_level_zero)
 
+add_library(intel_npu_openvino STATIC openvino/probe.cpp)
+target_include_directories(intel_npu_openvino PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(
+  intel_npu_openvino
+  PUBLIC
+    intel_npu_json
+    openvino::runtime
+)
+intel_npu_harden_target(intel_npu_openvino)
+
+add_executable(intel_npu_openvino_probe openvino/main.cpp)
+set_target_properties(
+  intel_npu_openvino_probe
+  PROPERTIES OUTPUT_NAME intel-npu-openvino-probe
+)
+target_link_libraries(intel_npu_openvino_probe PRIVATE intel_npu_openvino)
+intel_npu_harden_target(intel_npu_openvino_probe)
+
 add_executable(intel_npu_level_zero_probe level_zero/main.cpp)
 set_target_properties(
   intel_npu_level_zero_probe
@@ -95,10 +129,33 @@ set_target_properties(
 target_link_libraries(intel_npu_level_zero_probe PRIVATE intel_npu_level_zero)
 intel_npu_harden_target(intel_npu_level_zero_probe)
 
+install(
+  TARGETS
+    intel_npu_level_zero_probe
+    intel_npu_openvino_probe
+  RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/intel-npu-stack"
+)
+
 add_executable(json_writer_test tests/json_writer_test.cpp)
 target_link_libraries(json_writer_test PRIVATE intel_npu_json)
 intel_npu_harden_target(json_writer_test)
 add_test(NAME json_writer COMMAND json_writer_test)
+
+add_executable(openvino_validation_test tests/openvino_validation_test.cpp)
+target_include_directories(openvino_validation_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(
+  openvino_validation_test
+  PRIVATE
+    intel_npu_openvino
+)
+intel_npu_harden_target(openvino_validation_test)
+add_test(NAME openvino_validation COMMAND openvino_validation_test)
+set_tests_properties(
+  openvino_validation
+  PROPERTIES
+    ENVIRONMENT_MODIFICATION
+      "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_OPENVINO_RUNTIME_DIR}"
+)
 
 add_executable(level_zero_mapping_test tests/level_zero_mapping_test.cpp)
 target_link_libraries(level_zero_mapping_test PRIVATE intel_npu_level_zero)
