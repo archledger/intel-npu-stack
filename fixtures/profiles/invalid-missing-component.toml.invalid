@@ -2,6 +2,11 @@ schema_version = 1
 id = "testos-1-x86_64-8086-abcd-invalid"
 stack_release = "0.1.0"
 status = "experimental"
+package_manager = "rpm"
+
+[[conflicts]]
+package = "fixture-conflicting-driver"
+resolution = "remove"
 
 [platform]
 id = "testos"
@@ -22,22 +27,92 @@ version = "1.0.0"
 source = "https://example.invalid/npu-firmware"
 sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
+[components.npu_firmware.provider]
+package = "fixture-npu-firmware"
+version = "0:1.0.0-1.fc44"
+activation = "reboot"
+
+[[components.npu_firmware.provider.files]]
+path = "/usr/lib/firmware/fixture/npu.bin"
+sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+[components.npu_firmware.license]
+expression = "Apache-2.0"
+redistribution = "allowed"
+evidence_sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 [components.level_zero_loader]
 version = "1.0.0"
 source = "https://example.invalid/level-zero-loader"
 sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+[components.level_zero_loader.provider]
+package = "fixture-level-zero-loader"
+version = "0:1.0.0-1.fc44"
+activation = "immediate"
+
+[[components.level_zero_loader.provider.files]]
+path = "/usr/lib64/libze_loader.fixture.so"
+sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+[components.level_zero_loader.license]
+expression = "Apache-2.0"
+redistribution = "allowed"
+evidence_sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 [components.npu_userspace_driver]
 version = "1.0.0"
 source = "https://example.invalid/npu-userspace-driver"
 sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 
+[components.npu_userspace_driver.provider]
+package = "fixture-npu-userspace-driver"
+version = "0:1.0.0-1.fc44"
+activation = "relogin"
+
+[[components.npu_userspace_driver.provider.files]]
+path = "/usr/lib64/libnpu_driver.fixture.so"
+sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+
+[components.npu_userspace_driver.license]
+expression = "Apache-2.0"
+redistribution = "allowed"
+evidence_sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+
 [components.npu_compiler]
 version = "1.0.0"
 source = "https://example.invalid/npu-compiler"
 sha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 
+[components.npu_compiler.provider]
+package = "fixture-npu-compiler"
+version = "0:1.0.0-1.fc44"
+activation = "immediate"
+
+[[components.npu_compiler.provider.files]]
+path = "/usr/libexec/intel-npu-stack/fixture-compiler"
+sha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
+[components.npu_compiler.license]
+expression = "Apache-2.0"
+redistribution = "allowed"
+evidence_sha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
 [components.openvino_runtime]
 version = "1.0.0"
 source = "https://example.invalid/openvino-runtime"
 sha256 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+[components.openvino_runtime.provider]
+package = "fixture-openvino-runtime"
+version = "0:1.0.0-1.fc44"
+activation = "immediate"
+
+[[components.openvino_runtime.provider.files]]
+path = "/usr/lib64/libopenvino.fixture.so"
+sha256 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+[components.openvino_runtime.license]
+expression = "Apache-2.0"
+redistribution = "allowed"
+evidence_sha256 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"

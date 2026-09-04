@@ -26,7 +26,7 @@ fn valid_profile(id: &str) -> String {
         "openvino_npu_plugin",
     ] {
         components.push_str(&format!(
-            "\n[components.{name}]\nversion = \"1.0.0\"\nsource = \"https://example.invalid/{name}\"\nsha256 = \"{HASH}\"\n"
+            "\n[components.{name}]\nversion = \"1.0.0\"\nsource = \"https://example.invalid/{name}\"\nsha256 = \"{HASH}\"\n\n[components.{name}.provider]\npackage = \"fixture-{name}\"\nversion = \"0:1.0.0-1.fc44\"\nactivation = \"immediate\"\n\n[[components.{name}.provider.files]]\npath = \"/usr/lib64/{name}.fixture.so\"\nsha256 = \"{HASH}\"\n\n[components.{name}.license]\nexpression = \"Apache-2.0\"\nredistribution = \"allowed\"\nevidence_sha256 = \"{HASH}\"\n"
         ));
     }
     format!(
@@ -34,6 +34,11 @@ fn valid_profile(id: &str) -> String {
 id = "{id}"
 stack_release = "0.1.0"
 status = "qualified"
+package_manager = "rpm"
+
+[[conflicts]]
+package = "fixture-conflicting-driver"
+resolution = "remove"
 
 [platform]
 id = "testos"
@@ -51,7 +56,10 @@ module = "intel_vpu"
 {components}
 [qualification]
 evidence_id = "fixture-only-not-hardware-evidence"
+evidence_sha256 = "{HASH}"
 qualified_at = "2026-09-03T19:00:00Z"
+hardware_class = "fixture-lunar-lake-class"
+test_suite_version = "fixture-suite-v1"
 "#
     )
 }

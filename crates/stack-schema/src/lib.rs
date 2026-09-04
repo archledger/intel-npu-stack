@@ -8,8 +8,9 @@ mod profile;
 pub use error::SchemaError;
 pub use kernel::KernelVersion;
 pub use profile::{
-    ComponentRequirement, KernelRange, PciId, PlatformSelector, Profile, ProfileStatus,
-    QualificationRecord,
+    ActivationRequirement, ComponentRequirement, ConflictResolution, InstalledFile, KernelRange,
+    LicenseRecord, NativeProvider, PackageConflict, PackageManager, PciId, PlatformSelector,
+    Profile, ProfileStatus, QualificationRecord, RedistributionVerdict,
 };
 
 /// Version of the profile format accepted by this release.

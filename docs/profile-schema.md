@@ -10,6 +10,8 @@ An `intel-npu-stack` profile is one independently reviewed compatibility matrix.
 | `id` | string | Nonempty stable profile identifier. |
 | `stack_release` | string | Nonempty stack release that consumes the profile. |
 | `status` | enum | `candidate`, `experimental`, `qualified`, `unsupported`, or `deprecated`. |
+| `package_manager` | enum | `rpm`, `dpkg`, or `pacman`; Phase 2 implements inspection for `rpm`. |
+| `conflicts` | array of tables | Sorted, unique native package names with resolution `remove`; maximum 32. |
 | `platform` | table | Exact OS and architecture selector. |
 | `hardware` | array of tables | At least one lowercase four-digit PCI vendor/device pair. |
 | `kernel` | table | Numeric inclusive minimum, exclusive maximum, and exact module. |
@@ -37,7 +39,19 @@ Every `hardware` entry has lowercase four-digit hexadecimal `vendor` and `device
 - `openvino_runtime`
 - `openvino_npu_plugin`
 
-Each component contains a nonempty `version`, a nonempty `https://` `source` with no whitespace, and a 64-character lowercase hexadecimal `sha256`. These six components form one compatibility matrix; independently newer versions are never combined automatically.
+Each component contains a nonempty `version`, a nonempty `https://` `source` with no whitespace, and a 64-character lowercase hexadecimal `sha256`. It also contains:
+
+- `provider.package`: exact native package name;
+- `provider.version`: exact native version including distribution release;
+- `provider.activation`: `immediate`, `reboot`, or `relogin`;
+- `provider.files`: one through 16 critical installed files, each with an approved absolute path and lowercase SHA-256;
+- `license.expression`: nonempty SPDX expression recorded by qualification;
+- `license.redistribution`: `allowed`, `external_only`, or `forbidden`;
+- `license.evidence_sha256`: digest of the reviewed license/provenance record.
+
+Package names allow only ASCII letters, digits, `.`, `+`, `-`, and `_`. Package versions additionally allow `:`, `~`, and `^`. These fields are inert data and are never shell fragments. Critical paths must be normalized beneath `/usr/bin/`, `/usr/lib/`, `/usr/lib64/`, `/usr/libexec/`, `/usr/share/`, or `/usr/lib/firmware/`; control characters, repeated separators, dot components, parent components, and trailing separators are rejected.
+
+These six components form one compatibility matrix; independently newer versions are never combined automatically.
 
 ## Status and channel policy
 
@@ -51,7 +65,11 @@ Each component contains a nonempty `version`, a nonempty `https://` `source` wit
 
 The experimental channel requires `--accept-experimental-risk`. Supplying that flag with the stable channel is an error. The approved release workflow currently authorizes only the evidence-backed `candidate` to `qualified` promotion; it occurs through a separately reviewed promotion change and never through parsing, validation, upstream discovery, or hardware-test automation. Any other status transition requires an explicit future design decision and cannot inherit qualification from a similar profile.
 
-A `qualified` profile has a `qualification` table with nonempty `evidence_id` and `qualified_at` values. Schema validation checks their presence, not the truth of the evidence; protected release automation must independently bind and verify the evidence and exact artifact digests.
+A `qualified` profile has a `qualification` table with nonempty `evidence_id`, `qualified_at`, `hardware_class`, and `test_suite_version` values plus lowercase `evidence_sha256`. It may not contain a component whose redistribution verdict is `forbidden`. Schema validation checks shape and completeness, not the truth of the evidence; protected release automation must independently bind and verify the evidence and exact artifact digests.
+
+## Resource limits
+
+Readers reject profile input larger than 1,048,576 bytes, any scalar string larger than 4096 UTF-8 bytes, more than 64 hardware identifiers, more than 32 conflicts, or a component with fewer than one or more than 16 critical files. These limits apply before runtime inspection.
 
 ## Selection rules
 
@@ -78,11 +96,15 @@ Selection output is deterministic and independent of profile input order.
 | `PROFILE_COMPONENT_MISSING` | One of the six required component keys is absent. |
 | `PROFILE_QUALIFICATION_MISSING` | A qualified profile lacks complete qualification metadata. |
 | `PROFILE_KERNEL_RANGE_INVALID` | Kernel range ordering is invalid. |
+| `PROFILE_RESOURCE_LIMIT` | Input, scalar, hardware, conflict, or critical-file bounds are exceeded. |
+| `PROFILE_PACKAGE_INVALID` | A package name/version is unsafe, or conflicts are not sorted and unique. |
+| `PROFILE_PATH_INVALID` | A critical file path is not normalized beneath an approved system prefix. |
+| `PROFILE_PROVENANCE_INVALID` | License or qualification provenance is malformed or incompatible with qualification. |
 
 The offline directory validator additionally reports `PROFILE_SYMLINK_REJECTED` and `DUPLICATE_PROFILE_ID` for directory-level safety and uniqueness failures.
 
 ## Compatibility and migration
 
-Readers accept only schema version 1 and fail closed on every other version. Adding optional fields, removing fields, changing meanings, or loosening validation must not be done silently. A schema change requires a new version, explicit compatibility tests, documented migration rules, and review of every consumer before any production profile adopts it.
+Readers accept only schema version 1 and fail closed on every other version. The provider, conflict, license, and expanded qualification fields are the approved correction to the unpublished Phase 1 version-1 shape; no production profile or released consumer used the earlier shape. After this correction is frozen, adding optional fields, removing fields, changing meanings, or loosening validation must not be done silently. A later schema change requires a new version, explicit compatibility tests, documented migration rules, and review of every consumer before any production profile adopts it.
 
 Files under `fixtures/profiles/` use the fictional OS `testos`, PCI device `8086:abcd`, `example.invalid` sources, and fixture-only evidence. They demonstrate parsing behavior and can never qualify a production platform.
