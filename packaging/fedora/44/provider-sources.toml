@@ -338,8 +338,8 @@ packages = [{ name = "ocl-icd-devel", nevr = "0:2.3.4-2.fc44" }]
 [[sources.gitlinks]]
 path = "thirdparty/onnx/onnx"
 commit = "e709452ef2bbc1d113faf678c24e6d3467696e83"
-disposition = "system"
-packages = [{ name = "onnx-devel", nevr = "0:1.17.0-12.fc44" }]
+disposition = "bundled"
+source = "openvino-onnx"
 
 [[sources.gitlinks]]
 path = "thirdparty/protobuf/protobuf"
@@ -430,6 +430,24 @@ license_files = [
 ]
 license_evidence_sha256 = "b5488044ec47b7f8c470dd546ef25ad161d7812c2eb518530dacaea71c64aef6"
 redistribution = "allowed"
+
+[[sources]]
+name = "openvino-onnx"
+role = "openvino_dependency"
+kind = "git_commit"
+url = "https://github.com/onnx/onnx.git"
+commit = "e709452ef2bbc1d113faf678c24e6d3467696e83"
+archive_sha256 = "f517f905fc46bb776c6472963267bfeddfc58e65be090cd8e67284f9972ddd5d"
+license_expression = "Apache-2.0"
+license_files = ["packaging/fedora/44/licenses/openvino-onnx-LICENSE"]
+license_evidence_sha256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+redistribution = "allowed"
+
+[[sources.gitlinks]]
+path = "third_party/pybind11"
+commit = "a2e59f0e7065404b44dfe92a28aca47ba1378dc4"
+disposition = "disabled"
+build_option = "ONNX_BUILD_PYTHON=OFF"
 
 [[sources]]
 name = "openvino-protobuf"
