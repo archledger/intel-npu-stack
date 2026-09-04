@@ -273,23 +273,14 @@ fn inspect_provider_files(
             .or_insert_with(|| inspector.inspect_file(&expected_file.path));
         match observed {
             FileObservation::Failed(code) => {
-                return provider_failure(
-                    capability,
-                    code,
-                    &provider.package,
-                    details([("path", json!(&expected_file.path))]),
-                );
+                return provider_failure(capability, code, &provider.package, BTreeMap::new());
             }
             FileObservation::Digest(actual) if actual != &expected_file.sha256 => {
                 return provider_failure(
                     capability,
                     "FILE_DIGEST_MISMATCH",
                     &provider.package,
-                    details([
-                        ("path", json!(&expected_file.path)),
-                        ("expected_sha256", json!(&expected_file.sha256)),
-                        ("actual_sha256", json!(actual)),
-                    ]),
+                    BTreeMap::new(),
                 );
             }
             FileObservation::Digest(_) => {}
@@ -300,22 +291,14 @@ fn inspect_provider_files(
             .or_insert_with(|| inspector.query_owner(&expected_file.path));
         match owner {
             Err(code) => {
-                return provider_failure(
-                    capability,
-                    code,
-                    &provider.package,
-                    details([("path", json!(&expected_file.path))]),
-                );
+                return provider_failure(capability, code, &provider.package, BTreeMap::new());
             }
             Ok(actual) if actual != &provider.package => {
                 return provider_failure(
                     capability,
                     "FILE_OWNERSHIP_MISMATCH",
                     &provider.package,
-                    details([
-                        ("path", json!(&expected_file.path)),
-                        ("actual_package", json!(actual)),
-                    ]),
+                    details([("actual_package", json!(actual))]),
                 );
             }
             Ok(_) => {}

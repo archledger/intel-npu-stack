@@ -263,6 +263,9 @@ fn ownership_mismatch_and_symlinked_file_fail() {
 #[test]
 fn critical_file_digest_mismatch_fails() {
     let (mut profile, root) = profile_and_root();
+    let private_path = profile.components["npu_compiler"].provider.files[0]
+        .path
+        .clone();
     profile
         .components
         .get_mut("npu_compiler")
@@ -276,6 +279,11 @@ fn critical_file_digest_mismatch_fails() {
         code(check(&result, "provider.npu_compiler")),
         "FILE_DIGEST_MISMATCH"
     );
+    let public = serde_json::to_string(check(&result, "provider.npu_compiler"))
+        .expect("serialize diagnostic check");
+    assert!(!public.contains(&private_path));
+    assert!(!public.contains(EMPTY_SHA256));
+    assert!(!public.contains("0000000000000000000000000000000000000000000000000000000000000000"));
 }
 
 #[test]
