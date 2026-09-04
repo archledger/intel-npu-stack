@@ -3,9 +3,11 @@
 #![cfg(unix)]
 
 use std::ffi::OsString;
-use std::fs;
+use std::fs::{self, File, OpenOptions};
+use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::thread;
 use std::time::{Duration, Instant};
 
 use stack_runtime::{
@@ -15,10 +17,25 @@ use tempfile::TempDir;
 
 fn script(root: &Path, name: &str, body: &str) -> PathBuf {
     let path = root.join(name);
-    fs::write(&path, format!("#!/bin/sh\nset -eu\n{body}\n")).expect("write fixture script");
-    let mut permissions = fs::metadata(&path).expect("script metadata").permissions();
+    let draft = root.join(format!(".{name}.tmp"));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&draft)
+        .expect("create fixture draft");
+    file.write_all(format!("#!/bin/sh\nset -eu\n{body}\n").as_bytes())
+        .expect("write fixture script");
+    file.sync_all().expect("sync fixture script");
+    drop(file);
+    let mut permissions = fs::metadata(&draft).expect("script metadata").permissions();
     permissions.set_mode(0o700);
-    fs::set_permissions(&path, permissions).expect("make fixture executable");
+    fs::set_permissions(&draft, permissions).expect("make fixture executable");
+    fs::rename(draft, &path).expect("publish fixture executable");
+    File::open(root)
+        .expect("open fixture directory")
+        .sync_all()
+        .expect("sync fixture directory");
+    thread::sleep(Duration::from_millis(50));
     path
 }
 

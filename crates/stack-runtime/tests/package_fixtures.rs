@@ -156,7 +156,9 @@ fn check<'a>(inspection: &'a PackageInspection, id: &str) -> &'a DiagnosticCheck
 }
 
 fn code(check: &DiagnosticCheck) -> &str {
-    check.details["code"].as_str().expect("stable detail code")
+    check.details["error_code"]
+        .as_str()
+        .expect("stable detail code")
 }
 
 #[test]
@@ -166,20 +168,18 @@ fn rpm_exact_package_version_and_file_ownership_pass() {
     let result = inspect(&profile, root.path(), &runner);
 
     assert_eq!(result.packages.len(), 6);
+    assert_eq!(result.checks.len(), 6);
     assert!(
         result
             .checks
             .iter()
             .all(|check| check.status == CheckStatus::Pass)
     );
-    assert_eq!(
-        code(check(&result, "provider.npu_firmware")),
-        "PROVIDER_VERIFIED"
-    );
-    assert_eq!(
-        code(check(&result, "conflict.fixture-conflicting-driver")),
-        "PACKAGE_CONFLICT_ABSENT"
-    );
+    assert!(result.checks.iter().all(|check| {
+        check.id.starts_with("package.")
+            && check.summary == "Native provider matches the selected profile"
+            && !check.details.contains_key("error_code")
+    }));
 }
 
 #[test]
@@ -199,8 +199,8 @@ fn missing_package_fails_only_its_capability() {
         .filter(|check| check.status == CheckStatus::Fail)
         .collect::<Vec<_>>();
     assert_eq!(failed.len(), 1);
-    assert_eq!(failed[0].id, "provider.npu_firmware");
-    assert_eq!(code(failed[0]), "PACKAGE_MISSING");
+    assert_eq!(failed[0].id, "package.npu_firmware");
+    assert_eq!(code(failed[0]), "PACKAGE_NOT_INSTALLED");
 }
 
 #[test]
@@ -218,7 +218,7 @@ fn version_mismatch_reports_expected_and_actual_without_raw_output() {
         .version = "0:9.9.9-1.fc44".to_owned();
 
     let result = inspect(&profile, root.path(), &runner);
-    let firmware = check(&result, "provider.npu_firmware");
+    let firmware = check(&result, "package.npu_firmware");
     assert_eq!(code(firmware), "PACKAGE_VERSION_MISMATCH");
     assert_eq!(firmware.details["expected_version"], "0:1.0.0-1.fc44");
     assert_eq!(firmware.details["actual_version"], "0:9.9.9-1.fc44");
@@ -241,8 +241,8 @@ fn ownership_mismatch_and_symlinked_file_fail() {
         .insert(target.path.clone(), "fixture-wrong-owner".to_owned());
     let mismatch = inspect(&profile, root.path(), &runner);
     assert_eq!(
-        code(check(&mismatch, "provider.level_zero_loader")),
-        "FILE_OWNERSHIP_MISMATCH"
+        code(check(&mismatch, "package.level_zero_loader")),
+        "PACKAGE_OWNERSHIP_MISMATCH"
     );
 
     let runner = FakeRunner::for_profile(&profile);
@@ -255,8 +255,8 @@ fn ownership_mismatch_and_symlinked_file_fail() {
     symlink("/dev/null", &host_path).expect("create fixture symlink");
     let symlinked = inspect(&profile, root.path(), &runner);
     assert_eq!(
-        code(check(&symlinked, "provider.level_zero_loader")),
-        "FILE_TYPE_INVALID"
+        code(check(&symlinked, "package.level_zero_loader")),
+        "PACKAGE_FILE_INVALID"
     );
 }
 
@@ -276,10 +276,10 @@ fn critical_file_digest_mismatch_fails() {
     let runner = FakeRunner::for_profile(&profile);
     let result = inspect(&profile, root.path(), &runner);
     assert_eq!(
-        code(check(&result, "provider.npu_compiler")),
-        "FILE_DIGEST_MISMATCH"
+        code(check(&result, "package.npu_compiler")),
+        "PACKAGE_DIGEST_MISMATCH"
     );
-    let public = serde_json::to_string(check(&result, "provider.npu_compiler"))
+    let public = serde_json::to_string(check(&result, "package.npu_compiler"))
         .expect("serialize diagnostic check");
     assert!(!public.contains(&private_path));
     assert!(!public.contains(EMPTY_SHA256));
@@ -299,9 +299,10 @@ fn conflicting_installed_package_fails() {
         }),
     );
     let result = inspect(&profile, root.path(), &runner);
-    assert_eq!(
-        code(check(&result, "conflict.fixture-conflicting-driver")),
-        "PACKAGE_CONFLICT_PRESENT"
+    assert!(
+        result.checks.iter().all(|check| {
+            check.status == CheckStatus::Fail && code(check) == "PACKAGE_CONFLICT"
+        })
     );
 }
 
@@ -345,9 +346,13 @@ fn dpkg_and_pacman_are_blocked_not_guessed() {
         let runner = FakeRunner::for_profile(&profile);
         let result = inspect(&profile, root.path(), &runner);
         assert!(result.packages.is_empty());
-        assert_eq!(result.checks.len(), 1);
-        assert_eq!(result.checks[0].status, CheckStatus::Blocked);
-        assert_eq!(code(&result.checks[0]), "PACKAGE_MANAGER_UNSUPPORTED");
+        assert_eq!(result.checks.len(), 6);
+        assert!(result.checks.iter().all(|check| {
+            check.id.starts_with("package.")
+                && check.status == CheckStatus::Blocked
+                && code(check) == "PACKAGE_INSPECTOR_UNAVAILABLE"
+                && check.summary == "Native provider matches the selected profile"
+        }));
         assert!(runner.requests().is_empty());
     }
 }
@@ -390,8 +395,8 @@ fn rpm_timeout_or_malformed_output_is_structured() {
     );
     let timed_out = inspect(&profile, root.path(), &runner);
     assert_eq!(
-        code(check(&timed_out, "provider.npu_firmware")),
-        "RPM_QUERY_TIMEOUT"
+        code(check(&timed_out, "package.npu_firmware")),
+        "PACKAGE_QUERY_FAILED"
     );
 
     runner.forced.lock().expect("forced lock").insert(
@@ -402,8 +407,8 @@ fn rpm_timeout_or_malformed_output_is_structured() {
         )),
     );
     let malformed = inspect(&profile, root.path(), &runner);
-    let firmware = check(&malformed, "provider.npu_firmware");
-    assert_eq!(code(firmware), "RPM_OUTPUT_INVALID");
+    let firmware = check(&malformed, "package.npu_firmware");
+    assert_eq!(code(firmware), "PACKAGE_OUTPUT_INVALID");
     assert!(
         !serde_json::to_string(firmware)
             .expect("serialize")

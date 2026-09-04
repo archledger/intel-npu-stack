@@ -78,18 +78,19 @@ impl<'a> RpmPackageInspector<'a> {
         ]);
         let output = match result {
             Ok(output) => output,
-            Err(ProcessError::Timeout) => return PackageQuery::Failed("RPM_QUERY_TIMEOUT"),
-            Err(_) => return PackageQuery::Failed("RPM_QUERY_FAILED"),
+            Err(_) => return PackageQuery::Failed("PACKAGE_QUERY_FAILED"),
         };
         if output.stdout_overflow || output.stderr_overflow {
-            return PackageQuery::Failed("RPM_OUTPUT_LIMIT");
+            return PackageQuery::Failed("PACKAGE_OUTPUT_INVALID");
         }
         match output.termination {
             Termination::Exit(1) if output.stdout.is_empty() => PackageQuery::Missing,
             Termination::Exit(0) => parse_package_output(&output.stdout, package)
                 .map(PackageQuery::Present)
-                .unwrap_or(PackageQuery::Failed("RPM_OUTPUT_INVALID")),
-            Termination::Exit(_) | Termination::Signal => PackageQuery::Failed("RPM_QUERY_FAILED"),
+                .unwrap_or(PackageQuery::Failed("PACKAGE_OUTPUT_INVALID")),
+            Termination::Exit(_) | Termination::Signal => {
+                PackageQuery::Failed("PACKAGE_QUERY_FAILED")
+            }
         }
     }
 
@@ -103,22 +104,21 @@ impl<'a> RpmPackageInspector<'a> {
         ]);
         let output = match result {
             Ok(output) => output,
-            Err(ProcessError::Timeout) => return Err("RPM_QUERY_TIMEOUT"),
-            Err(_) => return Err("RPM_QUERY_FAILED"),
+            Err(_) => return Err("PACKAGE_QUERY_FAILED"),
         };
         if output.stdout_overflow || output.stderr_overflow {
-            return Err("RPM_OUTPUT_LIMIT");
+            return Err("PACKAGE_OUTPUT_INVALID");
         }
         if output.termination != Termination::Exit(0) {
-            return Err("FILE_OWNERSHIP_QUERY_FAILED");
+            return Err("PACKAGE_OWNERSHIP_MISMATCH");
         }
-        parse_owner_output(&output.stdout).ok_or("RPM_OUTPUT_INVALID")
+        parse_owner_output(&output.stdout).ok_or("PACKAGE_OUTPUT_INVALID")
     }
 
     fn inspect_file(&self, path: &str) -> FileObservation {
         let relative = match Path::new(path).strip_prefix("/") {
             Ok(relative) => relative,
-            Err(_) => return FileObservation::Failed("FILE_PATH_INVALID"),
+            Err(_) => return FileObservation::Failed("PACKAGE_FILE_INVALID"),
         };
         hash_regular_file(&self.root.join(relative))
     }
@@ -128,18 +128,21 @@ impl PackageInspector for RpmPackageInspector<'_> {
     fn inspect(&self, profile: &Profile) -> PackageInspection {
         if profile.package_manager != PackageManager::Rpm {
             return PackageInspection {
-                checks: vec![check(
-                    "provider.package_manager",
-                    CheckStatus::Blocked,
-                    "native package manager is unsupported",
-                    details([
-                        ("code", json!("PACKAGE_MANAGER_UNSUPPORTED")),
-                        (
-                            "package_manager",
-                            json!(package_manager_name(profile.package_manager)),
-                        ),
-                    ]),
-                )],
+                checks: profile
+                    .components
+                    .iter()
+                    .map(|(capability, component)| {
+                        check(
+                            &format!("package.{capability}"),
+                            CheckStatus::Blocked,
+                            "Native provider matches the selected profile",
+                            details([
+                                ("error_code", json!("PACKAGE_INSPECTOR_UNAVAILABLE")),
+                                ("package", json!(&component.provider.package)),
+                            ]),
+                        )
+                    })
+                    .collect(),
                 packages: BTreeMap::new(),
             };
         }
@@ -169,16 +172,31 @@ impl PackageInspector for RpmPackageInspector<'_> {
 
         let mut files = BTreeMap::<String, FileObservation>::new();
         let mut owners = BTreeMap::<String, Result<String, &'static str>>::new();
-        let mut checks = Vec::with_capacity(profile.components.len() + profile.conflicts.len());
+        let conflict_failure = profile.conflicts.iter().find_map(|conflict| {
+            match queries
+                .get(&conflict.package)
+                .expect("all validated conflicts were queried")
+            {
+                PackageQuery::Present(installed) => Some((
+                    "PACKAGE_CONFLICT",
+                    installed.name.as_str(),
+                    Some(installed.version.as_str()),
+                )),
+                PackageQuery::Failed(code) => Some((*code, conflict.package.as_str(), None)),
+                PackageQuery::Missing => None,
+            }
+        });
+
+        let mut checks = Vec::with_capacity(profile.components.len());
         for (capability, component) in &profile.components {
             let provider = &component.provider;
             let package = queries
                 .get(&provider.package)
                 .expect("all validated providers were queried");
-            checks.push(match package {
+            let mut provider_check = match package {
                 PackageQuery::Missing => provider_failure(
                     capability,
-                    "PACKAGE_MISSING",
+                    "PACKAGE_NOT_INSTALLED",
                     &provider.package,
                     BTreeMap::new(),
                 ),
@@ -204,41 +222,16 @@ impl PackageInspector for RpmPackageInspector<'_> {
                     &mut files,
                     &mut owners,
                 ),
-            });
-        }
-
-        for conflict in &profile.conflicts {
-            let id = format!("conflict.{}", conflict.package);
-            let query = queries
-                .get(&conflict.package)
-                .expect("all validated conflicts were queried");
-            checks.push(match query {
-                PackageQuery::Missing => check(
-                    &id,
-                    CheckStatus::Pass,
-                    "conflicting package is absent",
-                    details([
-                        ("code", json!("PACKAGE_CONFLICT_ABSENT")),
-                        ("package", json!(&conflict.package)),
-                    ]),
-                ),
-                PackageQuery::Present(installed) => check(
-                    &id,
-                    CheckStatus::Fail,
-                    "conflicting package is installed",
-                    details([
-                        ("code", json!("PACKAGE_CONFLICT_PRESENT")),
-                        ("package", json!(&installed.name)),
-                        ("actual_version", json!(&installed.version)),
-                    ]),
-                ),
-                PackageQuery::Failed(code) => check(
-                    &id,
-                    CheckStatus::Fail,
-                    "conflicting package state could not be verified",
-                    details([("code", json!(code)), ("package", json!(&conflict.package))]),
-                ),
-            });
+            };
+            if provider_check.status == CheckStatus::Pass {
+                if let Some((code, package, version)) = conflict_failure {
+                    let extra = version.map_or_else(BTreeMap::new, |version| {
+                        details([("actual_version", json!(version))])
+                    });
+                    provider_check = provider_failure(capability, code, package, extra);
+                }
+            }
+            checks.push(provider_check);
         }
         checks.sort_by(|left, right| left.id.cmp(&right.id));
 
@@ -278,7 +271,7 @@ fn inspect_provider_files(
             FileObservation::Digest(actual) if actual != &expected_file.sha256 => {
                 return provider_failure(
                     capability,
-                    "FILE_DIGEST_MISMATCH",
+                    "PACKAGE_DIGEST_MISMATCH",
                     &provider.package,
                     BTreeMap::new(),
                 );
@@ -296,7 +289,7 @@ fn inspect_provider_files(
             Ok(actual) if actual != &provider.package => {
                 return provider_failure(
                     capability,
-                    "FILE_OWNERSHIP_MISMATCH",
+                    "PACKAGE_OWNERSHIP_MISMATCH",
                     &provider.package,
                     details([("actual_package", json!(actual))]),
                 );
@@ -306,11 +299,10 @@ fn inspect_provider_files(
     }
 
     check(
-        &format!("provider.{capability}"),
+        &format!("package.{capability}"),
         CheckStatus::Pass,
-        "native provider is verified",
+        "Native provider matches the selected profile",
         details([
-            ("code", json!("PROVIDER_VERIFIED")),
             ("package", json!(&installed.name)),
             ("version", json!(&installed.version)),
         ]),
@@ -323,12 +315,12 @@ fn provider_failure(
     package: &str,
     extra: BTreeMap<String, Value>,
 ) -> DiagnosticCheck {
-    let mut values = details([("code", json!(code)), ("package", json!(package))]);
+    let mut values = details([("error_code", json!(code)), ("package", json!(package))]);
     values.extend(extra);
     check(
-        &format!("provider.{capability}"),
+        &format!("package.{capability}"),
         CheckStatus::Fail,
-        "native provider verification failed",
+        "Native provider matches the selected profile",
         values,
     )
 }
@@ -410,33 +402,33 @@ fn is_package_version(value: &str) -> bool {
 fn hash_regular_file(path: &Path) -> FileObservation {
     let before = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
-        Err(_) => return FileObservation::Failed("FILE_UNAVAILABLE"),
+        Err(error) => return FileObservation::Failed(file_io_code(&error)),
     };
     if !before.file_type().is_file() {
-        return FileObservation::Failed("FILE_TYPE_INVALID");
+        return FileObservation::Failed("PACKAGE_FILE_INVALID");
     }
     if before.len() > MAX_CRITICAL_FILE_BYTES {
-        return FileObservation::Failed("FILE_TOO_LARGE");
+        return FileObservation::Failed("PACKAGE_FILE_INVALID");
     }
 
     let mut file = match File::open(path) {
         Ok(file) => file,
-        Err(_) => return FileObservation::Failed("FILE_UNAVAILABLE"),
+        Err(error) => return FileObservation::Failed(file_io_code(&error)),
     };
     let opened = match file.metadata() {
         Ok(metadata) => metadata,
-        Err(_) => return FileObservation::Failed("FILE_UNAVAILABLE"),
+        Err(_) => return FileObservation::Failed("PACKAGE_FILE_UNREADABLE"),
     };
     let after = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
-        Err(_) => return FileObservation::Failed("FILE_REPLACED"),
+        Err(_) => return FileObservation::Failed("PACKAGE_FILE_INVALID"),
     };
     if !after.file_type().is_file()
         || opened.len() > MAX_CRITICAL_FILE_BYTES
         || !same_file(&before, &opened)
         || !same_file(&opened, &after)
     {
-        return FileObservation::Failed("FILE_REPLACED");
+        return FileObservation::Failed("PACKAGE_FILE_INVALID");
     }
 
     let mut hasher = Sha256::new();
@@ -445,7 +437,7 @@ fn hash_regular_file(path: &Path) -> FileObservation {
         match file.read(&mut buffer) {
             Ok(0) => break,
             Ok(read) => hasher.update(&buffer[..read]),
-            Err(_) => return FileObservation::Failed("FILE_READ_FAILED"),
+            Err(_) => return FileObservation::Failed("PACKAGE_FILE_UNREADABLE"),
         }
     }
     FileObservation::Digest(format!("{:x}", hasher.finalize()))
@@ -463,10 +455,10 @@ fn same_file(_: &Metadata, _: &Metadata) -> bool {
     true
 }
 
-const fn package_manager_name(manager: PackageManager) -> &'static str {
-    match manager {
-        PackageManager::Rpm => "rpm",
-        PackageManager::Dpkg => "dpkg",
-        PackageManager::Pacman => "pacman",
+fn file_io_code(error: &std::io::Error) -> &'static str {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        "PACKAGE_FILE_MISSING"
+    } else {
+        "PACKAGE_FILE_UNREADABLE"
     }
 }
