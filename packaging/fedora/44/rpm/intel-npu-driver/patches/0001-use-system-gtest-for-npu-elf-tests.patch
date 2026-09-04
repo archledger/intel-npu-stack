@@ -1,0 +1,45 @@
+From: Intel NPU Stack maintainers <maintainers@example.invalid>
+Date: Fri, 4 Sep 2026 00:00:00 -0400
+Subject: [PATCH] Use packaged GTest for NPU ELF tests
+
+The source-locked Fedora build must not use FetchContent or network access.
+Fedora 44 provides the required GTest 1.17 targets through gtest-devel.
+
+---
+ third_party/npu_compiler_elf/cmake/gtest.cmake | 19 +------------------
+ 1 file changed, 1 insertion(+), 18 deletions(-)
+
+diff --git a/third_party/npu_compiler_elf/cmake/gtest.cmake b/third_party/npu_compiler_elf/cmake/gtest.cmake
+index 94ca61b..bd36b45 100644
+--- a/third_party/npu_compiler_elf/cmake/gtest.cmake
++++ b/third_party/npu_compiler_elf/cmake/gtest.cmake
+@@ -5,26 +5,8 @@
+ 
+ cmake_minimum_required(VERSION 3.24)
+ 
+-# GoogleTest requires at least C++17
+-set(CMAKE_CXX_STANDARD 17)
+-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+-set(FETCHCONTENT_QUIET FALSE)
+-set(BUILD_GMOCK OFF)
+-
+-include(FetchContent)
+-FetchContent_Declare(
+-        googletest
+-        GIT_REPOSITORY https://github.com/google/googletest.git
+-        GIT_TAG v1.17.0
+-        GIT_PROGRESS TRUE
+-        OVERRIDE_FIND_PACKAGE)
+-
+-# For Windows: Prevent overriding the parent project's compiler/linker settings
+-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+-FetchContent_MakeAvailable(googletest)
+-
+-find_package(googletest REQUIRED)
++find_package(GTest 1.17 REQUIRED)
+ 
+ # this part allow us to run ctest
+ enable_testing()
+ include(GoogleTest)
+-- 
+2.51.0

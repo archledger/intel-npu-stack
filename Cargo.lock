@@ -599,6 +599,7 @@ dependencies = [
  "clap",
  "rustix",
  "serde",
+ "serde_json",
  "sha2",
  "stack-runtime",
  "stack-schema",
