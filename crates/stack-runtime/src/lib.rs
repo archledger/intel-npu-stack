@@ -3,6 +3,7 @@
 
 mod activity;
 mod device;
+mod inspect;
 mod package;
 mod process;
 mod protocol;
@@ -13,6 +14,10 @@ pub use activity::{
     inspect_activation, read_busy_counters,
 };
 pub use device::{DeviceInspection, inspect_devices};
+pub use inspect::{
+    ActivityInspector, DeviceInspector, FilesystemDeviceInspector, InspectionResult,
+    RuntimeInspector, RuntimePaths, SysfsActivityInspector,
+};
 pub use package::{InstalledPackage, PackageInspection, PackageInspector, RpmPackageInspector};
 pub use process::{
     ProcessError, ProcessOutput, ProcessRequest, ProcessRunner, SystemProcessRunner, Termination,
