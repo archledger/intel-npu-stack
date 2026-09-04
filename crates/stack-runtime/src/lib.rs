@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 #![forbid(unsafe_code)]
 
+mod package;
 mod process;
 mod protocol;
 mod strict_json;
 
+pub use package::{InstalledPackage, PackageInspection, PackageInspector, RpmPackageInspector};
 pub use process::{
     ProcessError, ProcessOutput, ProcessRequest, ProcessRunner, SystemProcessRunner, Termination,
 };
