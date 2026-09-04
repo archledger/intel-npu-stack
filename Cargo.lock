@@ -363,6 +363,7 @@ dependencies = [
  "serde_json",
  "stack-core",
  "stack-platform",
+ "stack-runtime",
  "stack-schema",
  "tempfile",
 ]

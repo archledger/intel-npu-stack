@@ -7,12 +7,14 @@ use std::process::ExitCode;
 
 use stack_cli::{AppContext, run};
 use stack_platform::PlatformPaths;
+use stack_runtime::RuntimePaths;
 
 fn main() -> ExitCode {
     let context = AppContext {
         platform_paths: PlatformPaths::system(),
         profile_dir: PathBuf::from("/usr/share/intel-npu-stack/profiles"),
         arch: std::env::consts::ARCH.to_owned(),
+        runtime_paths: RuntimePaths::system(),
     };
     let mut stdout = BufWriter::new(io::stdout().lock());
     let mut stderr = BufWriter::new(io::stderr().lock());
