@@ -98,6 +98,8 @@ fn facts() -> PlatformFacts {
         }],
         intel_vpu_loaded: true,
         accel_node_present: true,
+        effective_root: false,
+        boot_time_epoch: 1_700_000_000,
     }
 }
 

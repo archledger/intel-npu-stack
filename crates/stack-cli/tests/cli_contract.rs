@@ -100,6 +100,16 @@ impl Fixture {
         );
         write(
             root.path(),
+            "platform/proc/self/status",
+            "Name:\tfixture\nUid:\t1000\t1000\t1000\t1000\n",
+        );
+        write(
+            root.path(),
+            "platform/proc/stat",
+            "cpu 1 2 3 4\nbtime 1700000000\n",
+        );
+        write(
+            root.path(),
             "platform/sys/bus/pci/devices/0000:00:0b.0/vendor",
             "0x8086\n",
         );

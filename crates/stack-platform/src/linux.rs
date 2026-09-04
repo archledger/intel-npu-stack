@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fs;
+use std::fs::{self, File};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use stack_schema::{KernelVersion, PciId};
@@ -32,6 +33,8 @@ pub struct PlatformFacts {
     pub pci_ids: Vec<PciId>,
     pub intel_vpu_loaded: bool,
     pub accel_node_present: bool,
+    pub effective_root: bool,
+    pub boot_time_epoch: u64,
 }
 
 /// Reads Linux facts only through the supplied filesystem root.
@@ -62,6 +65,10 @@ pub fn detect_platform(paths: &PlatformPaths, arch: &str) -> Result<PlatformFact
     pci_ids.dedup();
 
     let accel_node_present = has_accel_node(&paths.root.join("dev/accel"))?;
+    let process_status = read_bounded(paths, "proc/self/status", "PLATFORM_PROCESS_INVALID")?;
+    let effective_root = parse_effective_root(&process_status)?;
+    let proc_stat = read_bounded(paths, "proc/stat", "PLATFORM_BOOT_TIME_INVALID")?;
+    let boot_time_epoch = parse_boot_time(&proc_stat)?;
 
     Ok(PlatformFacts {
         os_id: os.id,
@@ -71,7 +78,95 @@ pub fn detect_platform(paths: &PlatformPaths, arch: &str) -> Result<PlatformFact
         pci_ids,
         intel_vpu_loaded,
         accel_node_present,
+        effective_root,
+        boot_time_epoch,
     })
+}
+
+fn read_bounded(
+    paths: &PlatformPaths,
+    relative: &str,
+    invalid_code: &'static str,
+) -> Result<String, PlatformError> {
+    const LIMIT: usize = 1_048_576;
+    let mut file = File::open(paths.root.join(relative)).map_err(|error| {
+        PlatformError::new(
+            "PLATFORM_IO_ERROR",
+            format!("cannot read required platform fact {relative}: {error}"),
+        )
+    })?;
+    let mut bytes = Vec::new();
+    file.by_ref()
+        .take((LIMIT + 1) as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            PlatformError::new(
+                "PLATFORM_IO_ERROR",
+                format!("cannot read required platform fact {relative}: {error}"),
+            )
+        })?;
+    if bytes.len() > LIMIT {
+        return Err(PlatformError::new(
+            invalid_code,
+            "platform fact exceeds its byte limit",
+        ));
+    }
+    String::from_utf8(bytes)
+        .map_err(|_| PlatformError::new(invalid_code, "platform fact is not valid UTF-8"))
+}
+
+fn parse_effective_root(status: &str) -> Result<bool, PlatformError> {
+    let rows = status
+        .lines()
+        .filter_map(|line| line.strip_prefix("Uid:"))
+        .collect::<Vec<_>>();
+    if rows.len() != 1 {
+        return Err(PlatformError::new(
+            "PLATFORM_PROCESS_INVALID",
+            "process status must contain exactly one UID row",
+        ));
+    }
+    let fields = rows[0].split_ascii_whitespace().collect::<Vec<_>>();
+    if fields.len() != 4
+        || fields
+            .iter()
+            .any(|field| field.is_empty() || !field.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        return Err(PlatformError::new(
+            "PLATFORM_PROCESS_INVALID",
+            "process UID row is malformed",
+        ));
+    }
+    let effective = fields[1].parse::<u32>().map_err(|_| {
+        PlatformError::new("PLATFORM_PROCESS_INVALID", "effective UID is out of range")
+    })?;
+    Ok(effective == 0)
+}
+
+fn parse_boot_time(stat: &str) -> Result<u64, PlatformError> {
+    let rows = stat
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.split_ascii_whitespace();
+            (fields.next() == Some("btime")).then(|| fields.collect::<Vec<_>>())
+        })
+        .collect::<Vec<_>>();
+    if rows.len() != 1 || rows[0].len() != 1 {
+        return Err(PlatformError::new(
+            "PLATFORM_BOOT_TIME_INVALID",
+            "process statistics must contain one exact boot-time row",
+        ));
+    }
+    let value = rows[0][0];
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(PlatformError::new(
+            "PLATFORM_BOOT_TIME_INVALID",
+            "boot time is malformed",
+        ));
+    }
+    value
+        .parse()
+        .map_err(|_| PlatformError::new("PLATFORM_BOOT_TIME_INVALID", "boot time is out of range"))
 }
 
 fn read(paths: &PlatformPaths, relative: &str) -> Result<String, PlatformError> {

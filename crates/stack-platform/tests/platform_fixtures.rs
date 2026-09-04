@@ -45,6 +45,16 @@ fn platform_fixture() -> TempDir {
         "proc/modules",
         "intel_vpu 123 0 - Live 0x00000000\nintel_vpu_aux 1 0 - Live 0x0\n",
     );
+    write(
+        fixture.path(),
+        "proc/self/status",
+        "Name:\tfixture\nUid:\t4242\t4242\t4242\t4242\n",
+    );
+    write(
+        fixture.path(),
+        "proc/stat",
+        "cpu  1 2 3 4 5 6 7 8 9 10\nbtime 1700000000\n",
+    );
     add_pci(fixture.path(), "0000:00:0b.0", "0x8086\n", "0xABCD\n");
     write(fixture.path(), "dev/accel/accel0", "");
     fixture
@@ -103,6 +113,87 @@ fn detect_exact_platform_facts_from_fixture_root() {
     assert_eq!(facts.pci_ids[0].device, "abcd");
     assert!(facts.intel_vpu_loaded);
     assert!(facts.accel_node_present);
+    assert!(!facts.effective_root);
+    assert_eq!(facts.boot_time_epoch, 1_700_000_000);
+}
+
+#[test]
+fn parse_effective_uid_without_retaining_identity() {
+    let fixture = platform_fixture();
+    write(
+        fixture.path(),
+        "proc/self/status",
+        "Name:\tfixture\nUid:\t4242\t0\t4242\t4242\n",
+    );
+    let facts = detect_platform(
+        &PlatformPaths {
+            root: fixture.path().to_path_buf(),
+        },
+        "x86_64",
+    )
+    .expect("fixture platform must be detected");
+    assert!(facts.effective_root);
+    assert!(!format!("{facts:?}").contains("4242"));
+}
+
+#[test]
+fn reject_missing_duplicate_or_malformed_effective_uid() {
+    for status in [
+        "Name:\tfixture\n",
+        "Uid:\t1\t1\t1\t1\nUid:\t1\t1\t1\t1\n",
+        "Uid:\t1\tnot-decimal\t1\t1\n",
+        "Uid:\t1\t1\t1\n",
+    ] {
+        let fixture = platform_fixture();
+        write(fixture.path(), "proc/self/status", status);
+        let error = detect_platform(
+            &PlatformPaths {
+                root: fixture.path().to_path_buf(),
+            },
+            "x86_64",
+        )
+        .expect_err("invalid effective UID record must fail");
+        assert_eq!(error.code, "PLATFORM_PROCESS_INVALID");
+    }
+}
+
+#[test]
+fn parse_one_exact_boot_time() {
+    let fixture = platform_fixture();
+    write(
+        fixture.path(),
+        "proc/stat",
+        "cpu 1 2 3 4\nbtime 987654321\n",
+    );
+    let facts = detect_platform(
+        &PlatformPaths {
+            root: fixture.path().to_path_buf(),
+        },
+        "x86_64",
+    )
+    .expect("fixture platform must be detected");
+    assert_eq!(facts.boot_time_epoch, 987_654_321);
+}
+
+#[test]
+fn reject_missing_duplicate_or_malformed_boot_time() {
+    for stat in [
+        "cpu 1 2 3 4\n",
+        "btime 1\nbtime 2\n",
+        "btime -1\n",
+        "btime 1 trailing\n",
+    ] {
+        let fixture = platform_fixture();
+        write(fixture.path(), "proc/stat", stat);
+        let error = detect_platform(
+            &PlatformPaths {
+                root: fixture.path().to_path_buf(),
+            },
+            "x86_64",
+        )
+        .expect_err("invalid boot-time record must fail");
+        assert_eq!(error.code, "PLATFORM_BOOT_TIME_INVALID");
+    }
 }
 
 #[test]

@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 #![forbid(unsafe_code)]
 
+mod activity;
+mod device;
 mod package;
 mod process;
 mod protocol;
 mod strict_json;
 
+pub use activity::{
+    ActivationInspection, ActivationState, BusyCounterSnapshot, BusyCounters, evaluate_activity,
+    inspect_activation, read_busy_counters,
+};
+pub use device::{DeviceInspection, inspect_devices};
 pub use package::{InstalledPackage, PackageInspection, PackageInspector, RpmPackageInspector};
 pub use process::{
     ProcessError, ProcessOutput, ProcessRequest, ProcessRunner, SystemProcessRunner, Termination,
