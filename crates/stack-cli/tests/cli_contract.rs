@@ -21,13 +21,18 @@ fn write(root: &Path, relative: &str, contents: &str) {
 
 fn profile_toml(status: &str) -> String {
     let qualification = if status == "qualified" {
-        r#"
+        format!(
+            r#"
 [qualification]
 evidence_id = "fixture-evidence-001"
+evidence_sha256 = "{HASH}"
 qualified_at = "2026-09-03T19:00:00Z"
+hardware_class = "fixture-lunar-lake-class"
+test_suite_version = "fixture-suite-v1"
 "#
+        )
     } else {
-        ""
+        String::new()
     };
     let mut components = String::new();
     for name in [
@@ -39,7 +44,7 @@ qualified_at = "2026-09-03T19:00:00Z"
         "openvino_npu_plugin",
     ] {
         components.push_str(&format!(
-            "\n[components.{name}]\nversion = \"1.0.0\"\nsource = \"https://example.invalid/{name}\"\nsha256 = \"{HASH}\"\n"
+            "\n[components.{name}]\nversion = \"1.0.0\"\nsource = \"https://example.invalid/{name}\"\nsha256 = \"{HASH}\"\n\n[components.{name}.provider]\npackage = \"fixture-{name}\"\nversion = \"0:1.0.0-1.fc44\"\nactivation = \"immediate\"\n\n[[components.{name}.provider.files]]\npath = \"/usr/lib64/{name}.fixture.so\"\nsha256 = \"{HASH}\"\n\n[components.{name}.license]\nexpression = \"Apache-2.0\"\nredistribution = \"allowed\"\nevidence_sha256 = \"{HASH}\"\n"
         ));
     }
     format!(
@@ -47,6 +52,11 @@ qualified_at = "2026-09-03T19:00:00Z"
 id = "testos-profile"
 stack_release = "0.1.0"
 status = "{status}"
+package_manager = "rpm"
+
+[[conflicts]]
+package = "fixture-conflicting-driver"
+resolution = "remove"
 
 [platform]
 id = "testos"
@@ -150,7 +160,7 @@ fn status_human_reports_no_compatible_profile() {
     let (code, stdout, stderr) = invoke(&fixture, &["intel-npu-stack", "status"]);
     assert_eq!(code, ExitCode::from(1));
     assert!(stdout.contains("overall: failed\n"));
-    assert!(stdout.contains("no compatible profile"));
+    assert!(stdout.contains("platform.profile [fail]: Compatible platform profile is selected"));
     assert_eq!(stderr, "");
 }
 
@@ -163,8 +173,13 @@ fn status_json_matches_schema_version_one() {
 
     assert_eq!(code, ExitCode::SUCCESS);
     assert_eq!(value["schema_version"], 1);
-    assert_eq!(value["stack_version"], "0.1.0");
-    assert_eq!(value["profile_id"], "testos-profile");
+    assert_eq!(value["tool_version"], "0.1.0");
+    assert_eq!(value["command"], "status");
+    assert_eq!(value["profile"]["id"], "testos-profile");
+    assert_eq!(value["profile"]["stack_release"], "0.1.0");
+    assert_eq!(value["profile"]["status"], "qualified");
+    assert_eq!(value["reboot_required"], false);
+    assert_eq!(value["relogin_required"], false);
     assert_eq!(value["overall"], "passed");
     assert_eq!(stderr, "");
     assert!(stdout.ends_with('\n'));
@@ -199,11 +214,10 @@ fn doctor_json_contains_two_blocked_runtime_checks() {
     assert_eq!(code, ExitCode::from(1));
     assert_eq!(value["overall"], "blocked");
     assert_eq!(runtime.len(), 2);
-    assert!(runtime.iter().all(|check| check["required"] == true));
     assert!(runtime.iter().all(|check| check["status"] == "blocked"));
-    assert!(runtime.iter().all(|check| {
-        check["message"] == "runtime probe is not implemented in foundation phase"
-    }));
+    assert!(runtime.iter().all(|check| check.get("required").is_none()));
+    assert!(runtime.iter().all(|check| check.get("message").is_none()));
+    assert_eq!(runtime[0].as_object().expect("check object").len(), 4);
     assert_eq!(stderr, "");
 }
 

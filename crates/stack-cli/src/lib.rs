@@ -10,8 +10,8 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use stack_core::{
-    Channel, CheckStatus, DiagnosticCheck, DiagnosticReport, OverallStatus, PlatformSummary,
-    SelectionError, SelectionPolicy, select_profile,
+    Channel, CheckStatus, DiagnosticCheck, DiagnosticCommand, DiagnosticReport, OverallStatus,
+    PlatformSummary, ProfileSummary, Requirement, SelectionError, SelectionPolicy, select_profile,
 };
 use stack_platform::{PlatformFacts, PlatformPaths, detect_platform};
 use stack_schema::Profile;
@@ -111,6 +111,11 @@ fn run_diagnostic(
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> ExitCode {
+    let command = if doctor {
+        DiagnosticCommand::Doctor
+    } else {
+        DiagnosticCommand::Status
+    };
     let channel = Channel::from(args.channel);
     if channel == Channel::Stable && args.accept_experimental_risk {
         return write_cli_error(
@@ -139,16 +144,20 @@ fn run_diagnostic(
     };
 
     let selection = select_profile(&profiles, &facts, &policy);
-    let mut report = base_report(channel, &facts);
+    let mut report = base_report(command, &facts);
     match selection {
         Ok(profile) => {
-            report.profile_id = Some(profile.id.clone());
+            report.profile = Some(ProfileSummary {
+                id: profile.id.clone(),
+                stack_release: profile.stack_release.clone(),
+                status: profile.status,
+            });
             report.checks.push(DiagnosticCheck {
                 id: "platform.profile".to_owned(),
-                required: true,
                 status: CheckStatus::Pass,
-                message: format!("compatible profile {} selected", profile.id),
+                summary: "Compatible platform profile is selected".to_owned(),
                 details: BTreeMap::new(),
+                requirement: Requirement::Required,
             });
             if doctor {
                 add_foundation_runtime_checks(&mut report);
@@ -157,10 +166,10 @@ fn run_diagnostic(
         Err(SelectionError::NoCompatibleProfile) => {
             report.checks.push(DiagnosticCheck {
                 id: "platform.profile".to_owned(),
-                required: true,
                 status: CheckStatus::Fail,
-                message: "no compatible profile".to_owned(),
+                summary: "Compatible platform profile is selected".to_owned(),
                 details: BTreeMap::new(),
+                requirement: Requirement::Required,
             });
         }
         Err(SelectionError::RiskAcknowledgementRequired) => {
@@ -230,13 +239,13 @@ fn load_profiles(directory: &Path) -> Result<Vec<Profile>, String> {
         .collect()
 }
 
-fn base_report(channel: Channel, facts: &PlatformFacts) -> DiagnosticReport {
+fn base_report(command: DiagnosticCommand, facts: &PlatformFacts) -> DiagnosticReport {
     DiagnosticReport {
         schema_version: 1,
-        stack_version: env!("CARGO_PKG_VERSION").to_owned(),
-        profile_id: None,
-        channel,
+        tool_version: env!("CARGO_PKG_VERSION").to_owned(),
+        command,
         overall: OverallStatus::Blocked,
+        profile: None,
         platform: PlatformSummary {
             os_id: facts.os_id.clone(),
             os_version_id: facts.os_version_id.clone(),
@@ -251,18 +260,23 @@ fn base_report(channel: Channel, facts: &PlatformFacts) -> DiagnosticReport {
                 .map(|id| format!("{}:{}", id.vendor, id.device))
                 .collect(),
         },
+        reboot_required: false,
+        relogin_required: false,
         checks: Vec::new(),
     }
 }
 
 fn add_foundation_runtime_checks(report: &mut DiagnosticReport) {
-    for id in ["runtime.level_zero", "runtime.openvino"] {
+    for (id, summary) in [
+        ("runtime.level_zero", "Level Zero exposes an Intel VPU"),
+        ("runtime.openvino", "OpenVINO exposes an NPU device"),
+    ] {
         report.checks.push(DiagnosticCheck {
             id: id.to_owned(),
-            required: true,
             status: CheckStatus::Blocked,
-            message: "runtime probe is not implemented in foundation phase".to_owned(),
+            summary: summary.to_owned(),
             details: BTreeMap::new(),
+            requirement: Requirement::Required,
         });
     }
 }
@@ -273,22 +287,35 @@ fn write_json(output: &mut dyn Write, report: &DiagnosticReport) -> std::io::Res
 }
 
 fn write_human(output: &mut dyn Write, report: &DiagnosticReport) -> std::io::Result<()> {
+    writeln!(output, "command: {}", command_name(report.command))?;
     writeln!(output, "overall: {}", overall_name(report.overall))?;
     writeln!(
         output,
         "profile: {}",
-        report.profile_id.as_deref().unwrap_or("none")
+        report
+            .profile
+            .as_ref()
+            .map_or("none", |profile| &profile.id)
     )?;
+    writeln!(output, "reboot required: {}", report.reboot_required)?;
+    writeln!(output, "relogin required: {}", report.relogin_required)?;
     for check in &report.checks {
         writeln!(
             output,
             "{} [{}]: {}",
             check.id,
             check_name(check.status),
-            check.message
+            check.summary
         )?;
     }
     Ok(())
+}
+
+fn command_name(command: DiagnosticCommand) -> &'static str {
+    match command {
+        DiagnosticCommand::Status => "status",
+        DiagnosticCommand::Doctor => "doctor",
+    }
 }
 
 fn overall_name(status: OverallStatus) -> &'static str {
@@ -304,9 +331,8 @@ fn check_name(status: CheckStatus) -> &'static str {
     match status {
         CheckStatus::Pass => "pass",
         CheckStatus::Fail => "fail",
-        CheckStatus::Warning => "warning",
+        CheckStatus::Warn => "warn",
         CheckStatus::Blocked => "blocked",
-        CheckStatus::Skipped => "skipped",
     }
 }
 

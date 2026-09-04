@@ -5,4 +5,7 @@ mod matching;
 mod report;
 
 pub use matching::{Channel, SelectionError, SelectionPolicy, select_profile};
-pub use report::{CheckStatus, DiagnosticCheck, DiagnosticReport, OverallStatus, PlatformSummary};
+pub use report::{
+    CheckStatus, DiagnosticCheck, DiagnosticCommand, DiagnosticReport, OverallStatus,
+    PlatformSummary, ProfileSummary, Requirement,
+};

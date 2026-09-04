@@ -5,9 +5,12 @@ use std::collections::BTreeMap;
 use stack_core::{Channel, SelectionError, SelectionPolicy, select_profile};
 use stack_platform::PlatformFacts;
 use stack_schema::{
-    ComponentRequirement, KernelRange, KernelVersion, PciId, PlatformSelector, Profile,
-    ProfileStatus, QualificationRecord,
+    ActivationRequirement, ComponentRequirement, InstalledFile, KernelRange, KernelVersion,
+    LicenseRecord, NativeProvider, PackageManager, PciId, PlatformSelector, Profile, ProfileStatus,
+    QualificationRecord, RedistributionVerdict,
 };
+
+const HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 fn components() -> BTreeMap<String, ComponentRequirement> {
     [
@@ -25,8 +28,21 @@ fn components() -> BTreeMap<String, ComponentRequirement> {
             ComponentRequirement {
                 version: "1.0.0".to_owned(),
                 source: format!("https://example.invalid/{name}"),
-                sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-                    .to_owned(),
+                sha256: HASH.to_owned(),
+                provider: NativeProvider {
+                    package: format!("fixture-{name}"),
+                    version: "0:1.0.0-1.fc44".to_owned(),
+                    activation: ActivationRequirement::Immediate,
+                    files: vec![InstalledFile {
+                        path: format!("/usr/lib64/{name}.fixture.so"),
+                        sha256: HASH.to_owned(),
+                    }],
+                },
+                license: LicenseRecord {
+                    expression: "Apache-2.0".to_owned(),
+                    redistribution: RedistributionVerdict::Allowed,
+                    evidence_sha256: HASH.to_owned(),
+                },
             },
         )
     })
@@ -39,6 +55,8 @@ fn profile(id: &str, status: ProfileStatus) -> Profile {
         id: id.to_owned(),
         stack_release: "0.1.0".to_owned(),
         status,
+        package_manager: PackageManager::Rpm,
+        conflicts: Vec::new(),
         platform: PlatformSelector {
             id: "testos".to_owned(),
             version_id: "1".to_owned(),
@@ -56,7 +74,10 @@ fn profile(id: &str, status: ProfileStatus) -> Profile {
         components: components(),
         qualification: (status == ProfileStatus::Qualified).then(|| QualificationRecord {
             evidence_id: "fixture-evidence-001".to_owned(),
+            evidence_sha256: HASH.to_owned(),
             qualified_at: "2026-09-03T19:00:00Z".to_owned(),
+            hardware_class: "fixture-lunar-lake-class".to_owned(),
+            test_suite_version: "fixture-suite-v1".to_owned(),
         }),
     }
 }

@@ -2,24 +2,37 @@
 
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
+use stack_schema::ProfileStatus;
 
-use crate::Channel;
+/// Diagnostic operation that produced a report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiagnosticCommand {
+    Status,
+    Doctor,
+}
 
 /// Outcome of one diagnostic check.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CheckStatus {
     Pass,
+    Warn,
     Fail,
-    Warning,
     Blocked,
-    Skipped,
+}
+
+/// Internal aggregation weight for one check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Requirement {
+    Required,
+    Optional,
 }
 
 /// Aggregate diagnostic outcome.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OverallStatus {
     Passed,
@@ -29,19 +42,26 @@ pub enum OverallStatus {
 }
 
 /// One deterministic, machine-readable diagnostic result.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DiagnosticCheck {
     pub id: String,
-    pub required: bool,
     pub status: CheckStatus,
-    pub message: String,
+    pub summary: String,
     pub details: BTreeMap<String, Value>,
+    #[serde(skip)]
+    pub requirement: Requirement,
+}
+
+/// Selected profile identity included in a report.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ProfileSummary {
+    pub id: String,
+    pub stack_release: String,
+    pub status: ProfileStatus,
 }
 
 /// Privacy-preserving subset of platform facts included in reports.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PlatformSummary {
     pub os_id: String,
     pub os_version_id: String,
@@ -51,15 +71,16 @@ pub struct PlatformSummary {
 }
 
 /// Versioned diagnostic report shared by human and JSON CLI modes.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DiagnosticReport {
     pub schema_version: u32,
-    pub stack_version: String,
-    pub profile_id: Option<String>,
-    pub channel: Channel,
+    pub tool_version: String,
+    pub command: DiagnosticCommand,
     pub overall: OverallStatus,
+    pub profile: Option<ProfileSummary>,
     pub platform: PlatformSummary,
+    pub reboot_required: bool,
+    pub relogin_required: bool,
     pub checks: Vec<DiagnosticCheck>,
 }
 
@@ -70,14 +91,12 @@ impl DiagnosticReport {
         self.platform.pci_ids.sort();
         self.platform.pci_ids.dedup();
 
-        self.overall = if self
-            .checks
-            .iter()
-            .any(|check| check.required && check.status == CheckStatus::Fail)
-        {
+        self.overall = if self.checks.iter().any(|check| {
+            check.requirement == Requirement::Required && check.status == CheckStatus::Fail
+        }) {
             OverallStatus::Failed
         } else if self.checks.iter().any(|check| {
-            check.required && matches!(check.status, CheckStatus::Blocked | CheckStatus::Skipped)
+            check.requirement == Requirement::Required && check.status == CheckStatus::Blocked
         }) {
             OverallStatus::Blocked
         } else if self
@@ -92,7 +111,8 @@ impl DiagnosticReport {
     }
 
     /// Returns the stable diagnostic exit code after finalization.
-    pub fn exit_code(&self) -> u8 {
+    #[must_use]
+    pub const fn exit_code(&self) -> u8 {
         match self.overall {
             OverallStatus::Passed | OverallStatus::Degraded => 0,
             OverallStatus::Failed | OverallStatus::Blocked => 1,
