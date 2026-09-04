@@ -3,6 +3,7 @@ members = [
     "crates/stack-cli",
     "crates/stack-core",
     "crates/stack-platform",
+    "crates/stack-runtime",
     "crates/stack-schema",
     "xtask",
 ]

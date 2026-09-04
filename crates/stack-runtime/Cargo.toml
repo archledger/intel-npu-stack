@@ -1,0 +1,17 @@
+[package]
+name = "stack-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+stack-core = { path = "../stack-core" }
+stack-platform = { path = "../stack-platform" }
+stack-schema = { path = "../stack-schema" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

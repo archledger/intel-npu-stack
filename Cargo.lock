@@ -329,6 +329,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "stack-runtime"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "stack-core",
+ "stack-platform",
+ "stack-schema",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "stack-schema"
 version = "0.1.0"
 dependencies = [

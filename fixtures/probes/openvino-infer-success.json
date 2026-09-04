@@ -1,0 +1,1 @@
+{"schema_version":1,"probe":"openvino","mode":"infer","outcome":"pass","observations":{"available_devices":["CPU","NPU"],"execution_devices":["NPU"],"runtime_version":"2026.2.0","graph_id":"intel-npu-stack-neutral-v1","iterations":8,"tolerance":0.001},"error_code":null}

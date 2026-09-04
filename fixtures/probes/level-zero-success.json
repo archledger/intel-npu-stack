@@ -1,0 +1,1 @@
+{"schema_version":1,"probe":"level_zero","mode":"enumerate","outcome":"pass","observations":{"vpu_devices":[{"vendor_id":"8086","device_id":"abcd","driver_version":65536}]},"error_code":null}
