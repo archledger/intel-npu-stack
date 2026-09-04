@@ -102,7 +102,7 @@ url = "https://github.com/intel/linux-npu-driver.git"
 tag = "v1.35.0"
 commit = "fd49947db934dc67dda6f4287cec2664a303df27"
 archive_sha256 = "555cb411208c94542fc88f62f77797cf021e70edca2b6c9df6350e5259f25c04"
-license_expression = "MIT AND LicenseRef-Intel-NPU-Firmware"
+license_expression = "MIT AND LicenseRef-Intel-firmware"
 license_files = [
   "packaging/fedora/44/licenses/linux-npu-driver-LICENSE.md",
   "packaging/fedora/44/licenses/linux-npu-driver-firmware-COPYRIGHT",
