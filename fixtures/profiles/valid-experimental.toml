@@ -1,0 +1,48 @@
+schema_version = 1
+id = "testos-1-x86_64-8086-abcd-experimental"
+stack_release = "0.1.0"
+status = "experimental"
+
+[platform]
+id = "testos"
+version_id = "1"
+arch = "x86_64"
+
+[[hardware]]
+vendor = "8086"
+device = "abcd"
+
+[kernel]
+min = "6.10.0"
+max_exclusive = "6.20.0"
+module = "intel_vpu"
+
+[components.npu_firmware]
+version = "1.0.0"
+source = "https://example.invalid/npu-firmware"
+sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+[components.level_zero_loader]
+version = "1.0.0"
+source = "https://example.invalid/level-zero-loader"
+sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+[components.npu_userspace_driver]
+version = "1.0.0"
+source = "https://example.invalid/npu-userspace-driver"
+sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+
+[components.npu_compiler]
+version = "1.0.0"
+source = "https://example.invalid/npu-compiler"
+sha256 = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
+[components.openvino_runtime]
+version = "1.0.0"
+source = "https://example.invalid/openvino-runtime"
+sha256 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+[components.openvino_npu_plugin]
+version = "1.0.0"
+source = "https://example.invalid/openvino-npu-plugin"
+sha256 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"

@@ -4,6 +4,7 @@ members = [
     "crates/stack-core",
     "crates/stack-platform",
     "crates/stack-schema",
+    "xtask",
 ]
 resolver = "2"
 
