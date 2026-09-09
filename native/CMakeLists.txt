@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.25)
 project(intel_npu_stack_native LANGUAGES CXX)
 
 include(GNUInstallDirs)
+include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Hardening)
@@ -33,7 +34,7 @@ find_path(
   INTEL_NPU_LEVEL_ZERO_INCLUDE_DIR
   NAMES level_zero/ze_api.h
   PATHS "${INTEL_NPU_SDK_PREFIX_REAL}"
-  PATH_SUFFIXES level-zero/usr/include
+  PATH_SUFFIXES level-zero/usr/include include
   NO_DEFAULT_PATH
   REQUIRED
 )
@@ -41,7 +42,7 @@ find_library(
   INTEL_NPU_LEVEL_ZERO_LOADER
   NAMES ze_loader
   PATHS "${INTEL_NPU_SDK_PREFIX_REAL}"
-  PATH_SUFFIXES level-zero/usr/lib/x86_64-linux-gnu level-zero/usr/lib64 level-zero/usr/lib
+  PATH_SUFFIXES level-zero/usr/lib/x86_64-linux-gnu level-zero/usr/lib64 level-zero/usr/lib lib64 lib
   NO_DEFAULT_PATH
   REQUIRED
 )
@@ -49,7 +50,7 @@ find_file(
   INTEL_NPU_OPENVINO_CONFIG
   NAMES OpenVINOConfig.cmake
   PATHS "${INTEL_NPU_SDK_PREFIX_REAL}"
-  PATH_SUFFIXES openvino/runtime/cmake
+  PATH_SUFFIXES openvino/runtime/cmake lib64/cmake/openvino2026.2.0
   NO_DEFAULT_PATH
   REQUIRED
 )
@@ -71,7 +72,14 @@ get_target_property(
   IMPORTED_LOCATION_RELEASE
 )
 if(NOT INTEL_NPU_OPENVINO_RUNTIME)
-  message(FATAL_ERROR "OpenVINO runtime has no Release library")
+  get_target_property(
+    INTEL_NPU_OPENVINO_RUNTIME
+    openvino::runtime
+    IMPORTED_LOCATION_RELWITHDEBINFO
+  )
+endif()
+if(NOT INTEL_NPU_OPENVINO_RUNTIME)
+  message(FATAL_ERROR "OpenVINO runtime has no Release or RelWithDebInfo library")
 endif()
 intel_npu_require_in_sdk("${INTEL_NPU_OPENVINO_RUNTIME}" "OpenVINO runtime")
 get_filename_component(
@@ -81,8 +89,6 @@ get_filename_component(
 )
 
 set(CMAKE_SKIP_RPATH TRUE)
-
-enable_testing()
 
 add_library(intel_npu_json STATIC common/json_writer.cpp)
 target_include_directories(intel_npu_json PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -136,39 +142,41 @@ install(
   RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/intel-npu-stack"
 )
 
-add_executable(json_writer_test tests/json_writer_test.cpp)
-target_link_libraries(json_writer_test PRIVATE intel_npu_json)
-intel_npu_harden_target(json_writer_test)
-add_test(NAME json_writer COMMAND json_writer_test)
+if(BUILD_TESTING)
+  add_executable(json_writer_test tests/json_writer_test.cpp)
+  target_link_libraries(json_writer_test PRIVATE intel_npu_json)
+  intel_npu_harden_target(json_writer_test)
+  add_test(NAME json_writer COMMAND json_writer_test)
 
-add_executable(openvino_validation_test tests/openvino_validation_test.cpp)
-target_include_directories(openvino_validation_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(
-  openvino_validation_test
-  PRIVATE
-    intel_npu_openvino
-)
-intel_npu_harden_target(openvino_validation_test)
-add_test(NAME openvino_validation COMMAND openvino_validation_test)
-set_tests_properties(
-  openvino_validation
-  PROPERTIES
-    ENVIRONMENT_MODIFICATION
-      "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_OPENVINO_RUNTIME_DIR}"
-)
+  add_executable(openvino_validation_test tests/openvino_validation_test.cpp)
+  target_include_directories(openvino_validation_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(
+    openvino_validation_test
+    PRIVATE
+      intel_npu_openvino
+  )
+  intel_npu_harden_target(openvino_validation_test)
+  add_test(NAME openvino_validation COMMAND openvino_validation_test)
+  set_tests_properties(
+    openvino_validation
+    PROPERTIES
+      ENVIRONMENT_MODIFICATION
+        "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_OPENVINO_RUNTIME_DIR}"
+  )
 
-add_executable(level_zero_mapping_test tests/level_zero_mapping_test.cpp)
-target_link_libraries(level_zero_mapping_test PRIVATE intel_npu_level_zero)
-intel_npu_harden_target(level_zero_mapping_test)
-add_test(NAME level_zero_mapping COMMAND level_zero_mapping_test)
-get_filename_component(
-  INTEL_NPU_LEVEL_ZERO_LOADER_DIR
-  "${INTEL_NPU_LEVEL_ZERO_LOADER}"
-  DIRECTORY
-)
-set_tests_properties(
-  level_zero_mapping
-  PROPERTIES
-    ENVIRONMENT_MODIFICATION
-      "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_LEVEL_ZERO_LOADER_DIR}"
-)
+  add_executable(level_zero_mapping_test tests/level_zero_mapping_test.cpp)
+  target_link_libraries(level_zero_mapping_test PRIVATE intel_npu_level_zero)
+  intel_npu_harden_target(level_zero_mapping_test)
+  add_test(NAME level_zero_mapping COMMAND level_zero_mapping_test)
+  get_filename_component(
+    INTEL_NPU_LEVEL_ZERO_LOADER_DIR
+    "${INTEL_NPU_LEVEL_ZERO_LOADER}"
+    DIRECTORY
+  )
+  set_tests_properties(
+    level_zero_mapping
+    PROPERTIES
+      ENVIRONMENT_MODIFICATION
+        "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_LEVEL_ZERO_LOADER_DIR}"
+  )
+endif()

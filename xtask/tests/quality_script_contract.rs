@@ -37,7 +37,7 @@ mod unix {
             &cargo,
             r#"#!/bin/sh
 set -eu
-printf 'RUSTDOCFLAGS=%s ARGS=' "${RUSTDOCFLAGS-}" >> "$TRACE_PATH"
+printf 'CARGO_NET_OFFLINE=%s RUSTDOCFLAGS=%s ARGS=' "${CARGO_NET_OFFLINE-}" "${RUSTDOCFLAGS-}" >> "$TRACE_PATH"
 printf '%s|' "$@" >> "$TRACE_PATH"
 printf '\n' >> "$TRACE_PATH"
 "#,
@@ -47,7 +47,7 @@ printf '\n' >> "$TRACE_PATH"
             .expect("make fake cargo executable");
 
         let metadata = fs::metadata(&script).expect("quality script must exist");
-        assert_ne!(metadata.permissions().mode() & 0o111, 0);
+        assert_eq!(metadata.permissions().mode() & 0o777, 0o755);
 
         let output = Command::new(&script)
             .current_dir(fixture.path())
@@ -66,11 +66,11 @@ printf '\n' >> "$TRACE_PATH"
 
         let actual = fs::read_to_string(&trace).expect("read fake cargo trace");
         let expected = concat!(
-            "RUSTDOCFLAGS= ARGS=fmt|--all|--|--check|\n",
-            "RUSTDOCFLAGS= ARGS=clippy|--workspace|--all-targets|--locked|--|-D|warnings|\n",
-            "RUSTDOCFLAGS= ARGS=test|--workspace|--locked|\n",
-            "RUSTDOCFLAGS=-D warnings ARGS=doc|--workspace|--no-deps|--locked|\n",
-            "RUSTDOCFLAGS= ARGS=run|-p|xtask|--locked|--|validate-profiles|profiles|\n",
+            "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=fmt|--all|--|--check|\n",
+            "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=clippy|--workspace|--all-targets|--locked|--|-D|warnings|\n",
+            "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=test|--workspace|--locked|\n",
+            "CARGO_NET_OFFLINE=true RUSTDOCFLAGS=-D warnings ARGS=doc|--workspace|--no-deps|--locked|\n",
+            "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=run|-p|xtask|--locked|--|validate-profiles|profiles|\n",
         );
         assert_eq!(actual, expected);
         assert_eq!(sorted_names(fixture.path()), ["bin", "trace.log"]);
