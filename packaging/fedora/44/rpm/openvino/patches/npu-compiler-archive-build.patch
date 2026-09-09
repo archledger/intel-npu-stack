@@ -1,0 +1,200 @@
+From: Intel NPU Stack maintainers <maintainers@example.invalid>
+Date: Fri, 4 Sep 2026 08:40:00 -0400
+Subject: [PATCH] Adapt the compiler to sealed archives and Fedora dependencies
+
+The release inputs are deterministic archives with Git LFS objects already
+verified and materialized by the source bundler. Require the two locked commit
+identities as CMake inputs instead of consulting absent mutable Git metadata or
+running a network-capable `git lfs pull` during the package build. Map Fedora's
+system Level Zero and GTest targets to the names expected by the compiler.
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b2a013f..33e80cd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -170,6 +170,14 @@ endif()
+ 
+ add_subdirectory(thirdparty EXCLUDE_FROM_ALL)
+ 
++if(NOT TARGET openvino::ze_loader AND TARGET LevelZero::LevelZero)
++    add_library(openvino_npu_system_ze_loader INTERFACE)
++    target_link_libraries(openvino_npu_system_ze_loader INTERFACE LevelZero::LevelZero)
++    target_include_directories(openvino_npu_system_ze_loader INTERFACE
++        $<TARGET_PROPERTY:LevelZero::LevelZero,INTERFACE_INCLUDE_DIRECTORIES>)
++    add_library(openvino::ze_loader ALIAS openvino_npu_system_ze_loader)
++endif()
++
+ if(ENABLE_DEVELOPER_BUILD)
+     add_compile_definitions(VPUX_DEVELOPER_BUILD)
+ endif()
+@@ -199,4 +207,3 @@ endif()
+ #
+ 
+ ov_cpack(${NPU_CPACK_COMPONENTS_ALL})
+-
+
+diff --git a/cmake/compiler_commit_hash.cmake b/cmake/compiler_commit_hash.cmake
+index 7617a6d..c177a98 100644
+--- a/cmake/compiler_commit_hash.cmake
++++ b/cmake/compiler_commit_hash.cmake
+@@ -3,17 +3,11 @@
+ # SPDX-License-Identifier: Apache-2.0
+ #
+ 
+-execute_process(
+-    COMMAND
+-        git rev-parse HEAD
+-    WORKING_DIRECTORY ${REPO_DIR}
+-    OUTPUT_VARIABLE CURRENT_COMMIT_HASH
+-    OUTPUT_STRIP_TRAILING_WHITESPACE
+-    RESULT_VARIABLE ERROR_CODE
+-)
+-
+-if (NOT ${ERROR_CODE} EQUAL 0)
+-    message(FATAL_ERROR "Failed to capture compiler git commit.")
++string(LENGTH "${CURRENT_COMMIT_HASH}" CURRENT_COMMIT_HASH_LENGTH)
++if (NOT CURRENT_COMMIT_HASH_LENGTH EQUAL 40 OR
++    NOT CURRENT_COMMIT_HASH MATCHES "^[0-9a-f]+$")
++    message(FATAL_ERROR
++        "CURRENT_COMMIT_HASH must be the locked 40-character compiler commit")
+ endif()
+ 
+ set(LAST_COMMIT_HASH "")
+diff --git a/cmake/npu_compiler_version.cmake b/cmake/npu_compiler_version.cmake
+index 1db7b7f..057990e 100644
+--- a/cmake/npu_compiler_version.cmake
++++ b/cmake/npu_compiler_version.cmake
+@@ -5,11 +5,16 @@
+ 
+ # Function to configure NPU Compiler version properties
+ function(npu_compiler_configure_version TARGET_NAME)
+-    find_package(Git REQUIRED)
+-    ov_commit_hash(PLUGIN_GIT_COMMIT_HASH ${CMAKE_CURRENT_SOURCE_DIR})
++    string(LENGTH "${NPU_COMPILER_SOURCE_COMMIT}" NPU_COMPILER_SOURCE_COMMIT_LENGTH)
++    if (NOT NPU_COMPILER_SOURCE_COMMIT_LENGTH EQUAL 40 OR
++        NOT NPU_COMPILER_SOURCE_COMMIT MATCHES "^[0-9a-f]+$")
++        message(FATAL_ERROR
++            "NPU_COMPILER_SOURCE_COMMIT must be a locked 40-character commit")
++    endif()
++    string(SUBSTRING "${NPU_COMPILER_SOURCE_COMMIT}" 0 11 PLUGIN_GIT_COMMIT_HASH)
+ 
+     # On master branch or develop branch or HEAD, VPUX_GIT_BRANCH_POSTFIX is empty, otherwise it is "-branch_name-dirty"
+-    ov_branch_name(VPUX_GIT_BRANCH ${CMAKE_CURRENT_SOURCE_DIR})
++    set(VPUX_GIT_BRANCH HEAD)
+     if(NOT VPUX_GIT_BRANCH MATCHES "^(master|develop|HEAD)$")
+         set(VPUX_GIT_BRANCH_POSTFIX "-${VPUX_GIT_BRANCH}-dirty")
+     endif()
+diff --git a/cmake/prepare_cost_model_binary.cmake b/cmake/prepare_cost_model_binary.cmake
+index d1204fb..573300c 100644
+--- a/cmake/prepare_cost_model_binary.cmake
++++ b/cmake/prepare_cost_model_binary.cmake
+@@ -18,11 +18,6 @@ function(prepare_cost_model_binary SOURCE_FILE HEADER_FILE VARIABLE_NAME)
+         message(FATAL_ERROR "File '${SOURCE_FILE}' does not exist")
+     endif()
+ 
+-    find_package(Git QUIET REQUIRED)
+-    execute_process(
+-        COMMAND ${GIT_EXECUTABLE} lfs pull
+-        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/vpucostmodel")
+-
+     file(READ ${SOURCE_FILE} hex_string HEX)
+     string(LENGTH "${hex_string}" hex_string_length)
+ 
+diff --git a/src/vpux_compiler/CMakeLists.txt b/src/vpux_compiler/CMakeLists.txt
+index 33c3fc2..5cdc09b 100644
+--- a/src/vpux_compiler/CMakeLists.txt
++++ b/src/vpux_compiler/CMakeLists.txt
+@@ -75,6 +75,7 @@ set(COMMIT_HASH_CACHE ${CMAKE_CURRENT_BINARY_DIR}/include/vpux/compiler/compiler
+ add_custom_target(update_compiler_hash ALL
+     COMMAND ${CMAKE_COMMAND}
+         -D REPO_DIR=${PROJECT_SOURCE_DIR}
++        -D CURRENT_COMMIT_HASH=${NPU_COMPILER_SOURCE_COMMIT}
+         -D COMMIT_HASH_PATTERN=${COMMIT_HASH_PATTERN}
+         -D COMMIT_HASH_FILE=${COMMIT_HASH_FILE}
+         -D COMMIT_HASH_CACHE=${COMMIT_HASH_CACHE}
+diff --git a/src/vpux_driver_compiler/src/vpux_compiler_l0/CMakeLists.txt b/src/vpux_driver_compiler/src/vpux_compiler_l0/CMakeLists.txt
+index 2812a3d..58031af 100644
+--- a/src/vpux_driver_compiler/src/vpux_compiler_l0/CMakeLists.txt
++++ b/src/vpux_driver_compiler/src/vpux_compiler_l0/CMakeLists.txt
+@@ -15,10 +15,15 @@ add_library(${TARGET_NAME}
+         vcl_query_network.cpp
+ )
+ 
+-find_package(Git REQUIRED)
++string(LENGTH "${NPU_COMPILER_SOURCE_COMMIT}" NPU_COMPILER_SOURCE_COMMIT_LENGTH)
++if (NOT NPU_COMPILER_SOURCE_COMMIT_LENGTH EQUAL 40 OR
++    NOT NPU_COMPILER_SOURCE_COMMIT MATCHES "^[0-9a-f]+$")
++    message(FATAL_ERROR
++        "NPU_COMPILER_SOURCE_COMMIT must be a locked 40-character commit")
++endif()
+ 
+ # Use commit info to create compiler version
+-ov_commit_hash(PLUGIN_GIT_COMMIT_HASH ${CMAKE_CURRENT_SOURCE_DIR})
++string(SUBSTRING "${NPU_COMPILER_SOURCE_COMMIT}" 0 11 PLUGIN_GIT_COMMIT_HASH)
+ 
+ string(TIMESTAMP DATE_MAJOR "%m%d")
+ string(TIMESTAMP DATE_MINOR "%H%M%S")
+diff --git a/src/vpux_driver_compiler/test/functional/CMakeLists.txt b/src/vpux_driver_compiler/test/functional/CMakeLists.txt
+index 287a465..d81f04d 100644
+--- a/src/vpux_driver_compiler/test/functional/CMakeLists.txt
++++ b/src/vpux_driver_compiler/test/functional/CMakeLists.txt
+@@ -32,17 +32,9 @@ if(NOT TARGET gtest)
+         get_target_property(GTEST_MAIN_OV_PKG_INCLUDE_DIR openvino::gtest_main INTERFACE_INCLUDE_DIRECTORIES)
+         set_target_properties(gtest_main PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${GTEST_MAIN_OV_PKG_INCLUDE_DIR}")
+     else()
+-        # gtest used by OpenVINO doesn't support CMake4+
+-        # OpenVINO enables CMake4+ support by applying minimum CMake policy as below before gtest build
+-        # reuse the same work-around just for gtest build to enable CMake4+ support
+-        #
+-        # note: npuUnitTests don't need this work-around as it links against openvino::commonTestUtils
+-        # instead of building gtest by itself; attempt to do the same here fails CiD build due to
+-        # openvino::commonTestUtils not being exported in some cases
+-        cmake_policy(PUSH)
+-        set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+-        add_subdirectory(${OpenVINO_SOURCE_DIR}/thirdparty/gtest gtest)
+-        cmake_policy(POP)
++        find_package(GTest 1.17 CONFIG REQUIRED)
++        add_library(gtest ALIAS GTest::gtest)
++        add_library(gtest_main ALIAS GTest::gtest_main)
+     endif()
+ endif()
+ 
+diff --git a/thirdparty/elf/npu-loader/CMakeLists.txt b/thirdparty/elf/npu-loader/CMakeLists.txt
+index e6b0843..62ef240 100644
+--- a/thirdparty/elf/npu-loader/CMakeLists.txt
++++ b/thirdparty/elf/npu-loader/CMakeLists.txt
+@@ -14,6 +14,7 @@ set(NPU_LOADER_SHA_CACHE ${CMAKE_CURRENT_BINARY_DIR}/npu_loader_sha_cache.txt)
+ 
+ add_custom_target(npu_loader_update_version ALL
+     COMMAND ${CMAKE_COMMAND}
++        -D CURRENT_NPU_LOADER_SHA=${NPU_LOADER_SOURCE_COMMIT}
+         -D CMAKE_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+         -D NPU_LOADER_SHA_PATTERN=${NPU_LOADER_SHA_PATTERN}
+         -D NPU_LOADER_VERSION_FILE=${NPU_LOADER_VERSION_FILE}
+diff --git a/thirdparty/elf/npu-loader/cmake/npu_loader_version.cmake b/thirdparty/elf/npu-loader/cmake/npu_loader_version.cmake
+index 7c378de..311502a 100644
+--- a/thirdparty/elf/npu-loader/cmake/npu_loader_version.cmake
++++ b/thirdparty/elf/npu-loader/cmake/npu_loader_version.cmake
+@@ -3,17 +3,11 @@
+ # SPDX-License-Identifier: Apache-2.0
+ #
+ 
+-execute_process(
+-    COMMAND
+-        git rev-parse HEAD
+-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+-    OUTPUT_VARIABLE CURRENT_NPU_LOADER_SHA
+-    OUTPUT_STRIP_TRAILING_WHITESPACE
+-    RESULT_VARIABLE ERROR_CODE
+-)
+-
+-if (NOT ${ERROR_CODE} EQUAL 0)
+-    message(FATAL_ERROR "Failed to retrieve version")
++string(LENGTH "${CURRENT_NPU_LOADER_SHA}" CURRENT_NPU_LOADER_SHA_LENGTH)
++if (NOT CURRENT_NPU_LOADER_SHA_LENGTH EQUAL 40 OR
++    NOT CURRENT_NPU_LOADER_SHA MATCHES "^[0-9a-f]+$")
++    message(FATAL_ERROR
++        "CURRENT_NPU_LOADER_SHA must be the locked 40-character loader commit")
+ endif()
+ 
+ set(LAST_NPU_LOADER_SHA "")

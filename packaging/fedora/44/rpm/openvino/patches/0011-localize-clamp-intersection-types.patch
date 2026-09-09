@@ -1,0 +1,49 @@
+Subject: [PATCH] Keep architecture-specific clamp result types local
+
+The pinned compiler 6a7a7c531f54baed1dddfda1b80299413c4c6943 defines
+ClampIntersectionResult at global scope in NPU37XX and NPU50XX, with
+incompatible field types. GCC 16.2.1 reproduces the One Definition Rule
+violation when linking the two real objects with LTO.
+
+Give each private result type translation-unit identity. Preserve all fields,
+clamp arithmetic and call sites. No warning option is disabled.
+Regression: check-clamp-odr.py links the actual built objects with strict LTO
+ODR diagnostics. The original objects fail; objects must retain LTO metadata.
+
+--- a/src/vpux_compiler/src/NPU37XX/dialect/VPU/impl/ppe_factory.cpp
++++ b/src/vpux_compiler/src/NPU37XX/dialect/VPU/impl/ppe_factory.cpp
+@@ -130,11 +130,15 @@
+     }
+ }
+ 
++namespace {
++
+ struct ClampIntersectionResult {
+     int32_t low;
+     int32_t high;
+     PPEMode mode;
+ };
++
++}  // namespace
+ 
+ static ClampIntersectionResult calcClampIntersection(const int32_t currentLow, const int32_t currentHigh,
+                                                      const double newLow, const double newHigh,
+--- a/src/vpux_compiler/src/NPU50XX/dialect/VPU/impl/ppe_factory.cpp
++++ b/src/vpux_compiler/src/NPU50XX/dialect/VPU/impl/ppe_factory.cpp
+@@ -305,12 +305,16 @@
+     }
+ }
+ 
++namespace {
++
+ struct ClampIntersectionResult {
+     double low;
+     double high;
+     PPEMode mode;
+     double adder;
+ };
++
++}  // namespace
+ 
+ static ClampIntersectionResult calcClampIntersection(const double currentLow, const double currentHigh,
+                                                      const double newLow, const double newHigh,

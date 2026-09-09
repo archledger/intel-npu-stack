@@ -1,0 +1,36 @@
+Subject: [PATCH] Make wrapper metadata serialization a direct LTO input
+
+With GCC 16.2.1 and binutils 2.46.1, the wrapper link extracts the VPUMI37XX
+network_metadata.cpp object from its archive after LTO symbol selection.
+Its native references to ELF Logger, RuntimeError and a Hashtable destructor
+then remain unresolved, although definitions exist in the LTO inputs.
+
+The original link fails both serially and with a regular archive. Including
+the same metadata object directly before archive scanning links successfully;
+the map confirms its plugin references select ELF definitions at that stage.
+Build this serialization source directly into the wrapper. The existing
+archive remains available for other consumers; linker flags, warnings and
+dependencies are unchanged. This avoids a global archive or optimization
+change and does not depend on generated object-file paths.
+
+Regression: the actual level_zero_wrapper target must link with its generated
+Fedora RPM flags. The unmodified target fails on the three references above.
+
+--- a/src/mlir_runtime/level_zero_wrapper/CMakeLists.txt
++++ b/src/mlir_runtime/level_zero_wrapper/CMakeLists.txt
+@@ -8,12 +8,15 @@
+ add_library(${TARGET_NAME} SHARED
+     level_zero_wrapper.h
+     level_zero_wrapper.cpp
++    # Keep this object visible to GCC LTO before archive-member selection.
++    ${PROJECT_SOURCE_DIR}/src/vpux_compiler/src/dialect/VPUMI37XX/ops/network_metadata.cpp
+ )
+ if(WIN32)
+     target_compile_definitions(${TARGET_NAME} PRIVATE NPU_I_API_DLL)
+ endif()
+ 
+ target_include_directories(${TARGET_NAME} PRIVATE
++    $<TARGET_PROPERTY:npu_compiler_dialect_vpumi37xx,INCLUDE_DIRECTORIES>
+     ${PROJECT_SOURCE_DIR}/src/vpux_compiler/include
+     ${PROJECT_SOURCE_DIR}/src/vpux_utils/include
+     ${MLIR_INCLUDE_DIRS}

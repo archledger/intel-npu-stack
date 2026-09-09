@@ -1,0 +1,26 @@
+Subject: [PATCH] Remove disable of a pass absent from pinned OpenVINO 2026.2
+
+This packaging patch applies only to the sealed OpenVINO 2026.2.0 source
+52ddc07385712456dd9f8c5ecf05d7e49c6da329. Its transpose_sinking.hpp neither
+declares TransposeFQ nor registers it in TransposeSinking. The compiler's
+validation/openvino_config.json instead names revision
+4089686065a245d648cdd2b99c31884f53cb7a5e, which contains that pass.
+Remove the obsolete disable call; do not replace it with TransposeFQReduction
+or TransposeFuse, which are distinct passes and remain unchanged.
+Reference: https://github.com/openvinotoolkit/openvino/blob/52ddc07385712456dd9f8c5ecf05d7e49c6da329/src/common/transformations/include/transformations/common_optimizations/transpose_sinking.hpp
+Reference: https://github.com/openvinotoolkit/openvino/blob/4089686065a245d648cdd2b99c31884f53cb7a5e/src/common/transformations/include/transformations/common_optimizations/transpose_sinking.hpp
+
+Regression: check-compatibility.py compiles the actual affected translation
+units with their generated release flags. Original units fail in the retained
+September 7 diagnostic build. No warning option is changed.
+
+--- a/src/vpux_compiler/src/frontend/IE.cpp
++++ b/src/vpux_compiler/src/frontend/IE.cpp
+@@ -5844,7 +5844,6 @@
+     pass_config->disable<ov::pass::FakeQuantizeMulFusion>();
+     pass_config->disable<ov::pass::MulFakeQuantizeFusion>();
+     pass_config->disable<ov::pass::MultiplyConvolutionFusion>();
+-    pass_config->disable<ov::pass::TransposeFQ>();
+ 
+     // NMS conversion passes
+     manager.register_pass<ov::pass::ConvertNMS1ToNMS9>();

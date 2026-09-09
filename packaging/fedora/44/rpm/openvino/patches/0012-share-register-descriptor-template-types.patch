@@ -1,0 +1,30 @@
+Subject: [PATCH] Give shared register descriptor templates consistent identity
+
+The pinned compiler 6a7a7c531f54baed1dddfda1b80299413c4c6943 declares
+FieldTemplate, RegisterTemplate and DescriptorTemplate in an anonymous
+namespace inside a shared header. Generated named register types inherit
+these translation-unit-local bases. DMA composers and their callers therefore
+disagree on the identity of the returned descriptor types.
+
+Keep the templates in the existing named detail namespace. Preserve all
+members, layout expressions and serialization logic. No warning is disabled.
+Both freshly compiled NPU40XX/NPU50XX composer/caller pairs reproduce the
+original failure with -Werror=odr during a partial LTO link.
+
+--- a/src/vpux_compiler/include/vpux/compiler/dialect/VPURegMapped/descriptors.hpp
++++ b/src/vpux_compiler/include/vpux/compiler/dialect/VPURegMapped/descriptors.hpp
+@@ -41,8 +41,6 @@
+ namespace vpux::VPURegMapped::detail {
+ 
+ std::pair<mlir::ParseResult, std::optional<elf::Version>> parseVersion(mlir::AsmParser&);
+-
+-namespace {
+ 
+ constexpr auto FLOAT16_BIT_SIZE = sizeof(uint16_t) * CHAR_BIT;
+ constexpr auto FLOAT32_BIT_SIZE = sizeof(float) * CHAR_BIT;
+@@ -762,5 +760,4 @@
+     return descriptor.hashValue();
+ }
+ 
+-}  // namespace
+ }  // namespace vpux::VPURegMapped::detail

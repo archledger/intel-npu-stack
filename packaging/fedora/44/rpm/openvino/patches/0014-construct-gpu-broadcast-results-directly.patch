@@ -1,0 +1,67 @@
+Subject: [PATCH] Construct GPU broadcast inference results directly
+
+The pinned GCC 16.2.1 build diagnoses free-nonheap-object in the move
+assignment that replaces a preinitialized vector<PartialShape>. That vector
+is discarded in either constant-target branch. Return each branch result
+from an immediately invoked lambda so the output vector is initialized
+once. Preserve shape inference, memory-lock scopes, format selection and
+the dynamic-shape fallback. All warning and optimization flags remain.
+
+--- a/src/plugins/intel_gpu/src/graph/broadcast.cpp
++++ b/src/plugins/intel_gpu/src/graph/broadcast.cpp
+@@ -59,7 +59,6 @@
+ 
+     ShapeType pattern_shape = impl_param.input_layouts.size() == 2 ? impl_param.get_input_layout(1).get<ShapeType>()
+                                                                    : ShapeType(ov::Shape{ target_shape.size() });
+-    std::vector<ShapeType> output_shapes = {ShapeType{}};
+     std::vector<ShapeType> input_shapes = {
+         input0_layout.get<ShapeType>(),
+         pattern_shape
+@@ -77,25 +76,28 @@
+         const_data.emplace(2, axes_mapping_tensor);
+     }
+ 
+-    auto& constant_mem = impl_param.memory_deps;
+-    if (constant_mem.count(1)) {
+-        auto target_shape_mem = constant_mem.at(1);
+-        cldnn::mem_lock<uint8_t, mem_lock_type::read> target_shape_lock(target_shape_mem, impl_param.get_stream());
+-        const_data.emplace(1, make_tensor(target_shape_mem->get_layout(), target_shape_lock.data()));
+-        output_shapes = ov::op::v3::shape_infer(&op, input_shapes, ov::make_tensor_accessor(const_data));
+-    } else if (impl_param.input_layouts.size() == 1) {
+-        // predefined pattern shape
+-        auto target_shape_tensor = make_tensor({pattern_shape, data_types::i64, format::bfyx}, static_cast<void*>(target_shape.data()));
+-        const_data.emplace(1, target_shape_tensor);
+-        output_shapes = ov::op::v3::shape_infer(&op, input_shapes, ov::make_tensor_accessor(const_data));
+-    } else if (impl_param.input_layouts.size() >= 2) {
+-        auto input1 = impl_param.get_input_layout(1);
+-        auto output_rank = input1.get<ShapeType>().size();
+-        if (input1.is_static()) {
+-            output_rank = input1.get_dim(0);    // target shape rank is set as second input.
+-        }
+-        output_shapes[0] = desc->output_pshape.rank().is_static() ? desc->output_pshape : ShapeType::dynamic(std::max(static_cast<int>(output_rank), 1));
+-    }
++    auto output_shapes = [&]() -> std::vector<ShapeType> {
++        auto& constant_mem = impl_param.memory_deps;
++        if (constant_mem.count(1)) {
++            auto target_shape_mem = constant_mem.at(1);
++            cldnn::mem_lock<uint8_t, mem_lock_type::read> target_shape_lock(target_shape_mem, impl_param.get_stream());
++            const_data.emplace(1, make_tensor(target_shape_mem->get_layout(), target_shape_lock.data()));
++            return ov::op::v3::shape_infer(&op, input_shapes, ov::make_tensor_accessor(const_data));
++        } else if (impl_param.input_layouts.size() == 1) {
++            // predefined pattern shape
++            auto target_shape_tensor = make_tensor({pattern_shape, data_types::i64, format::bfyx}, static_cast<void*>(target_shape.data()));
++            const_data.emplace(1, target_shape_tensor);
++            return ov::op::v3::shape_infer(&op, input_shapes, ov::make_tensor_accessor(const_data));
++        } else if (impl_param.input_layouts.size() >= 2) {
++            auto input1 = impl_param.get_input_layout(1);
++            auto output_rank = input1.get<ShapeType>().size();
++            if (input1.is_static()) {
++                output_rank = input1.get_dim(0);    // target shape rank is set as second input.
++            }
++            return {desc->output_pshape.rank().is_static() ? desc->output_pshape : ShapeType::dynamic(std::max(static_cast<int>(output_rank), 1))};
++        }
++        return {ShapeType{}};
++    }();
+ 
+     format output_format = format::adjust_to_rank(input0_layout.format, output_shapes[0].size());
+ 

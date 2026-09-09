@@ -1,0 +1,25 @@
+Subject: [PATCH] Remove unused counter from repeating-call output validation
+
+CallSiteAnalyzer::ensureValidRepeatingCall iterates output operands through
+OperandRange2D. Its loop counter is never read, including in assertion-enabled
+builds. GCC 16.2.1 rejects the pass with -Werror=unused-but-set-variable.
+
+Remove only the unused declaration and increment. Keep range advancement,
+termination, output tracking, and duplicate-output rejection unchanged.
+No compiler warning option is changed.
+
+Regression: check-repeating-calls.py compiles the actual translation unit
+using Ninja's generated command, then repeats with assertions enabled.
+The original source fails the release compile with the expected diagnostic.
+
+--- a/src/vpux_compiler/src/dialect/VPUIP/transforms/passes/legalize_repeating_func_calls.cpp
++++ b/src/vpux_compiler/src/dialect/VPUIP/transforms/passes/legalize_repeating_func_calls.cpp
+@@ -249,7 +249,7 @@
+             const bool firstTimeSeenValue = memorizedOutputs.insert(*x).second;
+             return !firstTimeSeenValue;
+         };
+-        for (size_t i = 0; !argsAcrossCallSites.empty(); OperandRange2D::advance(argsAcrossCallSites), ++i) {
++        for (; !argsAcrossCallSites.empty(); OperandRange2D::advance(argsAcrossCallSites)) {
+             const auto ithOutputs = argsAcrossCallSites.get();
+             auto it = llvm::find_if(ithOutputs, visitValue);
+             // this is currently not supported

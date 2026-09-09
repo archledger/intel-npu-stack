@@ -1,0 +1,24 @@
+Subject: [PATCH] Preserve format checks in extra-module compiler flags
+
+OpenVINO 2026.2.0 appends -Wno-all for extra modules. Fedora 44 supplies
+-Werror=format-security, which requires -Wformat. GCC 16.2.1 consequently
+rejects even safe C/C++ source before compilation in the NPU compiler.
+Keep format checking enabled without removing Fedora's security error flag.
+
+Regression: check-format-security.py invokes this actual macro in a CMake
+project: safe C/C++ must compile and unsafe printf calls must fail specifically
+on -Werror=format-security. The retained build's failed NPU object commands
+provide the integration reproduction.
+
+--- a/cmake/developer_package/compile_flags/functions.cmake
++++ b/cmake/developer_package/compile_flags/functions.cmake
+@@ -43,7 +43,8 @@
+ #
+ macro(ov_dev_package_no_errors)
+     if(OV_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_GNUCXX OR (OV_COMPILER_IS_INTEL_LLVM AND UNIX))
+-        set(ov_c_cxx_dev_no_errors "-Wno-all")
++        # Preserve format checking required by distro -Werror=format-security.
++        set(ov_c_cxx_dev_no_errors "-Wno-all -Wformat")
+         if(SUGGEST_OVERRIDE_SUPPORTED)
+             set(ov_cxx_dev_no_errors "-Wno-error=suggest-override")
+         endif()

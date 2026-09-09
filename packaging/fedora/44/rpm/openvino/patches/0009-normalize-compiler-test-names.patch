@@ -1,0 +1,33 @@
+Subject: [PATCH] Generate valid unique GoogleTest parameter names
+
+The sealed compiler test harness emits names such as mobilenet-v2_VPUX.3720.
+System GoogleTest 1.17 rejects punctuation before any tests can run. Normalize
+names to ASCII letters, digits and underscores, and append the parameter index
+to avoid collisions after normalization. Parameters and test bodies are unchanged.
+
+Applies to NPU compiler 6a7a7c531f54baed1dddfda1b80299413c4c6943.
+Regression: actual-header registration fails on the original and checks names
+that collide after normalization; the full compiler listing exercises bundled
+configs without dropping cases.
+
+--- a/src/vpux_driver_compiler/test/functional/vcl_tests_common.h
++++ b/src/vpux_driver_compiler/test/functional/vcl_tests_common.h
+@@ -62,7 +62,17 @@
+         auto netInfo = std::get<0>(param);
+         const std::string netName = netInfo.at("network");
+         const std::string deviceID = netInfo.at("device");
+-        return netName + std::string("_VPUX.") + deviceID;
++        std::string name = netName + "_VPUX_" + deviceID;
++        for (auto& character : name) {
++            const bool alphanumeric = (character >= 'A' && character <= 'Z') ||
++                                      (character >= 'a' && character <= 'z') ||
++                                      (character >= '0' && character <= '9');
++            if (!alphanumeric && character != '_') {
++                character = '_';
++            }
++        }
++        // Distinct parameters can normalize to the same spelling.
++        return name + "_" + std::to_string(obj.index);
+     }
+ 
+     /**

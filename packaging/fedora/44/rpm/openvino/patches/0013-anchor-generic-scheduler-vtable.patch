@@ -1,0 +1,31 @@
+Subject: [PATCH] Anchor the generic scheduler vtable in its implementation
+
+Give GenericSchedulerBase its own out-of-line anchor, following the existing
+MachineSchedStrategy convention. Reuse the inherited virtual slot without
+changing fields or scheduling operations. The pinned GCC LTO comparison
+reports a pure-virtual/scheduleTree mismatch between freshly compiled
+MachineScheduler and WindowScheduler despite matching front-end layouts
+and native vtable relocations. Keep all compiler warnings enabled.
+
+--- a/thirdparty/llvm-project/llvm/include/llvm/CodeGen/MachineScheduler.h
++++ b/thirdparty/llvm-project/llvm/include/llvm/CodeGen/MachineScheduler.h
+@@ -1072,6 +1072,8 @@
+ /// scheduling candidates based on TargetSchedModel making it easy to implement
+ /// heuristics for either preRA or postRA scheduling.
+ class GenericSchedulerBase : public MachineSchedStrategy {
++  LLVM_ABI void anchor() override;
++
+ public:
+   /// Represent the type of SchedCandidate found within a single queue.
+   /// pickNodeBidirectional depends on these listed by decreasing priority.
+--- a/thirdparty/llvm-project/llvm/lib/CodeGen/MachineScheduler.cpp
++++ b/thirdparty/llvm-project/llvm/lib/CodeGen/MachineScheduler.cpp
+@@ -300,6 +300,8 @@
+ // Pin the vtables to this file.
+ void MachineSchedStrategy::anchor() {}
+ 
++void GenericSchedulerBase::anchor() {}
++
+ void ScheduleDAGMutation::anchor() {}
+ 
+ //===----------------------------------------------------------------------===//

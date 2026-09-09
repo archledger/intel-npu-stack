@@ -1,0 +1,33 @@
+Subject: [PATCH] Initialize descriptor storage before copying pass properties
+
+The NPU50XX IDU pass copies a descriptor backed by LLVM SmallVector. With
+GCC 16.2.1 at -O2, the inlined copy constructor leaves an infeasible inline
+storage path in the object-size analysis: the subsequent write to payload
+byte 91 is diagnosed relative to the 64-byte descriptor object. The actual
+DpuInvariantRegister payload is 352 bytes.
+
+Default construction allocates the schema-sized payload before assignment.
+Copy assignment then copies the same property bytes into that storage.
+This keeps the descriptor layout and field encoding unchanged and preserves
+all warning/error flags. Only the affected pass's local copy is changed.
+
+Regression: check-descriptor-copy.py compiles the actual affected translation
+unit with Ninja's generated command and runs descriptor-copy-probe.cpp. The
+unpatched translation unit fails with -Werror=stringop-overflow. The runtime
+probe checks 16 literal field encodings, payload size, unchanged neighboring
+bytes, and independence from the source descriptor.
+
+--- a/src/vpux_compiler/src/NPU50XX/dialect/NPUReg50XX/passes/setup_idu_cmx_mux_mode.cpp
++++ b/src/vpux_compiler/src/NPU50XX/dialect/NPUReg50XX/passes/setup_idu_cmx_mux_mode.cpp
+@@ -62,7 +62,10 @@
+     auto dataSectionOps = elfMain.getOps<ELF::DataSectionOp>();
+     for (auto dataSectionOp : dataSectionOps) {
+         dataSectionOp.walk([&](NPUReg50XX::DPUInvariantOp invariantOp) {
+-            auto invariantDescriptorRegMap = invariantOp.getProperties().getDescriptor();
++            // Allocate the schema-sized payload before copying, so GCC does not
++            // analyze the field write against SmallVector's inline storage.
++            auto invariantDescriptorRegMap = NPUReg50XX::Descriptors::DpuInvariantRegister{};
++            invariantDescriptorRegMap = invariantOp.getProperties().getDescriptor();
+             invariantDescriptorRegMap.write<vpux::NPUReg50XX::Fields::idu_cmx_mux_mode>(_iduCmxMuxMode);
+             invariantOp.getProperties().setDescriptor(std::move(invariantDescriptorRegMap));
+         });

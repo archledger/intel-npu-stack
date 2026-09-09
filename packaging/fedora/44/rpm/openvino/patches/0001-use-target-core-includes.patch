@@ -1,0 +1,36 @@
+Subject: [PATCH] Use target usage requirements for OpenVINO core includes
+
+OpenVINO 2026.2.0 already links openvino_core_obj to openvino::core::dev.
+Copying that interface's transitive includes into per-source properties adds
+-isystem /usr/include on Fedora 44 (CMake 4.3.0, GCC 16.2.1). This moves the C
+headers before the C++ wrappers and makes cstdlib's include_next fail to find
+stdlib.h. Remove the redundant per-source copy; target usage requirements
+preserve the required project and dependency include directories.
+
+Observed failure: src/core/CMakeFiles/openvino_core_obj.dir/src/model.cpp.o.
+Regression: check-core-includes.py inspects the generated core commands before
+compilation, and the real model.cpp object build proves header resolution.
+
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -118,17 +118,9 @@
+     target_link_options(openvino_core_obj ${link_type} "/IGNORE:4217,4286")
+ endif()
+ 
+-# TODO: try to remove this and move smart reshape to transformations
+-# some sources are located in openvino_core, while headers are in openvino_transformations
+-file(GLOB_RECURSE smart_reshape_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/pass/smart_reshape/*.cpp)
+-file(GLOB_RECURSE rt_info_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/pass/rt_info/*.cpp)
+-set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/pass/convert_fp32_to_fp16.cpp"
+-                            "${CMAKE_CURRENT_SOURCE_DIR}/src/pass/serialize.cpp"
+-                            "${CMAKE_CURRENT_SOURCE_DIR}/src/op/type_relaxed.cpp"
+-                            "${CMAKE_CURRENT_SOURCE_DIR}/src/preprocess/preprocess_steps_impl.cpp"
+-                            "${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp" # for SmartReshape
+-                            ${smart_reshape_srcs} ${rt_info_srcs}
+-        PROPERTIES INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openvino::core::dev,INTERFACE_INCLUDE_DIRECTORIES>)
++# Core sources inherit the developer headers from openvino::core::dev above.
++# Copying its transitive includes to source properties can put /usr/include
++# before libstdc++ headers and break their include_next directives.
+ 
+ # Defines macro in C++ to load backend plugin
+ target_include_directories(openvino_core_obj PUBLIC $<BUILD_INTERFACE:${OV_CORE_INCLUDE_PATH}>

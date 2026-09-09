@@ -1,0 +1,70 @@
+--- a/src/vpux_compiler/CMakeLists.txt
++++ b/src/vpux_compiler/CMakeLists.txt
+@@ -152,6 +152,13 @@
+ npu_compiler_configure_version(${COMPILER_LIB})
+ 
+ install_target_with_debug_files(${COMPILER_LIB} ${INSTALL_DESTINATION}/lib ${INSTALL_COMPONENT})
++
++# Native RPM payload: select this component without the standalone CiD archive.
++if(CPACK_GENERATOR STREQUAL "RPM")
++    install(TARGETS ${COMPILER_LIB}
++            LIBRARY DESTINATION ${OV_CPACK_PLUGINSDIR}
++            COMPONENT npu_compiler EXCLUDE_FROM_ALL)
++endif()
+ 
+ install(TARGETS ${COMPILER_LIB}
+         ARCHIVE DESTINATION ${OV_CPACK_RUNTIMEDIR} COMPONENT ${VPUX_INTERNAL_COMPONENT}
+--- a/src/vpux_driver_compiler/src/vpux_compiler_l0/CMakeLists.txt
++++ b/src/vpux_driver_compiler/src/vpux_compiler_l0/CMakeLists.txt
+@@ -63,6 +63,15 @@
+ # Install library related files to component
+ install_target_with_debug_files(${TARGET_NAME} ${INSTALL_DESTINATION}/lib ${INSTALL_COMPONENT})
+ 
++# Native RPM payload: select this component without the standalone CiD archive.
++if(CPACK_GENERATOR STREQUAL "RPM")
++    install(TARGETS ${TARGET_NAME}
++            LIBRARY DESTINATION ${OV_CPACK_PLUGINSDIR}
++            COMPONENT npu_compiler EXCLUDE_FROM_ALL)
++    install(FILES "${PROJECT_SOURCE_DIR}/src/vpux_driver_compiler/include/npu_driver_compiler.h"
++            DESTINATION ${OV_CPACK_INCLUDEDIR} COMPONENT ${OV_CPACK_COMP_CORE_DEV})
++endif()
++
+ # Install library header
+ install(
+         FILES
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -34,9 +34,13 @@
+ endif()
+ 
+ set(CID_COMPONENT "CiD")
+-ov_cpack_add_component(${CID_COMPONENT})
++if(NOT CPACK_GENERATOR STREQUAL "RPM")
++    ov_cpack_add_component(${CID_COMPONENT})
++endif()
+ set(CIP_COMPONENT "CiP")
+-ov_cpack_add_component(${CIP_COMPONENT})
++if(NOT CPACK_GENERATOR STREQUAL "RPM")
++    ov_cpack_add_component(${CIP_COMPONENT})
++endif()
+ 
+ if(BUILD_COMPILER_FOR_DRIVER)
+     set(INSTALL_COMPONENT ${CID_COMPONENT})
+--- a/cmake/dependencies.cmake
++++ b/cmake/dependencies.cmake
+@@ -26,8 +26,11 @@
+ set(DATA_PATH "${TEMP}/validation_set/src/validation_set")
+ debug_message(STATUS "DATA_PATH=${DATA_PATH}")
+ 
+-if(WIN32)
+-    set(CPACK_GENERATOR "ZIP")
+-else()
+-    set(CPACK_GENERATOR "TGZ")
++# Honor the parent project's explicitly selected native package layout.
++if(NOT DEFINED CPACK_GENERATOR)
++    if(WIN32)
++        set(CPACK_GENERATOR "ZIP")
++    else()
++        set(CPACK_GENERATOR "TGZ")
++    endif()
+ endif()

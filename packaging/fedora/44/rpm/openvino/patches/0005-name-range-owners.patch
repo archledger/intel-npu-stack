@@ -1,0 +1,71 @@
+Subject: [PATCH] Keep attribute and range wrappers alive across iteration
+
+GCC 16.2.1 rejects these temporary-wrapper range expressions with
+-Werror=dangling-reference. MLIR attributes reference immutable storage owned
+by MLIRContext; ContentAttr::getTransformations returns its stored attribute
+array. Name the attribute handle or ArrayRef before iterating, making its
+lifetime explicit through the loop. Preserve element references, optional
+fallbacks, bounds checks and all compiler warnings.
+
+Regression: check-compatibility.py compiles the actual affected translation
+units with their generated release flags. Original units fail in the retained
+September 7 diagnostic build. No warning option is changed.
+
+--- a/src/vpux_compiler/src/dialect/VPUIP/IR/types/iti_buffer.cpp
++++ b/src/vpux_compiler/src/dialect/VPUIP/IR/types/iti_buffer.cpp
+@@ -309,7 +309,8 @@
+             return result;
+         }
+ 
+-        for (const auto& inHalo : outHalo.getInwardHaloRegions().getValue()) {
++        const auto inwardHaloRegions = outHalo.getInwardHaloRegions();
++        for (const auto& inHalo : inwardHaloRegions.getValue()) {
+             const auto inHaloAttr = mlir::cast<vpux::VPUIP::HaloRegionAttr>(inHalo);
+             const auto inHaloShape = parseIntArrayAttr<int64_t>(inHaloAttr.getShape());
+ 
+--- a/src/vpux_compiler/src/dialect/VPUIP/IR/ops/sw_kernel.cpp
++++ b/src/vpux_compiler/src/dialect/VPUIP/IR/ops/sw_kernel.cpp
+@@ -616,7 +616,8 @@
+                                "SW Kernel dynamicInputShapes size doesn't match with number of positive elements in "
+                                "dynamicInputShapesMap");
+             }
+-            for (const auto& i : getDynamicInputShapesMap().value_or(llvm::ArrayRef<int32_t>())) {
++            const auto dynamicInputShapesMap = getDynamicInputShapesMap().value_or(llvm::ArrayRef<int32_t>());
++            for (const auto& i : dynamicInputShapesMap) {
+                 if (i >= checked_cast<std::remove_reference<decltype(i)>::type>(getDynamicInputShapes().size())) {
+                     return errorAt(
+                             op, "SW Kernel dynamicInputShapesMap contains values which are out of dynamicInputShapes "
+@@ -651,7 +652,8 @@
+                                "SW Kernel dynamicOutputShapes size doesn't match with number of positive elements in "
+                                "dynamicOutputShapesMap");
+             }
+-            for (const auto& i : getDynamicOutputShapesMap().value_or(llvm::ArrayRef<int32_t>())) {
++            const auto dynamicOutputShapesMap = getDynamicOutputShapesMap().value_or(llvm::ArrayRef<int32_t>());
++            for (const auto& i : dynamicOutputShapesMap) {
+                 if (i >= checked_cast<std::remove_reference<decltype(i)>::type>(getDynamicOutputShapeBuffs().size())) {
+                     return errorAt(
+                             op, "SW Kernel dynamicOutputShapesMap contains values which are out of dynamicOutputShapes "
+--- a/src/vpux_compiler/src/dialect/VPU/utils/nce_sparsity.cpp
++++ b/src/vpux_compiler/src/dialect/VPU/utils/nce_sparsity.cpp
+@@ -415,7 +415,8 @@
+     if (!sourceOp) {
+         return false;
+     }
+-    for (const auto transformation : sourceOp.getContentAttr().getTransformations()) {
++    const auto contentAttr = sourceOp.getContentAttr();
++    for (const auto transformation : contentAttr.getTransformations()) {
+         if (mlir::isa<vpux::Const::SparsifyAttr, vpux::Const::GetSparsityMapAttr>(transformation)) {
+             VPUX_THROW("Trying to sparsify already sparsity related content at '{0}'", sourceOp->getLoc());
+         }
+--- a/src/vpux_compiler/src/dialect/const/passes/apply_swizzling.cpp
++++ b/src/vpux_compiler/src/dialect/const/passes/apply_swizzling.cpp
+@@ -39,7 +39,8 @@
+             return;
+         }
+ 
+-        for (auto transf : constOp.getContentAttr().getTransformations()) {
++        const auto contentAttr = constOp.getContentAttr();
++        for (auto transf : contentAttr.getTransformations()) {
+             if (mlir::isa<Const::SwizzleConstantAttr>(transf)) {
+                 return;
+             }
