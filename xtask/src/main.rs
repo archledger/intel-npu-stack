@@ -16,6 +16,13 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Generate an unqualified Fedora candidate from exact runtime RPM evidence.
+    GenerateFedoraProfile {
+        #[arg(long)]
+        rpms: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Validate all direct TOML profiles in a directory.
     ValidateProfiles { path: PathBuf },
     /// Validate one provider source lock without network access.
@@ -48,6 +55,27 @@ enum Command {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
+        Command::GenerateFedoraProfile { rpms, output } => {
+            let result = std::env::current_dir()
+                .map_err(|error| error.to_string())
+                .and_then(|root| {
+                    xtask::fedora_profile::generate_candidate(&rpms, &root, &output)
+                        .map_err(|error| error.to_string())
+                });
+            match result {
+                Ok(evidence) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&evidence).expect("serialize evidence")
+                    );
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(1)
+                }
+            }
+        }
         Command::ValidateProfiles { path } => {
             let mut stdout = std::io::stdout().lock();
             match validate_profiles_dir(&path, &mut stdout) {

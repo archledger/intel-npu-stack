@@ -53,6 +53,42 @@ Package names allow only ASCII letters, digits, `.`, `+`, `-`, and `_`. Package 
 
 These six components form one compatibility matrix; independently newer versions are never combined automatically.
 
+### Generated Fedora candidate evidence
+
+The Fedora generator accepts exactly fourteen runtime RPMs: the twelve provider
+packages, the tools package and the empty metapackage. Development, debug and
+source RPMs belong to separate build evidence. It validates exact NEVRs and
+architectures, required payload paths, executable modes, reviewed license
+expressions, package-owned license notices, internal version pins, absence of
+scripts and cross-package file overlap. RPM queries use fixed argument arrays,
+cleared environments, output bounds and deadlines; they do not execute scripts.
+
+For this generated profile, each component's `source` identifies its upstream
+provenance repository, while `sha256` identifies the supplied provider RPM.
+It is not a checksum for a download from that repository URL. The JSON generation
+report records exact RPM filenames and SHA-256 values for all fourteen packages,
+their queried file metadata, the source-lock digest and the profile-file digest.
+Store this report outside source archives. The tools RPM's digest cannot be
+embedded in its own installed manifest or source inputs.
+
+Each component's license evidence digest is SHA-256 of compact JSON serialized
+as `[source_lock_sha256, rpm_sha256, license_expression, license_owner_package,
+license_owner_rpm_sha256, license_files]`. OpenVINO subpackages may use the main
+OpenVINO RPM's notices only with an exact dependency, the same source-RPM identity
+and the same reviewed license expression. The owner must contain regular files
+marked as licenses. The generation report retains each source-RPM identity.
+`license_files` is the owner's path-sorted list of files marked as RPM licenses;
+each record has fields `path`, `sha256`, `mode` and `license`, in that order.
+The generation report preserves the inputs needed to reconstruct this record.
+Matching a reviewed expression and binding its notices does not replace the
+release review of actual redistribution and complete source availability.
+
+The Fedora Level Zero RPM remains distro-owned and is recorded as
+`external_only`. Its version is the explicitly unqualified 1.28.6 deviation from
+the upstream compatibility reference. The source lock identifies the source
+matrix; the profile identifier matches the tools' installed manifest. Candidate
+kernel bounds identify a narrow test target, not a qualified support range.
+
 ## Status and channel policy
 
 | Status | Stable channel | Experimental channel |

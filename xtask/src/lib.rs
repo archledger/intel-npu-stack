@@ -3,6 +3,7 @@
 
 pub mod fedora_openvino_package;
 pub mod fedora_package;
+pub mod fedora_profile;
 pub mod source_bundle;
 pub mod source_lock;
 

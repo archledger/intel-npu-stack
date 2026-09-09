@@ -14,8 +14,11 @@ sha2.workspace = true
 stack-runtime = { path = "../crates/stack-runtime" }
 stack-schema = { path = "../crates/stack-schema" }
 tar.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
+stack-core = { path = "../crates/stack-core" }
+stack-platform = { path = "../crates/stack-platform" }
 tempfile.workspace = true

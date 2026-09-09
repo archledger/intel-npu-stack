@@ -71,6 +71,7 @@ printf '\n' >> "$TRACE_PATH"
             "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=test|--workspace|--locked|\n",
             "CARGO_NET_OFFLINE=true RUSTDOCFLAGS=-D warnings ARGS=doc|--workspace|--no-deps|--locked|\n",
             "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=run|-p|xtask|--locked|--|validate-profiles|profiles|\n",
+            "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=run|-p|xtask|--locked|--|validate-profiles|profiles/fedora/44|\n",
         );
         assert_eq!(actual, expected);
         assert_eq!(sorted_names(fixture.path()), ["bin", "trace.log"]);
