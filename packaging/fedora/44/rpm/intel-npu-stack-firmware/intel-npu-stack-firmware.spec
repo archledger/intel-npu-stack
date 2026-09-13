@@ -8,9 +8,14 @@ Summary:        Source-locked Intel Lunar Lake NPU firmware override
 License:        LicenseRef-Intel-firmware
 URL:            https://github.com/intel/linux-npu-driver
 Source0:        linux-npu-driver.tar
+Source1:        install-provider-notices.py
+Source2:        provider-sources.toml
+Source3:        provider-license-evidence.tar
 
 BuildArch:      noarch
 ExclusiveArch:  x86_64
+
+BuildRequires:  python3
 
 Provides:       intel-npu-firmware = %{version}
 
@@ -22,16 +27,21 @@ reboot; this package intentionally has no module reload or reboot script.
 %prep
 %autosetup -n linux-npu-driver
 
+/usr/bin/python3 %{SOURCE1} --kind firmware \
+    --source "$PWD" --archives "$(dirname -- '%{SOURCE0}')" --spec %{_specdir}/intel-npu-stack-firmware.spec \
+    --source-lock %{SOURCE2} --license-evidence %{SOURCE3} \
+    --output ../provider-notices
+
 %build
 
 %install
 install -Dm0644 firmware/bin/vpu_40xx_v1.bin \
     %{buildroot}/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin
-install -Dm0644 firmware/bin/COPYRIGHT \
-    %{buildroot}%{_licensedir}/%{name}/COPYRIGHT
+mkdir -p %{buildroot}%{_licensedir}
+cp -a ../provider-notices/intel-npu-stack-firmware %{buildroot}%{_licensedir}/
 
 %files
-%license %{_licensedir}/%{name}/COPYRIGHT
+%license %{_licensedir}/%{name}
 /usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin
 
 %changelog

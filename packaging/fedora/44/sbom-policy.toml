@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+schema_version = 1
+spdx_version = "SPDX-2.3"
+syft_version = "1.51.1"
+diffoscope_version = "324"
+require_every_binary_rpm = true
+require_rpm_identity = true
+require_rpm_sha256 = true
+require_byte_identical_rebuilds = true
+# Raw Syft RPM identification is one input to the full source/static audit.
+# A provider pair can pass without granting a complete stack release decision.
+release_requires = ["complete-provider-closure", "source-and-static-dependency-sbom", "license-ref-text", "redistribution-review", "candidate-digest-binding", "phase3a-evidence-review"]

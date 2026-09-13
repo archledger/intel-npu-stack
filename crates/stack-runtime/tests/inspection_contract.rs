@@ -342,6 +342,41 @@ fn check<const N: usize>(
 }
 
 #[test]
+fn preflight_checks_packages_and_activation_without_device_or_probe_access() {
+    let fixture = Fixture::new();
+    let runner = FakeRunner::new([]);
+    let packages = passing_packages(&fixture.profile);
+    let devices = FakeDevices::default();
+    let activity = FakeActivity::new([]);
+    let result = RuntimeInspector::new(&fixture.paths, &runner, &packages, &devices, &activity)
+        .inspect_preflight(&fixture.profile, &fixture.facts);
+
+    assert_eq!(
+        diagnostic(&result, "package.npu_firmware").status,
+        CheckStatus::Pass
+    );
+    assert_eq!(
+        diagnostic(&result, "kernel.module").status,
+        CheckStatus::Pass
+    );
+    assert!(
+        runner.requests().is_empty(),
+        "preflight must not spawn helpers"
+    );
+    assert!(
+        devices.calls.lock().unwrap().is_empty(),
+        "preflight must not open devices"
+    );
+    assert_eq!(activity.calls(), 0);
+    assert!(
+        !result
+            .checks
+            .iter()
+            .any(|check| check.id.starts_with("runtime.") || check.id.starts_with("device."))
+    );
+}
+
+#[test]
 fn status_runs_enumeration_but_never_inference() {
     let fixture = Fixture::new();
     let runner = FakeRunner::new([output(LEVEL_ZERO_PASS), output(OPENVINO_ENUMERATE_PASS)]);

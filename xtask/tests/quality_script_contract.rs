@@ -46,6 +46,21 @@ printf '\n' >> "$TRACE_PATH"
         fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755))
             .expect("make fake cargo executable");
 
+        let shell = bin.join("sh");
+        fs::write(
+            &shell,
+            r#"#!/bin/sh
+set -eu
+printf 'SYNTAX=' >> "$TRACE_PATH"
+printf '%s|' "$@" >> "$TRACE_PATH"
+printf '\n' >> "$TRACE_PATH"
+exec /bin/sh "$@"
+"#,
+        )
+        .expect("write observed syntax checker");
+        fs::set_permissions(&shell, fs::Permissions::from_mode(0o755))
+            .expect("make syntax checker executable");
+
         let metadata = fs::metadata(&script).expect("quality script must exist");
         assert_eq!(metadata.permissions().mode() & 0o777, 0o755);
 
@@ -73,8 +88,14 @@ printf '\n' >> "$TRACE_PATH"
             "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=run|-p|xtask|--locked|--|validate-profiles|profiles|\n",
             "CARGO_NET_OFFLINE=true RUSTDOCFLAGS= ARGS=run|-p|xtask|--locked|--|validate-profiles|profiles/fedora/44|\n",
         );
+        let expected = format!(
+            "SYNTAX=-n|{}|\n{expected}",
+            repository
+                .join("scripts/check-fedora-packages.sh")
+                .display()
+        );
         assert_eq!(actual, expected);
         assert_eq!(sorted_names(fixture.path()), ["bin", "trace.log"]);
-        assert_eq!(sorted_names(&bin), ["cargo"]);
+        assert_eq!(sorted_names(&bin), ["cargo", "sh"]);
     }
 }

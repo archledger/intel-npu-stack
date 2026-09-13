@@ -390,6 +390,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "stack-install"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "sha2",
+ "stack-core",
+ "stack-platform",
+ "stack-runtime",
+ "stack-schema",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "stack-platform"
 version = "0.1.0"
 dependencies = [

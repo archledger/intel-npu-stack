@@ -16,6 +16,28 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Create a separate unqualified single-kernel candidate, preserving provider bindings.
+    RetargetCandidate {
+        #[arg(long)]
+        candidate: PathBuf,
+        #[arg(long)]
+        id: String,
+        #[arg(long)]
+        kernel_release: String,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Collect actual host observations for one pinned candidate without promotion.
+    CollectCandidate {
+        #[arg(long)]
+        profile: PathBuf,
+        #[arg(long)]
+        profile_sha256: String,
+        #[arg(long, value_enum, default_value = "preflight")]
+        mode: xtask::candidate_collection::CollectionMode,
+        #[arg(long)]
+        accept_hardware_probes: bool,
+    },
     /// Generate an unqualified Fedora candidate from exact runtime RPM evidence.
     GenerateFedoraProfile {
         #[arg(long)]
@@ -55,6 +77,37 @@ enum Command {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
+        Command::RetargetCandidate {
+            candidate,
+            id,
+            kernel_release,
+            output,
+        } => match xtask::kernel_candidate::generate(&candidate, &id, &kernel_release, &output) {
+            Ok(record) => write_record(&record, 0),
+            Err(error) => {
+                eprintln!("error: {error}");
+                ExitCode::from(2)
+            }
+        },
+        Command::CollectCandidate {
+            profile,
+            profile_sha256,
+            mode,
+            accept_hardware_probes,
+        } => {
+            match xtask::candidate_collection::collect_system(
+                &profile,
+                &profile_sha256,
+                mode,
+                accept_hardware_probes,
+            ) {
+                Ok(record) => write_record(&record, record.diagnostic.exit_code()),
+                Err(error) => {
+                    eprintln!("error: {error}");
+                    ExitCode::from(2)
+                }
+            }
+        }
         Command::GenerateFedoraProfile { rpms, output } => {
             let result = std::env::current_dir()
                 .map_err(|error| error.to_string())
@@ -148,4 +201,13 @@ fn main() -> ExitCode {
             }
         },
     }
+}
+
+fn write_record(record: &impl serde::Serialize, exit: u8) -> ExitCode {
+    use std::io::Write;
+    let mut output = std::io::stdout().lock();
+    if serde_json::to_writer_pretty(&mut output, record).is_err() || writeln!(output).is_err() {
+        return ExitCode::from(2);
+    }
+    ExitCode::from(exit)
 }

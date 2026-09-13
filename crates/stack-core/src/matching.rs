@@ -69,7 +69,12 @@ fn status_allowed(status: ProfileStatus, channel: Channel) -> bool {
     }
 }
 
-fn platform_matches(profile: &Profile, facts: &PlatformFacts) -> bool {
+/// Checks platform compatibility without authorizing a lifecycle state/channel.
+///
+/// Candidate qualification tooling may use this predicate, but public channel
+/// consumers must use [`select_profile`] to enforce lifecycle policy as well.
+#[must_use]
+pub fn platform_matches(profile: &Profile, facts: &PlatformFacts) -> bool {
     profile.platform.id == facts.os_id
         && profile.platform.version_id == facts.os_version_id
         && profile.platform.arch == facts.arch

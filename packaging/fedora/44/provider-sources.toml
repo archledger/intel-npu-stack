@@ -52,9 +52,29 @@ kind = "git_commit"
 url = "https://github.com/intel-staging/npu-compiler-llvm.git"
 commit = "0f0abce229bce226ff686f0c14c38747a1572c35"
 archive_sha256 = "f1b87a16b89c80726681585b9077af53b60def64cf1872c700e32ad4af433621"
-license_expression = "Apache-2.0 WITH LLVM-exception OR NCSA"
-license_files = ["packaging/fedora/44/licenses/intel-npu-compiler-llvm-LICENSE.TXT"]
-license_evidence_sha256 = "8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee"
+license_expression = "Apache-2.0 AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5 AND BSD-3-Clause"
+license_files = [
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/LICENSE.TXT",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/include/llvm/Support/ConvertUTF.h",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/include/llvm/Support/MD5.h",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/include/llvm/Support/xxhash.h",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/lib/Support/BLAKE3/LICENSE",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/lib/Support/COPYRIGHT.regex",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/lib/Support/ConvertUTF.cpp",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/lib/Support/MD5.cpp",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/lib/Support/regstrlcpy.c",
+  "packaging/fedora/44/licenses/compiler-llvm/llvm/lib/Support/xxhash.cpp",
+  "packaging/fedora/44/licenses/compiler-llvm/mlir/LICENSE.TXT",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regcomp.c",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regengine.inc",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regerror.c",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regex2.h",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regex_impl.h",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regexec.c",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regfree.c",
+  "packaging/fedora/44/licenses/source-notices/intel-npu-compiler-llvm/llvm/lib/Support/regutils.h",
+]
+license_evidence_sha256 = "7be8701602626f6e6679c48873ae6f7786d5e7017b48afcdf0ddecf0fb0f1f71"
 redistribution = "allowed"
 
 [[sources]]
@@ -102,12 +122,39 @@ url = "https://github.com/intel/linux-npu-driver.git"
 tag = "v1.35.0"
 commit = "fd49947db934dc67dda6f4287cec2664a303df27"
 archive_sha256 = "555cb411208c94542fc88f62f77797cf021e70edca2b6c9df6350e5259f25c04"
-license_expression = "MIT AND LicenseRef-Intel-firmware"
+license_expression = "MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note) AND LicenseRef-Intel-firmware"
 license_files = [
   "packaging/fedora/44/licenses/linux-npu-driver-LICENSE.md",
   "packaging/fedora/44/licenses/linux-npu-driver-firmware-COPYRIGHT",
+  "packaging/fedora/44/licenses/linux-uapi-GPL-2.0",
+  "packaging/fedora/44/licenses/linux-uapi-Linux-syscall-note",
+  "packaging/fedora/44/licenses/npu-compiler-elf-LICENCE",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/compiler/include/npu_driver_compiler.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_cmx_info_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_cmx_info_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_dma_hw.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_dma_hw_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_dma_hw_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_jsm_api.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_jsm_job_cmd_api.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_media_hw.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nce_hw_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nce_hw_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_api.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_api_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_api_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_api_ver.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_common.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_shavert.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_nnrt_wlm.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/firmware/include/api/vpu_pwrmgr_api.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/linux/include/uapi/drm/drm.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/linux/include/uapi/drm/ivpu_accel.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/umd/level_zero_driver/source/ext/cityhash/city.cc",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/umd/level_zero_driver/source/ext/cityhash/city.h",
+  "packaging/fedora/44/licenses/source-notices/linux-npu-driver/umd/level_zero_driver/source/ext/cityhash/citycrc.h",
 ]
-license_evidence_sha256 = "675d4dc9cd2cc41e32556fdb44003774aba867450c286d70b83d2f484cf26b1e"
+license_evidence_sha256 = "96788eb67c034d82d0f3a0270438e8655d92fafb869c5802c979bf444572e853"
 redistribution = "allowed"
 
 [[sources.gitlinks]]
@@ -146,9 +193,28 @@ tag = "npu_ud_2026_28_rc1"
 tag_object = "77a77b017875b42ba41f4ffeba2a742f495c0c88"
 commit = "6a7a7c531f54baed1dddfda1b80299413c4c6943"
 archive_sha256 = "e8e23e1c66de83756466b646f315fa0a163bbed3340d0343c5e1b66b5c665dfd"
-license_expression = "Apache-2.0"
-license_files = ["packaging/fedora/44/licenses/npu-compiler-LICENSE"]
-license_evidence_sha256 = "0a83a892e9b2050be9008f7f06bc8f85003a18f45585c93b7cf995fe2e665303"
+license_expression = "Apache-2.0 AND MIT AND (Apache-2.0 WITH LLVM-exception)"
+license_files = [
+  "packaging/fedora/44/licenses/npu-compiler-LICENSE",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX/firmware_headers/details/api/vpu_cmx_info_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX/firmware_headers/details/api/vpu_dma_hw_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX/firmware_headers/details/api/vpu_nce_hw_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX/firmware_headers/details/api/vpu_nnrt_api_37xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU37XX/dialect/NPUReg37XX/firmware_headers/details/api/vpu_pwrmgr_api.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_cmx_info_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_dma_hw_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_media_hw.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nce_hw_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nnrt_api.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nnrt_api_40xx.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nnrt_api_ver.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nnrt_common.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nnrt_shavert.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_nnrt_wlm.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/include/vpux/compiler/NPU40XX/dialect/NPUReg40XX/firmware_headers/details/api/vpu_pwrmgr_api.h",
+  "packaging/fedora/44/licenses/source-notices/npu-compiler/src/vpux_compiler/src/pipelines/compilation_options.cpp",
+]
+license_evidence_sha256 = "6f9b88c29adfffaaf2656c03efa69cc852346d10f27d4ae9a3795cb33d8ea6db"
 redistribution = "allowed"
 
 [[sources.gitlinks]]
@@ -211,8 +277,35 @@ license_expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause A
 license_files = [
   "packaging/fedora/44/licenses/openvino-LICENSE",
   "packaging/fedora/44/licenses/openvino-third-party-programs.txt",
+  "packaging/fedora/44/licenses/source-notices/openvino/licensing/onednn_third-party-programs.txt",
+  "packaging/fedora/44/licenses/source-notices/openvino/licensing/onetbb_third-party-programs.txt",
+  "packaging/fedora/44/licenses/source-notices/openvino/licensing/runtime-third-party-programs.txt",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/allocators.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/document.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/encodedstream.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/encodings.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/error/error.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/biginteger.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/diyfp.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/dtoa.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/ieee754.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/itoa.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/meta.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/pow10.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/stack.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/strfunc.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/strtod.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/internal/swap.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/istreamwrapper.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/memorystream.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/prettywriter.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/rapidjson.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/reader.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/stream.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/stringbuffer.h",
+  "packaging/fedora/44/licenses/source-notices/openvino/src/plugins/intel_gpu/thirdparty/rapidjson/writer.h",
 ]
-license_evidence_sha256 = "38983e471d276830f44a6124550c50d73e9a326f69fe1ddd3b57f44e8de0925e"
+license_evidence_sha256 = "46abb742ba14ebc6a49e92c57be00f59b226b451a8811dcd0d4309845ad986ba"
 redistribution = "allowed"
 
 [[sources.gitlinks]]
@@ -399,9 +492,15 @@ kind = "git_commit"
 url = "https://github.com/openvinotoolkit/mlas.git"
 commit = "d1bc25ec4660cddd87804fcf03b2411b5dfb2e94"
 archive_sha256 = "4a4643e37fc7f0d302a01400eac989830810deabfd611243faa4214aca59af4f"
-license_expression = "Apache-2.0"
-license_files = ["packaging/fedora/44/licenses/openvino-mlas-LICENSE"]
-license_evidence_sha256 = "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+license_expression = "Apache-2.0 AND MIT AND BSD-3-Clause"
+license_files = [
+  "packaging/fedora/44/licenses/openvino-mlas-LICENSE",
+  "packaging/fedora/44/licenses/source-notices/openvino-mlas/inc/mlas.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-mlas/lib/qdwconv_kernelsize.cpp",
+  "packaging/fedora/44/licenses/source-notices/openvino-mlas/lib/reorder.cpp",
+  "packaging/fedora/44/licenses/source-notices/openvino-mlas/lib/x86_64/AssembleAvxVnni.h",
+]
+license_evidence_sha256 = "9706ed28c0d38cb546278d3c3b68b8a4cbaa37f8f181835a3317e9592f8e8d7c"
 redistribution = "allowed"
 
 [[sources]]
@@ -415,8 +514,18 @@ license_expression = "Apache-2.0 AND BSL-1.0 AND BSD-3-Clause AND (GPL-2.0-only 
 license_files = [
   "packaging/fedora/44/licenses/openvino-onednn-cpu-LICENSE",
   "packaging/fedora/44/licenses/openvino-onednn-cpu-THIRD-PARTY-PROGRAMS",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/disable_warnings.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/ittnotify.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/ittnotify_config.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/ittnotify_static.c",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/ittnotify_static.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/ittnotify_types.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/ittptmark64.S",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/jitprofiling.c",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/jitprofiling.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-onednn-cpu/third_party/ittnotify/legacy/ittnotify.h",
 ]
-license_evidence_sha256 = "a815d76a7f96f4595efae97a6f2d7c916760310e0dd2db88b99ba66f2baf603b"
+license_evidence_sha256 = "23e21994acc89f272e62605af5ac53f3bd8705dd9ec7afd52da58912075353ad"
 redistribution = "allowed"
 
 [[sources]]
@@ -463,8 +572,11 @@ license_expression = "BSD-3-Clause AND MIT"
 license_files = [
   "packaging/fedora/44/licenses/openvino-protobuf-LICENSE",
   "packaging/fedora/44/licenses/openvino-protobuf-utf8_range-LICENSE",
+  "packaging/fedora/44/licenses/source-notices/openvino-protobuf/src/google/protobuf/stubs/casts.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-protobuf/src/google/protobuf/stubs/mutex.h",
+  "packaging/fedora/44/licenses/source-notices/openvino-protobuf/src/google/protobuf/stubs/platform_macros.h",
 ]
-license_evidence_sha256 = "0e93570185f4bef280467f6c2551d7b9aa8207025545ed5ca820e948b831d71a"
+license_evidence_sha256 = "b07978d466971c623a22a7b6970efbb8f61a181fecd73053713ba1eb6dbf81ac"
 redistribution = "allowed"
 
 [[sources.gitlinks]]

@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "stack_release": "0.1.0",
+  "profile_sha256": "2c91fad76dcf67681bf8ae425b526906976c69cdbedd3060a94aa15209b9644f",
+  "repository": {
+    "id": "intel-npu-stack-0.1.0",
+    "base_url": "https://downloads.example.invalid/intel-npu-stack/0.1.0/fedora/44/x86_64/",
+    "repomd_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "packages": [
+    {
+      "name": "intel-npu-compiler",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "intel-npu-compiler-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "b4896cb744d39fe6f3ed02cb05e7306f82f2256e2581024d11fa58bd1bfae056",
+      "role": "runtime"
+    },
+    {
+      "name": "intel-npu-driver",
+      "nevr": "0:1.35.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "intel-npu-driver-1.35.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "fe61bf40595679a56ec3d73e2528e3aeb9ef3604e285373a356892d252b33ad7",
+      "role": "runtime"
+    },
+    {
+      "name": "intel-npu-stack",
+      "nevr": "0:0.1.0-1.intelnpu.fc44",
+      "arch": "noarch",
+      "filename": "intel-npu-stack-0.1.0-1.intelnpu.fc44.noarch.rpm",
+      "sha256": "8807d1bc9a140e011ee306c7e170729b20a4414809675875de6e0c9fd84bbb89",
+      "role": "runtime"
+    },
+    {
+      "name": "intel-npu-stack-firmware",
+      "nevr": "0:1.35.0-1.intelnpu.fc44",
+      "arch": "noarch",
+      "filename": "intel-npu-stack-firmware-1.35.0-1.intelnpu.fc44.noarch.rpm",
+      "sha256": "8b2c0181293cb4d8373841decf15cc0dc251aba25181961371f6cef8baf39950",
+      "role": "runtime"
+    },
+    {
+      "name": "intel-npu-stack-tools",
+      "nevr": "0:0.1.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "intel-npu-stack-tools-0.1.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "a7a484f7a7d8ee76fa955a1f41aa27a7f8e702eba21d2378b8efb961537f3499",
+      "role": "runtime"
+    },
+    {
+      "name": "libopenvino-ir-frontend",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "libopenvino-ir-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "a7b2fa09de4153d5442168a5d6a2cd00be36a1c4e43d8406be7400deba3b9ae8",
+      "role": "runtime"
+    },
+    {
+      "name": "libopenvino-onnx-frontend",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "libopenvino-onnx-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "4489ec6b166fa8b5b7fc554333dfed0b9e9625d50856a336924220383c258113",
+      "role": "runtime"
+    },
+    {
+      "name": "libopenvino-paddle-frontend",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "libopenvino-paddle-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "69a11b3fd9885e001d1dad28812a2129f737e51a806e078a9c12d42d52e8725b",
+      "role": "runtime"
+    },
+    {
+      "name": "libopenvino-pytorch-frontend",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "libopenvino-pytorch-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "623df46fdf834509040dd522342dd24645035c17879796a1b8c9e4b47bfaac1c",
+      "role": "runtime"
+    },
+    {
+      "name": "libopenvino-tensorflow-frontend",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "libopenvino-tensorflow-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "542948c34d2e60cbcead49ae53bff4fcee5f72cec3a74910e43b02fdaafc00c8",
+      "role": "runtime"
+    },
+    {
+      "name": "libopenvino-tensorflow-lite-frontend",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "libopenvino-tensorflow-lite-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "ee02fe1ef40d07662c2f3e34518cda31d4b6f6d0af5fd8f6d74cd7bb3566b3fc",
+      "role": "runtime"
+    },
+    {
+      "name": "oneapi-level-zero",
+      "nevr": "0:1.28.6-1.fc44",
+      "arch": "x86_64",
+      "filename": "oneapi-level-zero-1.28.6-1.fc44.x86_64.rpm",
+      "sha256": "0b61bf4cc439afa7f47ab403d9d69fbc390fda36fa1cb41892c88e7c6eb02a2a",
+      "role": "runtime"
+    },
+    {
+      "name": "openvino",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "openvino-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "964c32809395c0bce820fd410e00b6415dcacebff355d888e4e05e81a5f1cfea",
+      "role": "runtime"
+    },
+    {
+      "name": "openvino-plugins",
+      "nevr": "0:2026.2.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "openvino-plugins-2026.2.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "9cee06382be12cb890ed3789050472bed2503efe23a0da227afb948252924d77",
+      "role": "runtime"
+    }
+  ]
+}

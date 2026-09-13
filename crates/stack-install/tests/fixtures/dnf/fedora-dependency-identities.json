@@ -1,0 +1,3040 @@
+[
+  {
+    "name": "CharLS",
+    "evr": "0:2.4.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "CharLS-2.4.3-2.fc44.x86_64.rpm",
+    "sha256": "495f0224233584b16aae347c3bc440df5363e37464f239ff6c0da63e95692cb7"
+  },
+  {
+    "name": "PDAL-libs",
+    "evr": "0:2.9.3-3.fc44",
+    "arch": "x86_64",
+    "filename": "PDAL-libs-2.9.3-3.fc44.x86_64.rpm",
+    "sha256": "e82d4ae912cfe341aff42bfb05367c2992e420332cde220b8dbc8c0698bde8e7"
+  },
+  {
+    "name": "SDL3",
+    "evr": "0:3.4.16-1.fc44",
+    "arch": "x86_64",
+    "filename": "SDL3-3.4.16-1.fc44.x86_64.rpm",
+    "sha256": "2a6137406a06d1adb3cec55c517646110bfc8697b7c4e5779e893b14b57884d3"
+  },
+  {
+    "name": "abseil-cpp",
+    "evr": "0:20260107.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "abseil-cpp-20260107.1-1.fc44.x86_64.rpm",
+    "sha256": "3d4abe07c1e90aea7d20d09be96ba5d056bc81c5a80863e52fdcd7ee747e2c34"
+  },
+  {
+    "name": "adwaita-cursor-theme",
+    "evr": "0:50.0-1.fc44",
+    "arch": "noarch",
+    "filename": "adwaita-cursor-theme-50.0-1.fc44.noarch.rpm",
+    "sha256": "6d46cf5017b77db42f9bfecf3866c193c91b49c1a364c23855efa072ba2be537"
+  },
+  {
+    "name": "adwaita-icon-theme",
+    "evr": "0:50.0-1.fc44",
+    "arch": "noarch",
+    "filename": "adwaita-icon-theme-50.0-1.fc44.noarch.rpm",
+    "sha256": "e0a8a851b955b2b98f94fc159abcec0139d0c936d6de50ca2a21c8ffe798d2f7"
+  },
+  {
+    "name": "adwaita-icon-theme-legacy",
+    "evr": "0:46.2-7.fc44",
+    "arch": "noarch",
+    "filename": "adwaita-icon-theme-legacy-46.2-7.fc44.noarch.rpm",
+    "sha256": "a07ea59c0d1a711a2e5a582ad5e98e1c582851b6ed83db5d2b031a06cf5c713d"
+  },
+  {
+    "name": "alembic-libs",
+    "evr": "0:1.8.12-1.fc44",
+    "arch": "x86_64",
+    "filename": "alembic-libs-1.8.12-1.fc44.x86_64.rpm",
+    "sha256": "ed9dfb600d32427736ae52dc2347c91b07f675746d1491549272e6ef1133f954"
+  },
+  {
+    "name": "alsa-lib",
+    "evr": "0:1.2.16.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "alsa-lib-1.2.16.1-1.fc44.x86_64.rpm",
+    "sha256": "05d9c51183de8b254df47f09ef1c63419eee3e2caea6452f1b39f10b2a22a9fe"
+  },
+  {
+    "name": "aribb24",
+    "evr": "0:1.0.3^20160216git5e9be27-5.fc44",
+    "arch": "x86_64",
+    "filename": "aribb24-1.0.3^20160216git5e9be27-5.fc44.x86_64.rpm",
+    "sha256": "73e33dfa76f9cb0b49ff47340c219e76d5cb35d7274c71131f82cad5d3f88847"
+  },
+  {
+    "name": "armadillo",
+    "evr": "0:12.8.1-9.fc44",
+    "arch": "x86_64",
+    "filename": "armadillo-12.8.1-9.fc44.x86_64.rpm",
+    "sha256": "d4d9acf8967672fad703948d4fb1300e578f51429891d079cbcdaf5ad92072a3"
+  },
+  {
+    "name": "arpack",
+    "evr": "0:3.9.1-9.fc44",
+    "arch": "x86_64",
+    "filename": "arpack-3.9.1-9.fc44.x86_64.rpm",
+    "sha256": "e01ec1d329f9c522a43401b5106e9176d83ca9adb365ead42adf3239e6cd6377"
+  },
+  {
+    "name": "at-spi2-atk",
+    "evr": "0:2.60.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "at-spi2-atk-2.60.6-1.fc44.x86_64.rpm",
+    "sha256": "9e29f8628fe810d76063cf862c1c1a2c5e5b6775a6c380fa762b209c462d81c3"
+  },
+  {
+    "name": "at-spi2-core",
+    "evr": "0:2.60.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "at-spi2-core-2.60.6-1.fc44.x86_64.rpm",
+    "sha256": "94f926090e3f436ce2365339abd7a5695f890628f0b5a8e9bcb5c37d1ae8084e"
+  },
+  {
+    "name": "atk",
+    "evr": "0:2.60.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "atk-2.60.6-1.fc44.x86_64.rpm",
+    "sha256": "19473c019d1dc90765b0da1eeaef5c5b7523238cc8213d3436797777dd7254e4"
+  },
+  {
+    "name": "avahi-glib",
+    "evr": "0:0.9~rc2-8.fc44",
+    "arch": "x86_64",
+    "filename": "avahi-glib-0.9~rc2-8.fc44.x86_64.rpm",
+    "sha256": "060082046613ccf33a065c7569980dea69883c5803d36c171fb774e1e7517ce1"
+  },
+  {
+    "name": "avahi-libs",
+    "evr": "0:0.9~rc2-8.fc44",
+    "arch": "x86_64",
+    "filename": "avahi-libs-0.9~rc2-8.fc44.x86_64.rpm",
+    "sha256": "e1d6490ad8c79ae5047a8cbd822938221242e923082082cde784090bee5f6dcb"
+  },
+  {
+    "name": "blosc",
+    "evr": "0:1.21.6-10.fc44",
+    "arch": "x86_64",
+    "filename": "blosc-1.21.6-10.fc44.x86_64.rpm",
+    "sha256": "54bc9a483e5c1e2983ca456a6933bb21cbf99c6228882bdb1e0efb52cc3d6dbf"
+  },
+  {
+    "name": "boost-atomic",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-atomic-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "41517cffd4836571d385026c6606f920d8edcbf797a1023032e3f0be7e764ccb"
+  },
+  {
+    "name": "boost-chrono",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-chrono-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "2501e9eeff1bec569f670b1f1373ef1c112810ea75c79d70aa970aff7d803333"
+  },
+  {
+    "name": "boost-container",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-container-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "7c958ea3ea721c633dfcea48dab89b4e3240c8332229a6ce8aa2df09e9cb5e72"
+  },
+  {
+    "name": "boost-date-time",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-date-time-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "5d0c854318138e34bd760ea4d4183cbe7f0fda09393778af4b3e8a5f6a8a87a6"
+  },
+  {
+    "name": "boost-filesystem",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-filesystem-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "7b08fb8922c295286d02518d21e2dcbb607cdfd2aea87f314e66aede1df882ca"
+  },
+  {
+    "name": "boost-program-options",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-program-options-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "4b451bae10b4a2eb5863471f3bef669f7357c1b9a41d65fa6f217a3c5c90480c"
+  },
+  {
+    "name": "boost-thread",
+    "evr": "0:1.90.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "boost-thread-1.90.0-7.fc44.x86_64.rpm",
+    "sha256": "38f4d0b2c3d371b05580c398f8e447494d3023c4b138a824e644f80c35f99cbf"
+  },
+  {
+    "name": "cdparanoia-libs",
+    "evr": "0:10.2-50.fc44",
+    "arch": "x86_64",
+    "filename": "cdparanoia-libs-10.2-50.fc44.x86_64.rpm",
+    "sha256": "31932adbec0ff45b5863dcf6b55f410b25e0f22a85eb9e8de3d197cc9aa8e58a"
+  },
+  {
+    "name": "cfitsio",
+    "evr": "0:4.6.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "cfitsio-4.6.3-2.fc44.x86_64.rpm",
+    "sha256": "16bcedf9132f8117262a7e35d350d3fc6be93008b196616ce7381c7897320061"
+  },
+  {
+    "name": "cgnslib-libs",
+    "evr": "0:4.5.1-3.fc44",
+    "arch": "x86_64",
+    "filename": "cgnslib-libs-4.5.1-3.fc44.x86_64.rpm",
+    "sha256": "796777a1f8e163a413036d84c4f9c5c7567cda795a42a7953e8479c241c5f4bb"
+  },
+  {
+    "name": "cjson",
+    "evr": "0:1.7.19-1.fc44",
+    "arch": "x86_64",
+    "filename": "cjson-1.7.19-1.fc44.x86_64.rpm",
+    "sha256": "31053341f0327df941e146c96e7002f9b28859833e2ef301038b7ab4d223f094"
+  },
+  {
+    "name": "codec2",
+    "evr": "0:1.2.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "codec2-1.2.0-9.fc44.x86_64.rpm",
+    "sha256": "4a469d1410e6ca824fde815509a1d8ccb38054fdc224e3c7b084ffebfacd2ae4"
+  },
+  {
+    "name": "colord-libs",
+    "evr": "0:1.4.8-4.fc44",
+    "arch": "x86_64",
+    "filename": "colord-libs-1.4.8-4.fc44.x86_64.rpm",
+    "sha256": "7d501d9060ab6d6a6af5aa0cd662494b74bdcb66fd84c4b58e1378d1cb1e57c2"
+  },
+  {
+    "name": "cpuinfo",
+    "evr": "0:24.09.26-2.git1e83a2f.fc44.5",
+    "arch": "x86_64",
+    "filename": "cpuinfo-24.09.26-2.git1e83a2f.fc44.5.x86_64.rpm",
+    "sha256": "0a341104928a42421216053643b9c316e2463ec64d9db337493b426e4a804b99"
+  },
+  {
+    "name": "createrepo_c",
+    "evr": "0:1.2.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "createrepo_c-1.2.1-5.fc44.x86_64.rpm",
+    "sha256": "d7f5e66841aa5ba43f5d0f2a595250ce97a61043158abf4bbf3c375a234e629b"
+  },
+  {
+    "name": "createrepo_c-libs",
+    "evr": "0:1.2.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "createrepo_c-libs-1.2.1-5.fc44.x86_64.rpm",
+    "sha256": "926810dc9bd5e93e296cce9ccd8be3486e4b5d0e7e645950f8baed40f1ed25dc"
+  },
+  {
+    "name": "cryptsetup-libs",
+    "evr": "0:2.8.7-1.fc44",
+    "arch": "x86_64",
+    "filename": "cryptsetup-libs-2.8.7-1.fc44.x86_64.rpm",
+    "sha256": "f79a915243fae51d3f56f07c3006ce4a6169a568f36f1de2710373ac4dd1237f"
+  },
+  {
+    "name": "cups-filesystem",
+    "evr": "1:2.4.19-3.fc44",
+    "arch": "noarch",
+    "filename": "cups-filesystem-2.4.19-3.fc44.noarch.rpm",
+    "sha256": "c22453b8ceac85980ad8cff7f7561a380d56bb281fd6d58d14a6e508d8b5ebd5"
+  },
+  {
+    "name": "cups-libs",
+    "evr": "1:2.4.19-3.fc44",
+    "arch": "x86_64",
+    "filename": "cups-libs-2.4.19-3.fc44.x86_64.rpm",
+    "sha256": "60eba21016672a37f0002048b7363a0fe1c92df86412463203d76e9984f7c907"
+  },
+  {
+    "name": "dbus",
+    "evr": "1:1.16.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "dbus-1.16.2-1.fc44.x86_64.rpm",
+    "sha256": "95e855674c4e3a419335f5b110ef1931a8df1635c9276ec468c1cc34381e6620"
+  },
+  {
+    "name": "dbus-broker",
+    "evr": "0:37-8.fc44",
+    "arch": "x86_64",
+    "filename": "dbus-broker-37-8.fc44.x86_64.rpm",
+    "sha256": "9cdd6cc622610ca0c3b9c72242e1787811524f506b77fb00e0367baec660e179"
+  },
+  {
+    "name": "dbus-common",
+    "evr": "1:1.16.2-1.fc44",
+    "arch": "noarch",
+    "filename": "dbus-common-1.16.2-1.fc44.noarch.rpm",
+    "sha256": "e4bf3a067db6424b9cd06259de46b8719bd34bc0dac90a8861245f6e3e9e3aac"
+  },
+  {
+    "name": "dbus-libs",
+    "evr": "1:1.16.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "dbus-libs-1.16.2-1.fc44.x86_64.rpm",
+    "sha256": "7feb93ce981ee35dc4a2d7f960a1077bf7656bc439335ff49bf51dfa0ddbd236"
+  },
+  {
+    "name": "device-mapper",
+    "evr": "0:1.02.212-2.fc44",
+    "arch": "x86_64",
+    "filename": "device-mapper-1.02.212-2.fc44.x86_64.rpm",
+    "sha256": "d559d7d859ef61fc8676e8dda182ad8df88aac68fc64dea195076dae93210cc4"
+  },
+  {
+    "name": "device-mapper-libs",
+    "evr": "0:1.02.212-2.fc44",
+    "arch": "x86_64",
+    "filename": "device-mapper-libs-1.02.212-2.fc44.x86_64.rpm",
+    "sha256": "faaf83a68262d5bff1e09ae4f7b5596b1acd349b410b3cf3baf7d73e80017b2a"
+  },
+  {
+    "name": "double-conversion",
+    "evr": "0:3.4.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "double-conversion-3.4.0-3.fc44.x86_64.rpm",
+    "sha256": "f10c2f74d71838faba7e0c66d80d6bf9a9f195f36fd4163d7ce8a248b9a782df"
+  },
+  {
+    "name": "drpm",
+    "evr": "0:0.5.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "drpm-0.5.3-2.fc44.x86_64.rpm",
+    "sha256": "aef76b722ef541b469392d1baeae27da4e6b217055d0046559a15019e7eedbf6"
+  },
+  {
+    "name": "duktape",
+    "evr": "0:2.7.0-11.fc44",
+    "arch": "x86_64",
+    "filename": "duktape-2.7.0-11.fc44.x86_64.rpm",
+    "sha256": "90b487eae6fbf2636b575eedda6c752b58bd5e4b6b24c7dabcb8d74c6319a1f3"
+  },
+  {
+    "name": "fdk-aac-free",
+    "evr": "0:2.0.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "fdk-aac-free-2.0.3-2.fc44.x86_64.rpm",
+    "sha256": "8d8820da6a23e50563259d8cd0850d88e34d63f926bbf539c34faca22fb2aaed"
+  },
+  {
+    "name": "fftw-libs-double",
+    "evr": "0:3.3.10-17.fc44",
+    "arch": "x86_64",
+    "filename": "fftw-libs-double-3.3.10-17.fc44.x86_64.rpm",
+    "sha256": "6f1921b87fa3dd5d626d5224bd5bd8f1bf01575fb2a226b44c252c16ac1593a4"
+  },
+  {
+    "name": "flac-libs",
+    "evr": "0:1.5.0-8.fc44",
+    "arch": "x86_64",
+    "filename": "flac-libs-1.5.0-8.fc44.x86_64.rpm",
+    "sha256": "2b3b670cadeb5ae63319bd9841f561c48f8d3e6918425ad6c9b9c7ca97020c39"
+  },
+  {
+    "name": "flexiblas",
+    "evr": "0:3.5.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "flexiblas-3.5.0-2.fc44.x86_64.rpm",
+    "sha256": "dd580a1f423d1935560c79b29268c8d7b8bfa96bbcc799c92a579652fc6a8641"
+  },
+  {
+    "name": "flexiblas-netlib",
+    "evr": "0:3.5.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "flexiblas-netlib-3.5.0-2.fc44.x86_64.rpm",
+    "sha256": "6990be2c8c110030b9015cdc51dfba5492db66b26bb8471d436c6bd3fe42b763"
+  },
+  {
+    "name": "flexiblas-netlib64",
+    "evr": "0:3.5.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "flexiblas-netlib64-3.5.0-2.fc44.x86_64.rpm",
+    "sha256": "da524d31447f36d22a894e4341d914aee91b0f376c1c776e2f28b16b022092db"
+  },
+  {
+    "name": "flexiblas-openblas-openmp",
+    "evr": "0:3.5.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "flexiblas-openblas-openmp-3.5.0-2.fc44.x86_64.rpm",
+    "sha256": "5305ad7e0c670d606999f53f60e23dc7e001556295b1eb979fb27071b9eaf0a9"
+  },
+  {
+    "name": "flexiblas-openblas-openmp64",
+    "evr": "0:3.5.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "flexiblas-openblas-openmp64-3.5.0-2.fc44.x86_64.rpm",
+    "sha256": "b1aed0a2facd0b337523713b54277c575885dfee40ad66c95b2bb501e4d428aa"
+  },
+  {
+    "name": "flite",
+    "evr": "0:2.2-13.fc44",
+    "arch": "x86_64",
+    "filename": "flite-2.2-13.fc44.x86_64.rpm",
+    "sha256": "3026c5acc9ecd25eb856705518cf1dd601ed866d14622d3df59faa4e107e60d8"
+  },
+  {
+    "name": "freeglut",
+    "evr": "0:3.8.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "freeglut-3.8.0-2.fc44.x86_64.rpm",
+    "sha256": "74fe753afebeb7ff1051f73ce0ee6be558952d3e53c0ecd705833e811738cce9"
+  },
+  {
+    "name": "freexl",
+    "evr": "0:2.0.0-20.fc44",
+    "arch": "x86_64",
+    "filename": "freexl-2.0.0-20.fc44.x86_64.rpm",
+    "sha256": "212dea22b64d6a57ca538a5c831b95013ee68129c53ff85d4980d3b86f1652c2"
+  },
+  {
+    "name": "game-music-emu",
+    "evr": "0:0.6.4-3.fc44",
+    "arch": "x86_64",
+    "filename": "game-music-emu-0.6.4-3.fc44.x86_64.rpm",
+    "sha256": "fec8d2478fa6397027fd92b8b091c98acf75e77a034edd1055836c4f6113f06a"
+  },
+  {
+    "name": "gdal-libs",
+    "evr": "0:3.12.4-1.fc44",
+    "arch": "x86_64",
+    "filename": "gdal-libs-3.12.4-1.fc44.x86_64.rpm",
+    "sha256": "1ae7acb2da80a625c591550624b6e600790f4f759d94e914c75a230468c2ca9a"
+  },
+  {
+    "name": "gdcm",
+    "evr": "0:3.0.24-17.fc44",
+    "arch": "x86_64",
+    "filename": "gdcm-3.0.24-17.fc44.x86_64.rpm",
+    "sha256": "2108de18ac047120ca156cfb602900271e2292d2edb13a5998753f451a7e0875"
+  },
+  {
+    "name": "geos",
+    "evr": "0:3.14.1-2.fc44",
+    "arch": "x86_64",
+    "filename": "geos-3.14.1-2.fc44.x86_64.rpm",
+    "sha256": "f32768ea0659daac2d63da266fec466f45b70e2293238fc2c1b243322303c4ca"
+  },
+  {
+    "name": "giflib",
+    "evr": "0:6.1.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "giflib-6.1.3-2.fc44.x86_64.rpm",
+    "sha256": "040859f2882e55afa4e246adb9ed2b68e85eea8fa2ecbffe6b4d0cb406aaa1ac"
+  },
+  {
+    "name": "git",
+    "evr": "0:2.55.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "git-2.55.0-1.fc44.x86_64.rpm",
+    "sha256": "e6dc583ab2a545dea11573ff604df0fadcc0688e07d867591ec1b6ed14b94e0b"
+  },
+  {
+    "name": "git-core",
+    "evr": "0:2.55.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "git-core-2.55.0-1.fc44.x86_64.rpm",
+    "sha256": "84ef10e8f224a916246c1c60fef23deae373509e6127a19173a1032952d19fa2"
+  },
+  {
+    "name": "git-core-doc",
+    "evr": "0:2.55.0-1.fc44",
+    "arch": "noarch",
+    "filename": "git-core-doc-2.55.0-1.fc44.noarch.rpm",
+    "sha256": "fc49abda8a1644a01ca8895361895b8330c42b8efd229a0bba2ee4981ed09aa3"
+  },
+  {
+    "name": "glib-networking",
+    "evr": "0:2.80.1-4.fc44",
+    "arch": "x86_64",
+    "filename": "glib-networking-2.80.1-4.fc44.x86_64.rpm",
+    "sha256": "322211f0de47b0c5e241e1d94ab3ce096d67fc62725d993a5efdb3a416d4f71b"
+  },
+  {
+    "name": "glibmm2.4",
+    "evr": "0:2.66.10-1.fc44",
+    "arch": "x86_64",
+    "filename": "glibmm2.4-2.66.10-1.fc44.x86_64.rpm",
+    "sha256": "ee7c9346ea0bf31a6c6114087721f02245b47fdacc361a2eb3572f66c9e06763"
+  },
+  {
+    "name": "glx-utils",
+    "evr": "0:9.0.0-11.fc44",
+    "arch": "x86_64",
+    "filename": "glx-utils-9.0.0-11.fc44.x86_64.rpm",
+    "sha256": "b30fc5b7f799f14b42d01ae8b20efba1e7351a4f8aa0eb7a93e966c5ef266e5b"
+  },
+  {
+    "name": "gpgme",
+    "evr": "0:2.0.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "gpgme-2.0.1-5.fc44.x86_64.rpm",
+    "sha256": "47d4f55177f38344089cc68403b98d31cb18447352d7428fdf8ddbcda3e0b1ef"
+  },
+  {
+    "name": "gpgmepp",
+    "evr": "0:2.0.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "gpgmepp-2.0.1-5.fc44.x86_64.rpm",
+    "sha256": "c768902dd8c27a02e44cd5df51488b5b60e9e1ffdda16e01023f589a9d66ef69"
+  },
+  {
+    "name": "graphene",
+    "evr": "0:1.10.8-4.fc44",
+    "arch": "x86_64",
+    "filename": "graphene-1.10.8-4.fc44.x86_64.rpm",
+    "sha256": "f3617c2a02f80d92ccafce53bcbffa53b08bab6e609503d746ff3fbf12437c30"
+  },
+  {
+    "name": "gsettings-desktop-schemas",
+    "evr": "0:50.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "gsettings-desktop-schemas-50.1-1.fc44.x86_64.rpm",
+    "sha256": "295467adcf3ee761cec6394c2c75720e8294da4d939e8eb45c33a2567ecd16e5"
+  },
+  {
+    "name": "gsm",
+    "evr": "0:1.0.24-2.fc44",
+    "arch": "x86_64",
+    "filename": "gsm-1.0.24-2.fc44.x86_64.rpm",
+    "sha256": "6459413800414c74b8d04b0c9bb59749779c3230d5936c569e738c8a80a4ea1b"
+  },
+  {
+    "name": "gstreamer1",
+    "evr": "0:1.28.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "gstreamer1-1.28.6-1.fc44.x86_64.rpm",
+    "sha256": "589544d6750b3fbbef2d47b019bb1aa0058536808b29081b3918d332517241a3"
+  },
+  {
+    "name": "gstreamer1-plugins-base",
+    "evr": "0:1.28.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "gstreamer1-plugins-base-1.28.6-1.fc44.x86_64.rpm",
+    "sha256": "a46a8a0c2cd55197a2f308482c7069aaa5b5e8b41a11917a4b61fb27c7e45489"
+  },
+  {
+    "name": "gtk-update-icon-cache",
+    "evr": "0:3.24.52-2.fc44",
+    "arch": "x86_64",
+    "filename": "gtk-update-icon-cache-3.24.52-2.fc44.x86_64.rpm",
+    "sha256": "6ec33c7f26814f70ff69c7e9e4a6d57f772ed01e136c93f9fbf7a2c96becc2fa"
+  },
+  {
+    "name": "gtk3",
+    "evr": "0:3.24.52-2.fc44",
+    "arch": "x86_64",
+    "filename": "gtk3-3.24.52-2.fc44.x86_64.rpm",
+    "sha256": "a79d5e9e687459c9a10d08ac125fc02dab882f9b95e5f95fa8ec638bd8ee228e"
+  },
+  {
+    "name": "hdf-libs",
+    "evr": "0:4.3.0-5.fc44",
+    "arch": "x86_64",
+    "filename": "hdf-libs-4.3.0-5.fc44.x86_64.rpm",
+    "sha256": "fff135eefeba6abc9319612a9e65fdcb96031275126c049ee73c27b3e1ea8482"
+  },
+  {
+    "name": "hdf5",
+    "evr": "0:1.14.6-7.fc44",
+    "arch": "x86_64",
+    "filename": "hdf5-1.14.6-7.fc44.x86_64.rpm",
+    "sha256": "f33563707be497ad1e187139742f634e0e8d7c42166b417fafe3d22b57b94a05"
+  },
+  {
+    "name": "hicolor-icon-theme",
+    "evr": "0:0.18-3.fc44",
+    "arch": "noarch",
+    "filename": "hicolor-icon-theme-0.18-3.fc44.noarch.rpm",
+    "sha256": "28894b2ad620f1b525a5de4db3e17d1782ccfe0ac1322c2336070bee1cacf47e"
+  },
+  {
+    "name": "hipblas",
+    "evr": "0:7.1.0-6.fc44",
+    "arch": "x86_64",
+    "filename": "hipblas-7.1.0-6.fc44.x86_64.rpm",
+    "sha256": "f4976715937359ce8523dd288bb5d1f0ee1a64c9f2b16fd937007d551a12467a"
+  },
+  {
+    "name": "hipblaslt",
+    "evr": "0:7.1.1-7.fc44",
+    "arch": "x86_64",
+    "filename": "hipblaslt-7.1.1-7.fc44.x86_64.rpm",
+    "sha256": "27828584ffb3fd0c884377dc8006c87ee90508279f99bc46b414c71ca7e1dec8"
+  },
+  {
+    "name": "hipcc",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "hipcc-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "aa093dd04eb9f891beee09933dfe76d160ae9f812c8dcb3894085150d4fbe288"
+  },
+  {
+    "name": "hipfft",
+    "evr": "0:7.1.0-5.fc44",
+    "arch": "x86_64",
+    "filename": "hipfft-7.1.0-5.fc44.x86_64.rpm",
+    "sha256": "18e0c1d2990cf77002df4ca986f9be2bcbf7a0909f0a9e7dcf919e349e2cca8c"
+  },
+  {
+    "name": "hiprand",
+    "evr": "0:7.1.0-6.fc44",
+    "arch": "x86_64",
+    "filename": "hiprand-7.1.0-6.fc44.x86_64.rpm",
+    "sha256": "346cefeb63f1d48a559cd8b852938fd2a9a42cab0a8a911b398664fd420c2af4"
+  },
+  {
+    "name": "hipsolver",
+    "evr": "0:7.1.0-5.fc44",
+    "arch": "x86_64",
+    "filename": "hipsolver-7.1.0-5.fc44.x86_64.rpm",
+    "sha256": "3d40556bbbc26c0adf30525811954cbcbbf6d8a9f37a337d430c8082b4f82436"
+  },
+  {
+    "name": "hipsparse",
+    "evr": "0:7.1.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "hipsparse-7.1.1-5.fc44.x86_64.rpm",
+    "sha256": "149a9e2d1bbb73125bfccd44becb2cc6bde2a2082ce741fb2b9449d0e7728d8c"
+  },
+  {
+    "name": "hipsparselt",
+    "evr": "0:7.1.1-4.fc44",
+    "arch": "x86_64",
+    "filename": "hipsparselt-7.1.1-4.fc44.x86_64.rpm",
+    "sha256": "f7fbe36f52d41746ec85fad4726616f7f1c45be8d644f46a3b55e45ff9e48201"
+  },
+  {
+    "name": "hwdata",
+    "evr": "0:0.411-1.fc44",
+    "arch": "noarch",
+    "filename": "hwdata-0.411-1.fc44.noarch.rpm",
+    "sha256": "c5f66df4f0e4e101928dcd305852add3b447fb54607cc929ea3d4b55af16e837"
+  },
+  {
+    "name": "ilbc",
+    "evr": "0:3.0.4-19.fc44",
+    "arch": "x86_64",
+    "filename": "ilbc-3.0.4-19.fc44.x86_64.rpm",
+    "sha256": "083395453a2de7b547dccd44dca570f927f292ab2117e0cdbe1faf611b0c888e"
+  },
+  {
+    "name": "imath",
+    "evr": "0:3.1.12-6.fc44",
+    "arch": "x86_64",
+    "filename": "imath-3.1.12-6.fc44.x86_64.rpm",
+    "sha256": "8ecedac3056155efdc870edabe88b1f78b4bc6f7b560548f60f1ac61c04dddb4"
+  },
+  {
+    "name": "iso-codes",
+    "evr": "0:4.20.1-3.fc44",
+    "arch": "noarch",
+    "filename": "iso-codes-4.20.1-3.fc44.noarch.rpm",
+    "sha256": "56e4d850711d11c21fb9f3b2005b54b2b69c4e218399ca50259f9678ea06e007"
+  },
+  {
+    "name": "jack-audio-connection-kit",
+    "evr": "0:1.9.22-11.fc44",
+    "arch": "x86_64",
+    "filename": "jack-audio-connection-kit-1.9.22-11.fc44.x86_64.rpm",
+    "sha256": "d6c9808432affe1c5e5dc08b4ef13bef3960b73d0e741a55f13f3c4465010473"
+  },
+  {
+    "name": "jbigkit-libs",
+    "evr": "0:2.1-33.fc44",
+    "arch": "x86_64",
+    "filename": "jbigkit-libs-2.1-33.fc44.x86_64.rpm",
+    "sha256": "506ab844edc755a822e203e1c7f426892f1cce3596871efd67e1880f933696a8"
+  },
+  {
+    "name": "lame-libs",
+    "evr": "0:3.100-21.fc44",
+    "arch": "x86_64",
+    "filename": "lame-libs-3.100-21.fc44.x86_64.rpm",
+    "sha256": "02f533c130aabfe13ad20edb935c882b322c6561f9ef39d6370a23f7fd734c68"
+  },
+  {
+    "name": "laszip",
+    "evr": "0:3.5.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "laszip-3.5.0-3.fc44.x86_64.rpm",
+    "sha256": "176a7fde177c01800bbcfc1dbc0264b0cc6bd1ae7e636d09ae2bc41ac562e918"
+  },
+  {
+    "name": "leptonica",
+    "evr": "0:1.87.0-4.fc44",
+    "arch": "x86_64",
+    "filename": "leptonica-1.87.0-4.fc44.x86_64.rpm",
+    "sha256": "457860e68c3effcedc81c9364e9edf01a0be6841c8e4ef656a758e234305b149"
+  },
+  {
+    "name": "less",
+    "evr": "0:704-4.fc44",
+    "arch": "x86_64",
+    "filename": "less-704-4.fc44.x86_64.rpm",
+    "sha256": "ef8e2ee0cda9d9ca9e74fe90fd18b739ce3ee5281ee79a9aec626b867776ffda"
+  },
+  {
+    "name": "libICE",
+    "evr": "0:1.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libICE-1.1.2-4.fc44.x86_64.rpm",
+    "sha256": "256a6fe32cad068c336f7d82e2b8255a13c965e3cf8376a0d56b61d3e525ad81"
+  },
+  {
+    "name": "libSM",
+    "evr": "0:1.2.5-4.fc44",
+    "arch": "x86_64",
+    "filename": "libSM-1.2.5-4.fc44.x86_64.rpm",
+    "sha256": "34e5587bbefbb6ef3b22ddfaaf09989565d38d0bb03ed7b1e72de1152097845c"
+  },
+  {
+    "name": "libX11-xcb",
+    "evr": "0:1.8.13-1.fc44",
+    "arch": "x86_64",
+    "filename": "libX11-xcb-1.8.13-1.fc44.x86_64.rpm",
+    "sha256": "1f7521ac70e0cb92bcc195afd40467faad387757c49f5cb417237ccc6f88888c"
+  },
+  {
+    "name": "libXcomposite",
+    "evr": "0:0.4.6-7.fc44",
+    "arch": "x86_64",
+    "filename": "libXcomposite-0.4.6-7.fc44.x86_64.rpm",
+    "sha256": "a323ec28a202d17d0fb57c83e4ddd05f97c97345fcbc478a2fcaf6d122cb8794"
+  },
+  {
+    "name": "libXcursor",
+    "evr": "0:1.2.3-4.fc44",
+    "arch": "x86_64",
+    "filename": "libXcursor-1.2.3-4.fc44.x86_64.rpm",
+    "sha256": "d998a8101f40d7b61ffb28cc5052b195c874b039a9c83a6a0552cdece56ae4f1"
+  },
+  {
+    "name": "libXdamage",
+    "evr": "0:1.1.6-7.fc44",
+    "arch": "x86_64",
+    "filename": "libXdamage-1.1.6-7.fc44.x86_64.rpm",
+    "sha256": "9d9c0dd562f1a2fd8d6d925e9a055e324a3113d32f3f55bda550f2716776dd72"
+  },
+  {
+    "name": "libXfixes",
+    "evr": "0:6.0.1-7.fc44",
+    "arch": "x86_64",
+    "filename": "libXfixes-6.0.1-7.fc44.x86_64.rpm",
+    "sha256": "32f0d319c7968cbbcabc79c08c2354716c916f9adaf916b27a085b00e637e48e"
+  },
+  {
+    "name": "libXi",
+    "evr": "0:1.8.3-1.fc44",
+    "arch": "x86_64",
+    "filename": "libXi-1.8.3-1.fc44.x86_64.rpm",
+    "sha256": "1453cf634cde50fcd4dd695a3434807701676715a306ca8beec9bd5a189fefbc"
+  },
+  {
+    "name": "libXinerama",
+    "evr": "0:1.1.5-10.fc44",
+    "arch": "x86_64",
+    "filename": "libXinerama-1.1.5-10.fc44.x86_64.rpm",
+    "sha256": "4d84b8ad9ae72feb00f968209513110c9566b05dc61f189e8ae2766b5d079da1"
+  },
+  {
+    "name": "libXrandr",
+    "evr": "0:1.5.4-7.fc44",
+    "arch": "x86_64",
+    "filename": "libXrandr-1.5.4-7.fc44.x86_64.rpm",
+    "sha256": "b8a0dbcc7c995926f356ae18e6e006ef83e36d4d9c859ac76003bea2ab80860f"
+  },
+  {
+    "name": "libXtst",
+    "evr": "0:1.2.5-4.fc44",
+    "arch": "x86_64",
+    "filename": "libXtst-1.2.5-4.fc44.x86_64.rpm",
+    "sha256": "9b1ae705b1ff302a112a41a1f3ec6db5242fdd80857498cb200dc905a254fd45"
+  },
+  {
+    "name": "libXv",
+    "evr": "0:1.0.13-4.fc44",
+    "arch": "x86_64",
+    "filename": "libXv-1.0.13-4.fc44.x86_64.rpm",
+    "sha256": "ecdd8e679c6b9f0a5af026fb9fb5d8e9f364d58718cec8b5153f86070053cdfe"
+  },
+  {
+    "name": "libXxf86vm",
+    "evr": "0:1.1.6-4.fc44",
+    "arch": "x86_64",
+    "filename": "libXxf86vm-1.1.6-4.fc44.x86_64.rpm",
+    "sha256": "734d510ce8b84542631652bbd02544ea4ef647b54b6bd24ce3a27a179b5f7d5c"
+  },
+  {
+    "name": "libaec",
+    "evr": "0:1.1.5-1.fc44",
+    "arch": "x86_64",
+    "filename": "libaec-1.1.5-1.fc44.x86_64.rpm",
+    "sha256": "878d057a7d1e2e473f508cfd8cdfa49015293e4824d308eb428909d7dbf4586c"
+  },
+  {
+    "name": "libaribcaption",
+    "evr": "0:1.1.1-4.fc44",
+    "arch": "x86_64",
+    "filename": "libaribcaption-1.1.1-4.fc44.x86_64.rpm",
+    "sha256": "f3536757c8240c21d08302782f5b5e1f8fa3eb97a3c8bd223d2ca1024526e4e6"
+  },
+  {
+    "name": "libarrow",
+    "evr": "0:23.0.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libarrow-23.0.1-1.fc44.x86_64.rpm",
+    "sha256": "6b97a1d13805bbc3ac36a2d860fc1874d0ac58afea2be12678c561434295af90"
+  },
+  {
+    "name": "libarrow-acero-libs",
+    "evr": "0:23.0.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libarrow-acero-libs-23.0.1-1.fc44.x86_64.rpm",
+    "sha256": "72f671e2d2ca9e7f1b976b15e733d30e703d39c4fe049742cdd62d74cac66ff5"
+  },
+  {
+    "name": "libarrow-compute-libs",
+    "evr": "0:23.0.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libarrow-compute-libs-23.0.1-1.fc44.x86_64.rpm",
+    "sha256": "abb80056b6838e6690a4afe1cb9991aaece19f663d3817653dca3263a9f2a720"
+  },
+  {
+    "name": "libarrow-dataset-libs",
+    "evr": "0:23.0.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libarrow-dataset-libs-23.0.1-1.fc44.x86_64.rpm",
+    "sha256": "4b15d7e163672fb052d367e1ccaa39a1554bf9ee1ee9e25e1567523a7cb865fc"
+  },
+  {
+    "name": "libarrow-doc",
+    "evr": "0:23.0.1-1.fc44",
+    "arch": "noarch",
+    "filename": "libarrow-doc-23.0.1-1.fc44.noarch.rpm",
+    "sha256": "8753ff6350989baede6f34e8aeeefaef4c535eed0624c76a7933e53f87c161f2"
+  },
+  {
+    "name": "libass",
+    "evr": "0:0.17.4-2.fc44",
+    "arch": "x86_64",
+    "filename": "libass-0.17.4-2.fc44.x86_64.rpm",
+    "sha256": "46fd9f7d3272c769014dfeef274840bbcf58b9738ed7abd3472aa3389d44982d"
+  },
+  {
+    "name": "libasyncns",
+    "evr": "0:0.8-34.fc44",
+    "arch": "x86_64",
+    "filename": "libasyncns-0.8-34.fc44.x86_64.rpm",
+    "sha256": "c2ce1a4d8ea1f9efa807340bd6f42b7c2cc5c68f4a5310f740c38fc5d491e185"
+  },
+  {
+    "name": "libavc1394",
+    "evr": "0:0.5.4-27.fc44",
+    "arch": "x86_64",
+    "filename": "libavc1394-0.5.4-27.fc44.x86_64.rpm",
+    "sha256": "63a07ca0fdfcb53abd7825ac20208150b1267785966cea5c7b633621b419b1c6"
+  },
+  {
+    "name": "libavcodec-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libavcodec-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "5815f5bebac022383ca3688a28adfb6536801d8727cd159633d4668cdd4c616d"
+  },
+  {
+    "name": "libavdevice-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libavdevice-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "5be22db81223ad479c2291562bf7b9ba66b0b5c7cff4fdb400f7ec2da9961bab"
+  },
+  {
+    "name": "libavfilter-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libavfilter-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "42508488a24469cbf31fda8ebc442bf7d2a16f4a5ba038398dfbb7e3c2705fed"
+  },
+  {
+    "name": "libavformat-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libavformat-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "bef8018e7f4f21c2e04a10f99fab4ef57f9f91e8d4860b2afea23cd4a899c4e5"
+  },
+  {
+    "name": "libavif",
+    "evr": "0:1.3.0-4.fc44",
+    "arch": "x86_64",
+    "filename": "libavif-1.3.0-4.fc44.x86_64.rpm",
+    "sha256": "5c32689edeae0416755b891bd671f20e40c676eb50622cae4b81f51a90263e9a"
+  },
+  {
+    "name": "libavutil-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libavutil-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "04f3912d48d8e7fa38b8836e6c6c4a9777a261db0694bee6e3d80f22f341657f"
+  },
+  {
+    "name": "libb2",
+    "evr": "0:0.98.1-15.fc44",
+    "arch": "x86_64",
+    "filename": "libb2-0.98.1-15.fc44.x86_64.rpm",
+    "sha256": "00566517f36595c3187a19634bd54359197879ce909431cf73a2c71779962e86"
+  },
+  {
+    "name": "libbluray",
+    "evr": "0:1.4.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "libbluray-1.4.0-3.fc44.x86_64.rpm",
+    "sha256": "6d96a6e30bce6943de76bac0cc8b9ed23de1ffc9d2b269c9a735d21cd893d4ca"
+  },
+  {
+    "name": "libbs2b",
+    "evr": "0:3.1.0-37.fc44",
+    "arch": "x86_64",
+    "filename": "libbs2b-3.1.0-37.fc44.x86_64.rpm",
+    "sha256": "679cf58dfc4d2773bdb3946affe3df574124cd06d4af998296c4b7bbc37225da"
+  },
+  {
+    "name": "libcaca",
+    "evr": "0:0.99-0.82.beta20.fc44",
+    "arch": "x86_64",
+    "filename": "libcaca-0.99-0.82.beta20.fc44.x86_64.rpm",
+    "sha256": "967fbd5a410ee46bb7b8eeb1c6fb84f3202473fcf3a13180901c0a155b98d6cd"
+  },
+  {
+    "name": "libcdio",
+    "evr": "0:2.3.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libcdio-2.3.0-1.fc44.x86_64.rpm",
+    "sha256": "aae37a11be0384903f09a7ed61a2ba5cd95d6636f9f812b14bf2b34700dc8a93"
+  },
+  {
+    "name": "libcdio-paranoia",
+    "evr": "0:10.2+2.0.2-6.fc44",
+    "arch": "x86_64",
+    "filename": "libcdio-paranoia-10.2+2.0.2-6.fc44.x86_64.rpm",
+    "sha256": "51a08097f706acfa72c85e48cf1664d8f8f4e1235360d5f169eb7cf8625cbc2d"
+  },
+  {
+    "name": "libchromaprint",
+    "evr": "0:1.6.0-4.fc44",
+    "arch": "x86_64",
+    "filename": "libchromaprint-1.6.0-4.fc44.x86_64.rpm",
+    "sha256": "4efd9190419a97b1964df80f4359e3db77e47c6d7c405e9ac39969907011d834"
+  },
+  {
+    "name": "libcloudproviders",
+    "evr": "0:0.4.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libcloudproviders-0.4.1-1.fc44.x86_64.rpm",
+    "sha256": "4c50e11807b0e4712fd349cd9646275e23655ad423db73fa5ad2aa6ac9135b1f"
+  },
+  {
+    "name": "libconfig",
+    "evr": "0:1.8.2-2.fc44",
+    "arch": "x86_64",
+    "filename": "libconfig-1.8.2-2.fc44.x86_64.rpm",
+    "sha256": "f756166e26fec97813d3e313b4bb6d78242db682fcfc11d0bc7b44e06cb0647f"
+  },
+  {
+    "name": "libdb",
+    "evr": "0:5.3.28-67.fc44",
+    "arch": "x86_64",
+    "filename": "libdb-5.3.28-67.fc44.x86_64.rpm",
+    "sha256": "0a70fcac948272ebc0af39a5be2c70779aee01e974efd41d092ace9c8b4b32d7"
+  },
+  {
+    "name": "libdc1394",
+    "evr": "0:2.2.7-9.fc44",
+    "arch": "x86_64",
+    "filename": "libdc1394-2.2.7-9.fc44.x86_64.rpm",
+    "sha256": "83b681fc22b29a77e32e68d9899335053fd1345dfc62fecaf7c75df156a7b3a9"
+  },
+  {
+    "name": "libdecor",
+    "evr": "0:0.2.5-2.fc44",
+    "arch": "x86_64",
+    "filename": "libdecor-0.2.5-2.fc44.x86_64.rpm",
+    "sha256": "c73dadc5aeaed8390e09666e911d465eba1a0605acbed46c1a438b44214ddfc4"
+  },
+  {
+    "name": "libdeflate",
+    "evr": "0:1.26-1.fc44",
+    "arch": "x86_64",
+    "filename": "libdeflate-1.26-1.fc44.x86_64.rpm",
+    "sha256": "31c50e0b8461fb19520b85564163cb96dce37de1126c700a8161be98f21f9624"
+  },
+  {
+    "name": "libdicom",
+    "evr": "0:1.2.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "libdicom-1.2.0-3.fc44.x86_64.rpm",
+    "sha256": "bb36c46aedf85620d11ff5c0be6980b69f730d87a6849f74824346eea189cc8c"
+  },
+  {
+    "name": "libdovi",
+    "evr": "0:3.3.2-3.fc44",
+    "arch": "x86_64",
+    "filename": "libdovi-3.3.2-3.fc44.x86_64.rpm",
+    "sha256": "3acf3b372e1f09d48cc37c480775e59764c1388f21d154f7f7a5cc4a0461f963"
+  },
+  {
+    "name": "libdrm",
+    "evr": "0:2.4.134-1.fc44",
+    "arch": "x86_64",
+    "filename": "libdrm-2.4.134-1.fc44.x86_64.rpm",
+    "sha256": "edd4ba5100079961bb7f9ebcb3efda75dac38f7be79f73e55839c699e236e997"
+  },
+  {
+    "name": "libdvdnav",
+    "evr": "0:7.0.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libdvdnav-7.0.0-1.fc44.x86_64.rpm",
+    "sha256": "9c0868fe417ff0243d775e616a2f75fcbaa8c50b944e899c51d21d47c301ef26"
+  },
+  {
+    "name": "libdvdread",
+    "evr": "0:7.0.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libdvdread-7.0.1-1.fc44.x86_64.rpm",
+    "sha256": "9c0bbc09e385449c163a998f923fb08b771ee71d1997ac5dbfd3a5fcb3c5c94d"
+  },
+  {
+    "name": "libepoxy",
+    "evr": "0:1.5.10-12.fc44",
+    "arch": "x86_64",
+    "filename": "libepoxy-1.5.10-12.fc44.x86_64.rpm",
+    "sha256": "e266d086c3d10abd6da2e6586c937eb429bb0fd19e90d4e8dd08aa6f938ab924"
+  },
+  {
+    "name": "libevdev",
+    "evr": "0:1.13.7-1.fc44",
+    "arch": "x86_64",
+    "filename": "libevdev-1.13.7-1.fc44.x86_64.rpm",
+    "sha256": "70397701d0c98f1e2afa7820e3dda3197c462f5ed03f86cce0599bb6040d4f12"
+  },
+  {
+    "name": "libffado",
+    "evr": "0:2.4.9-10.fc44",
+    "arch": "x86_64",
+    "filename": "libffado-2.4.9-10.fc44.x86_64.rpm",
+    "sha256": "7cdc0ee2a27428b3607f92b0fe173c47ce111d0d1d9ca44a1e78e543224e2ace"
+  },
+  {
+    "name": "libgeotiff",
+    "evr": "0:1.7.4-5.fc44",
+    "arch": "x86_64",
+    "filename": "libgeotiff-1.7.4-5.fc44.x86_64.rpm",
+    "sha256": "59bfba552ab66ace0ad028579ef812abff59d846478b198e9f1f23112395b95e"
+  },
+  {
+    "name": "libgfortran",
+    "evr": "0:16.2.1-2.fc44",
+    "arch": "x86_64",
+    "filename": "libgfortran-16.2.1-2.fc44.x86_64.rpm",
+    "sha256": "4d20d0e8e77cea4d35f3b0485447599e401aa29a6b909e98743726ecf1093ef6"
+  },
+  {
+    "name": "libglvnd",
+    "evr": "1:1.7.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "libglvnd-1.7.0-9.fc44.x86_64.rpm",
+    "sha256": "212df4a80c24320c53477d6d4a1fae424c58bbe475761d04a74c648c350a5fdc"
+  },
+  {
+    "name": "libglvnd-egl",
+    "evr": "1:1.7.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "libglvnd-egl-1.7.0-9.fc44.x86_64.rpm",
+    "sha256": "30286b1e16ab7830a0d9e34dc82fcc0234d3cfc7dbb937940bb3fc7b38b84272"
+  },
+  {
+    "name": "libglvnd-glx",
+    "evr": "1:1.7.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "libglvnd-glx-1.7.0-9.fc44.x86_64.rpm",
+    "sha256": "f8f04675d76927068b35bfa1af7d5a332bd69498909206efb60a699dbd232d10"
+  },
+  {
+    "name": "libglvnd-opengl",
+    "evr": "1:1.7.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "libglvnd-opengl-1.7.0-9.fc44.x86_64.rpm",
+    "sha256": "9ff4a8342698a36cf9bf8ba2d9a7cea3f2dd957180b133805b1b350e12a0be46"
+  },
+  {
+    "name": "libgta",
+    "evr": "0:1.2.1-17.fc44",
+    "arch": "x86_64",
+    "filename": "libgta-1.2.1-17.fc44.x86_64.rpm",
+    "sha256": "2df404ced5a556a5c62484357216abc86fcd64a8388e5a1ce2ed1050fb22817e"
+  },
+  {
+    "name": "libgudev",
+    "evr": "0:238-9.fc44",
+    "arch": "x86_64",
+    "filename": "libgudev-238-9.fc44.x86_64.rpm",
+    "sha256": "6666748a718546d220f6e6c2dc4ce3dbc9187290a73d8cf7a5b3adaa90c80d07"
+  },
+  {
+    "name": "libgusb",
+    "evr": "0:0.4.9-5.fc44",
+    "arch": "x86_64",
+    "filename": "libgusb-0.4.9-5.fc44.x86_64.rpm",
+    "sha256": "14d94cd79d0f52400e8eeaae62b37662f84df934ff9f5240d65433331e351be6"
+  },
+  {
+    "name": "libharu",
+    "evr": "0:2.4.5-2.fc44",
+    "arch": "x86_64",
+    "filename": "libharu-2.4.5-2.fc44.x86_64.rpm",
+    "sha256": "98fdac3ac59b35da0bc33ff5d6609a4c4bc8d6196ccf2dd5e0ed9170503bcfa3"
+  },
+  {
+    "name": "libicu",
+    "evr": "0:77.1-3.fc44",
+    "arch": "x86_64",
+    "filename": "libicu-77.1-3.fc44.x86_64.rpm",
+    "sha256": "db68619033421e65ef4b583946bf301fe3964509f25f4d6e3c7b8c2a41544c29"
+  },
+  {
+    "name": "libiec61883",
+    "evr": "0:1.2.0-39.fc44",
+    "arch": "x86_64",
+    "filename": "libiec61883-1.2.0-39.fc44.x86_64.rpm",
+    "sha256": "0ff3c32237216ef430873772a58e61b33c44dc1fae6e310aa18fa08a9bf326c7"
+  },
+  {
+    "name": "libinput",
+    "evr": "0:1.31.3-1.fc44",
+    "arch": "x86_64",
+    "filename": "libinput-1.31.3-1.fc44.x86_64.rpm",
+    "sha256": "6d187c79c517affeb59b7aa6becaa127d15f1423e35b766625c89249a019cbe2"
+  },
+  {
+    "name": "libklvanc",
+    "evr": "0:1.6.0-4.fc44",
+    "arch": "x86_64",
+    "filename": "libklvanc-1.6.0-4.fc44.x86_64.rpm",
+    "sha256": "3b11ad70eba12d499097c9bba8d99764c2e1b1112ad6f4a85741ab617bedfdbe"
+  },
+  {
+    "name": "libkml",
+    "evr": "0:1.3.0-58.fc44",
+    "arch": "x86_64",
+    "filename": "libkml-1.3.0-58.fc44.x86_64.rpm",
+    "sha256": "8a21447ff95fb0252817cf12e5d794264092ab2f5d0d1adcac14025c6d78f642"
+  },
+  {
+    "name": "liblas",
+    "evr": "0:1.8.2-0.30.git0756b73.fc44",
+    "arch": "x86_64",
+    "filename": "liblas-1.8.2-0.30.git0756b73.fc44.x86_64.rpm",
+    "sha256": "4254d70741eab907db71daefbc7ded67cb0eec0c2428eabd8b1ad23b2cf449cb"
+  },
+  {
+    "name": "liblc3",
+    "evr": "0:1.1.3-7.fc44",
+    "arch": "x86_64",
+    "filename": "liblc3-1.1.3-7.fc44.x86_64.rpm",
+    "sha256": "98f9ceab31418394a5e27c6cc5bd492ffed0f9e521545be3aeb56da4b37c74ed"
+  },
+  {
+    "name": "libldb",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "libldb-4.24.6-1.fc44.x86_64.rpm",
+    "sha256": "816c3057c4de05989c72dada8568000384fadcd4e38dfeaaac1f278a5cca2b16"
+  },
+  {
+    "name": "liblerc",
+    "evr": "0:4.0.0-10.fc44",
+    "arch": "x86_64",
+    "filename": "liblerc-4.0.0-10.fc44.x86_64.rpm",
+    "sha256": "eabd33ee5b55d9d2659dc206d616553533be19dec01f463681ad38dc0dab52a8"
+  },
+  {
+    "name": "libmodplug",
+    "evr": "1:0.8.9.0-29.fc44",
+    "arch": "x86_64",
+    "filename": "libmodplug-0.8.9.0-29.fc44.x86_64.rpm",
+    "sha256": "ea37acdcc55c34e7096dbf801d420fb9fb3231400d7bb16c5265f69936c5c464"
+  },
+  {
+    "name": "libmysofa",
+    "evr": "0:1.3.3-4.fc44",
+    "arch": "x86_64",
+    "filename": "libmysofa-1.3.3-4.fc44.x86_64.rpm",
+    "sha256": "494c720cfd6ad4b006f1404e3b6e710a2144abcb5e9f9b3239376a4c11eeca85"
+  },
+  {
+    "name": "libogg",
+    "evr": "2:1.3.6-2.fc44",
+    "arch": "x86_64",
+    "filename": "libogg-1.3.6-2.fc44.x86_64.rpm",
+    "sha256": "b2ee2e92d8685b273c489bc61e9caf5f2c664efafd87ed431f213e3755dfcd98"
+  },
+  {
+    "name": "libomp",
+    "evr": "0:22.1.8-4.fc44",
+    "arch": "x86_64",
+    "filename": "libomp-22.1.8-4.fc44.x86_64.rpm",
+    "sha256": "d86c3cc305bc4ffa7b3317ff57b4266a50d13f38d48662f67a17c7d498cf2b46"
+  },
+  {
+    "name": "libopenmpt",
+    "evr": "0:0.8.9-1.fc44",
+    "arch": "x86_64",
+    "filename": "libopenmpt-0.8.9-1.fc44.x86_64.rpm",
+    "sha256": "6f30552f27274ab2e66ee2ec6ce8202ca28b61e83b271f7ffaa75350418b309e"
+  },
+  {
+    "name": "liborc2",
+    "evr": "0:2.2.2-2.fc44",
+    "arch": "x86_64",
+    "filename": "liborc2-2.2.2-2.fc44.x86_64.rpm",
+    "sha256": "00e4e5a6de0e82d5a0ed7d548084bb123836d0126acff15148cd25c83d9bad9e"
+  },
+  {
+    "name": "libpciaccess",
+    "evr": "0:0.16-17.fc44",
+    "arch": "x86_64",
+    "filename": "libpciaccess-0.16-17.fc44.x86_64.rpm",
+    "sha256": "6883cf376da3dd09ff28923c74f7647c02e14996dddd64e49ae39bcd8085e69d"
+  },
+  {
+    "name": "libplacebo",
+    "evr": "0:7.360.1-3.fc44",
+    "arch": "x86_64",
+    "filename": "libplacebo-7.360.1-3.fc44.x86_64.rpm",
+    "sha256": "12241ab02bf18ed5114c9d4065d5f91d41fa57924d21d29aaefcf54fea3ee3c3"
+  },
+  {
+    "name": "libpq",
+    "evr": "0:18.0-4.fc44",
+    "arch": "x86_64",
+    "filename": "libpq-18.0-4.fc44.x86_64.rpm",
+    "sha256": "8c034bd2d2139cfe0cb674c43aaf59cc94035e667dc99f463814d2ef123886d2"
+  },
+  {
+    "name": "libproxy",
+    "evr": "0:0.5.12-2.fc44",
+    "arch": "x86_64",
+    "filename": "libproxy-0.5.12-2.fc44.x86_64.rpm",
+    "sha256": "ee7d9b409a2bf32f58881c1a787bac0ba903a7d5437cb9b646d503f9f8fd440b"
+  },
+  {
+    "name": "libqhull_r",
+    "evr": "1:8.0.2-8.fc44",
+    "arch": "x86_64",
+    "filename": "libqhull_r-8.0.2-8.fc44.x86_64.rpm",
+    "sha256": "62abec1331a66cb96ada44cce80cbd22db53cd9dcddb4bebe41919c6ac547a27"
+  },
+  {
+    "name": "libquadmath",
+    "evr": "0:16.2.1-2.fc44",
+    "arch": "x86_64",
+    "filename": "libquadmath-16.2.1-2.fc44.x86_64.rpm",
+    "sha256": "666035b5b242f827a43b8ca0499ec797659e22f108eb546362902df3da4d260d"
+  },
+  {
+    "name": "librabbitmq",
+    "evr": "0:0.17.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "librabbitmq-0.17.0-1.fc44.x86_64.rpm",
+    "sha256": "1b0f3b36a24a436bee6717674ffccaa75361ffaee3c04241881f9ccaede55da9"
+  },
+  {
+    "name": "libraw1394",
+    "evr": "0:2.1.2-25.fc44",
+    "arch": "x86_64",
+    "filename": "libraw1394-2.1.2-25.fc44.x86_64.rpm",
+    "sha256": "7bb7107ca3040832af1fa823a0a4a34aed4a3297f15ace82dc1a00fbe5f2d2fc"
+  },
+  {
+    "name": "librist",
+    "evr": "0:0.2.11-1.fc44",
+    "arch": "x86_64",
+    "filename": "librist-0.2.11-1.fc44.x86_64.rpm",
+    "sha256": "ff18b0619f06f1d71674de3b4ec47d1ff22642da7390eb5d1a4bf3511cc79beb"
+  },
+  {
+    "name": "librttopo",
+    "evr": "0:1.1.0-19.fc44",
+    "arch": "x86_64",
+    "filename": "librttopo-1.1.0-19.fc44.x86_64.rpm",
+    "sha256": "976b29bc53192bc87e9d351e0625726ef196182eeaa7e77c2b28844298e42f67"
+  },
+  {
+    "name": "libsamplerate",
+    "evr": "0:0.2.2-12.fc44",
+    "arch": "x86_64",
+    "filename": "libsamplerate-0.2.2-12.fc44.x86_64.rpm",
+    "sha256": "04de4233feb45adfe9b822e4092f20bc104768c66539a7f445c0a48064565ead"
+  },
+  {
+    "name": "libshaderc",
+    "evr": "0:2026.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libshaderc-2026.1-1.fc44.x86_64.rpm",
+    "sha256": "c7f03ba93ef58a98e4bd54494292d097f142182cafd9fe08475de393a3a4e9c5"
+  },
+  {
+    "name": "libsigc++20",
+    "evr": "0:2.12.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "libsigc++20-2.12.2-1.fc44.x86_64.rpm",
+    "sha256": "a0a9f11a44936000518a4142616fa7a29a23fb410c0ed91b6b7b9e031cdc1be2"
+  },
+  {
+    "name": "libsmbclient",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "libsmbclient-4.24.6-1.fc44.x86_64.rpm",
+    "sha256": "3344f6a7b76b95ce00f10c4c601e1bf48c64ad13f2fd764a69daabcdb671c9e2"
+  },
+  {
+    "name": "libsndfile",
+    "evr": "0:1.2.2-11.fc44",
+    "arch": "x86_64",
+    "filename": "libsndfile-1.2.2-11.fc44.x86_64.rpm",
+    "sha256": "f7bb2f0abb0a15687ce5e4c972bc2394405457021e0118ef6d43ba2fb97d626c"
+  },
+  {
+    "name": "libsodium",
+    "evr": "0:1.0.22-1.fc44",
+    "arch": "x86_64",
+    "filename": "libsodium-1.0.22-1.fc44.x86_64.rpm",
+    "sha256": "d68bfb57a93d95c5f7d0be1fd8557a2cfda20afac3c43904325b30c17b4fae4f"
+  },
+  {
+    "name": "libsoup3",
+    "evr": "0:3.6.6-10.fc44",
+    "arch": "x86_64",
+    "filename": "libsoup3-3.6.6-10.fc44.x86_64.rpm",
+    "sha256": "cfc785b852b1a558010a5be093996bf3fb84cc0d3ed1fe8a4e023b5acbf4a4b5"
+  },
+  {
+    "name": "libspatialite",
+    "evr": "0:5.1.0-12.fc44",
+    "arch": "x86_64",
+    "filename": "libspatialite-5.1.0-12.fc44.x86_64.rpm",
+    "sha256": "df94a182452993fde5f917668422087bc15db3ae6420e5d4205a613b87b50a73"
+  },
+  {
+    "name": "libstemmer",
+    "evr": "0:3.0.1-11.fc44",
+    "arch": "x86_64",
+    "filename": "libstemmer-3.0.1-11.fc44.x86_64.rpm",
+    "sha256": "df3bafb6551ea650dbe3a571bee8f15f280ba3601ef048edab0140fdc00d0806"
+  },
+  {
+    "name": "libswresample-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libswresample-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "de022d010053e008ae1d5b63de6176e63e2ef7a2432c741279fd95993b39cc09"
+  },
+  {
+    "name": "libswscale-free",
+    "evr": "0:8.1.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libswscale-free-8.1.2-4.fc44.x86_64.rpm",
+    "sha256": "41aabea127b4e03b2f92a758deb2020365d4282cb604a09de79e2266c345fb31"
+  },
+  {
+    "name": "libtalloc",
+    "evr": "0:2.4.4-1.fc44",
+    "arch": "x86_64",
+    "filename": "libtalloc-2.4.4-1.fc44.x86_64.rpm",
+    "sha256": "f85faec803d236600ae7181bd0d0fa64ee8408fef267792095cb87836c581538"
+  },
+  {
+    "name": "libtdb",
+    "evr": "0:1.4.15-1.fc44",
+    "arch": "x86_64",
+    "filename": "libtdb-1.4.15-1.fc44.x86_64.rpm",
+    "sha256": "99a8984721421a1e85b522bce32a3e22c7927fce505584ad21d8b5f8885ec2d2"
+  },
+  {
+    "name": "libtevent",
+    "evr": "0:0.17.1-4.fc44",
+    "arch": "x86_64",
+    "filename": "libtevent-0.17.1-4.fc44.x86_64.rpm",
+    "sha256": "36fbb72b41dfe7a46123f99578f2b53a188e7a501a10a3d7e64dc698648bc717"
+  },
+  {
+    "name": "libtheora",
+    "evr": "1:1.1.1-41.fc44",
+    "arch": "x86_64",
+    "filename": "libtheora-1.1.1-41.fc44.x86_64.rpm",
+    "sha256": "3365db93d654e2ee1b4c0cd86e84f6fce9c27bf8520bc47f50ea1e746334e8e2"
+  },
+  {
+    "name": "libtiff",
+    "evr": "0:4.7.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "libtiff-4.7.2-1.fc44.x86_64.rpm",
+    "sha256": "d2d69d4d7f4f5e34abd8f717336d4fc5bd8deba6546c46de7c95c1ec805036a2"
+  },
+  {
+    "name": "libtinysparql",
+    "evr": "0:3.11.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "libtinysparql-3.11.1-1.fc44.x86_64.rpm",
+    "sha256": "95bd2620dd81899da12899631cbccb68cd627a3195f26ea596878c139e6afe65"
+  },
+  {
+    "name": "libtommath",
+    "evr": "0:1.3.1~rc1-7.fc44",
+    "arch": "x86_64",
+    "filename": "libtommath-1.3.1~rc1-7.fc44.x86_64.rpm",
+    "sha256": "bfc715fa89924283149ae10ec13c60ed486eedf2fa08c2bbe5e503de4a0be803"
+  },
+  {
+    "name": "libudfread",
+    "evr": "0:1.2.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "libudfread-1.2.0-3.fc44.x86_64.rpm",
+    "sha256": "721ff274be4053db1f98866be7c03f93b517c149f6515fb54f9839b075f4e655"
+  },
+  {
+    "name": "libunibreak",
+    "evr": "0:6.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "libunibreak-6.1-5.fc44.x86_64.rpm",
+    "sha256": "d9d5781804507443a4041ca6d798a89f7af8b6b7917d8817e062eca676ddf10b"
+  },
+  {
+    "name": "libunwind",
+    "evr": "0:1.8.3-1.fc44",
+    "arch": "x86_64",
+    "filename": "libunwind-1.8.3-1.fc44.x86_64.rpm",
+    "sha256": "1608336a6354ef1f900f4dd61de77973d62f60943eb273ab99c982cc1b9a562b"
+  },
+  {
+    "name": "libv4l",
+    "evr": "0:1.32.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "libv4l-1.32.0-3.fc44.x86_64.rpm",
+    "sha256": "29c8abad3d007500de2e6d282debf0fc98a84086fe0e522480945a209d6ccd52"
+  },
+  {
+    "name": "libva",
+    "evr": "0:2.23.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "libva-2.23.0-3.fc44.x86_64.rpm",
+    "sha256": "d2fc6a290e4f5e142fb4506ed2e188f615c8eb3b407dabbf4159b774edf20402"
+  },
+  {
+    "name": "libvdpau",
+    "evr": "0:1.5-11.fc44",
+    "arch": "x86_64",
+    "filename": "libvdpau-1.5-11.fc44.x86_64.rpm",
+    "sha256": "5955332827a62021cfcfe2cedaa850e4a1d978db790f0e5ebdc6c1b26c24c21f"
+  },
+  {
+    "name": "libvisual",
+    "evr": "1:0.4.2-4.fc44",
+    "arch": "x86_64",
+    "filename": "libvisual-0.4.2-4.fc44.x86_64.rpm",
+    "sha256": "0ec48de19a467d48ea369fc4393c3690de86ff68e927e21d1e36ff27f016749f"
+  },
+  {
+    "name": "libvorbis",
+    "evr": "1:1.3.7-14.fc44",
+    "arch": "x86_64",
+    "filename": "libvorbis-1.3.7-14.fc44.x86_64.rpm",
+    "sha256": "f003acd249ad988a60ecc5458895f6e444fe13f98108969d82598339d1942f85"
+  },
+  {
+    "name": "libvpl",
+    "evr": "1:2.17.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libvpl-2.17.0-1.fc44.x86_64.rpm",
+    "sha256": "39cb71cb3fad4ac82372d13eb08e1a650f3137326f2547f5df3c2facc7afd2c1"
+  },
+  {
+    "name": "libvpx",
+    "evr": "0:1.15.0-5.fc44",
+    "arch": "x86_64",
+    "filename": "libvpx-1.15.0-5.fc44.x86_64.rpm",
+    "sha256": "d57a8be46724d00d1a798706e621b7a0934bc7ddcd58dff815b3bf705d727ec1"
+  },
+  {
+    "name": "libwacom",
+    "evr": "0:2.19.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libwacom-2.19.0-1.fc44.x86_64.rpm",
+    "sha256": "ba5748e8c52fbde3d73ca6791e04c861c3a818d454245fd4f1de3b3e229cec22"
+  },
+  {
+    "name": "libwacom-data",
+    "evr": "0:2.19.0-1.fc44",
+    "arch": "noarch",
+    "filename": "libwacom-data-2.19.0-1.fc44.noarch.rpm",
+    "sha256": "5099f8e569baba02dc1343ab49316a3c9876b981e2b51a40636d2b988d946921"
+  },
+  {
+    "name": "libwayland-client",
+    "evr": "0:1.25.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libwayland-client-1.25.0-1.fc44.x86_64.rpm",
+    "sha256": "3a3818606a11089c90382a13908431658cf8999768d6b8b6c99c5f7ee8a60d1b"
+  },
+  {
+    "name": "libwayland-cursor",
+    "evr": "0:1.25.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libwayland-cursor-1.25.0-1.fc44.x86_64.rpm",
+    "sha256": "ad0d93b6f79fa060247d6840e2eec941f3e251696dc4efd8bc4e767051334a7e"
+  },
+  {
+    "name": "libwayland-egl",
+    "evr": "0:1.25.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "libwayland-egl-1.25.0-1.fc44.x86_64.rpm",
+    "sha256": "642a40f9a0ac07803752e82fd7d3a223c2511738e1cb0cdbac094799af6115c7"
+  },
+  {
+    "name": "libwbclient",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "libwbclient-4.24.6-1.fc44.x86_64.rpm",
+    "sha256": "22b586de9877123e1a6084c04d04e66bfdb99c8d8adc68aa93d663be135089cf"
+  },
+  {
+    "name": "libxkbcommon",
+    "evr": "0:1.13.1-2.fc44",
+    "arch": "x86_64",
+    "filename": "libxkbcommon-1.13.1-2.fc44.x86_64.rpm",
+    "sha256": "9c24e901d5daffbd0b78c06af4e63a00fcfec104fea05917314d781d0d439677"
+  },
+  {
+    "name": "libxkbcommon-x11",
+    "evr": "0:1.13.1-2.fc44",
+    "arch": "x86_64",
+    "filename": "libxkbcommon-x11-1.13.1-2.fc44.x86_64.rpm",
+    "sha256": "e533b631e4e99b12f3a4a34c5b1ffbdee10a2a8ecb8d73157b6d05da1bbe9921"
+  },
+  {
+    "name": "libxml++",
+    "evr": "0:2.42.3-8.fc44",
+    "arch": "x86_64",
+    "filename": "libxml++-2.42.3-8.fc44.x86_64.rpm",
+    "sha256": "850cde8fda8705f9365b0525c1057f99258af4ea3adc55fec9df4c93fb7a6098"
+  },
+  {
+    "name": "libxshmfence",
+    "evr": "0:1.3.2-8.fc44",
+    "arch": "x86_64",
+    "filename": "libxshmfence-1.3.2-8.fc44.x86_64.rpm",
+    "sha256": "c25f27024419607d84725563bdde157887dd8c90b767beaf10745826715ccc5e"
+  },
+  {
+    "name": "libyuv",
+    "evr": "0:0-0.61.20260213git6067afd.fc44",
+    "arch": "x86_64",
+    "filename": "libyuv-0-0.61.20260213git6067afd.fc44.x86_64.rpm",
+    "sha256": "8ddfcd6a35658453aca7b9d709265b248d84f9a7436358684bd023f33ae3597b"
+  },
+  {
+    "name": "libzip",
+    "evr": "0:1.11.4-3.fc44",
+    "arch": "x86_64",
+    "filename": "libzip-1.11.4-3.fc44.x86_64.rpm",
+    "sha256": "301d4294b2506f522e4fd2c84f423767e16e533ae4b449f9db34e541c5941f36"
+  },
+  {
+    "name": "lilv-libs",
+    "evr": "0:0.26.4-1.fc44",
+    "arch": "x86_64",
+    "filename": "lilv-libs-0.26.4-1.fc44.x86_64.rpm",
+    "sha256": "965c717733cf757067d7c969cd871eaf0544704238dc009778132906837cda0c"
+  },
+  {
+    "name": "lm_sensors-libs",
+    "evr": "0:3.6.0-24.fc44",
+    "arch": "x86_64",
+    "filename": "lm_sensors-libs-3.6.0-24.fc44.x86_64.rpm",
+    "sha256": "8baa6be6981022632fad26a741e598c7e89c864494c676a3b4a9433f7899e4bc"
+  },
+  {
+    "name": "lmdb-libs",
+    "evr": "0:0.9.34-2.fc44",
+    "arch": "x86_64",
+    "filename": "lmdb-libs-0.9.34-2.fc44.x86_64.rpm",
+    "sha256": "506bface042bb5caac4c343147ea4b1275b694ed45c233a5a0728b0a2ff1c21d"
+  },
+  {
+    "name": "lpcnetfreedv",
+    "evr": "0:0.5-10.fc44",
+    "arch": "x86_64",
+    "filename": "lpcnetfreedv-0.5-10.fc44.x86_64.rpm",
+    "sha256": "4800044b4f400aec05c96320ca161bcd07ba086a707d35a8847701bf9556ee2b"
+  },
+  {
+    "name": "magma",
+    "evr": "0:2.9.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "magma-2.9.0-9.fc44.x86_64.rpm",
+    "sha256": "72596f08a7cb663c368d79318f03289f0547cc3aedf59b86ced2ba33e607f859"
+  },
+  {
+    "name": "mariadb-connector-c",
+    "evr": "0:3.4.9-2.fc44",
+    "arch": "x86_64",
+    "filename": "mariadb-connector-c-3.4.9-2.fc44.x86_64.rpm",
+    "sha256": "7bae47286c8bda9b4d45ab3b46baddfe5bb18b8336b1a49025c71bbc67cf2f27"
+  },
+  {
+    "name": "mariadb-connector-c-config",
+    "evr": "0:3.4.9-2.fc44",
+    "arch": "noarch",
+    "filename": "mariadb-connector-c-config-3.4.9-2.fc44.noarch.rpm",
+    "sha256": "1da5fa0ae9ad33b0a17cd6cd45647491a651154660c776b3b82cd2577387f36b"
+  },
+  {
+    "name": "mesa-dri-drivers",
+    "evr": "0:26.1.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "mesa-dri-drivers-26.1.8-1.fc44.x86_64.rpm",
+    "sha256": "b754cce1dd5559baf7e2614794b65c3bcbfc75db4ffb00e950e504e02bed7e2f"
+  },
+  {
+    "name": "mesa-filesystem",
+    "evr": "0:26.1.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "mesa-filesystem-26.1.8-1.fc44.x86_64.rpm",
+    "sha256": "ea2df0127a007ea415049cfc79d77df631a496e2639357a484669db8aae7b941"
+  },
+  {
+    "name": "mesa-libEGL",
+    "evr": "0:26.1.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "mesa-libEGL-26.1.8-1.fc44.x86_64.rpm",
+    "sha256": "6d8b94dae5f99f5e01548955f0538bbd4e402c0577b9bc7b80a194610f3526ca"
+  },
+  {
+    "name": "mesa-libGL",
+    "evr": "0:26.1.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "mesa-libGL-26.1.8-1.fc44.x86_64.rpm",
+    "sha256": "5e2e47f138c62b5b6efeaedcf0d4888c405c6326b1734628ee4263efa0bef260"
+  },
+  {
+    "name": "mesa-libGLU",
+    "evr": "0:9.0.3-8.fc44",
+    "arch": "x86_64",
+    "filename": "mesa-libGLU-9.0.3-8.fc44.x86_64.rpm",
+    "sha256": "911a97a0f04c4eb3d4743f86ca4372a6955a804fac6d90cb1210840bc4551a9f"
+  },
+  {
+    "name": "mesa-libgbm",
+    "evr": "0:26.1.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "mesa-libgbm-26.1.8-1.fc44.x86_64.rpm",
+    "sha256": "6b622cf1bb186c5fef57db3abd55e423e0b63965b9cff77979fe8e1dddf29dcb"
+  },
+  {
+    "name": "minizip-ng-compat",
+    "evr": "0:4.1.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "minizip-ng-compat-4.1.0-1.fc44.x86_64.rpm",
+    "sha256": "c77dbd8c4eb384e4ef8c8f2cf35b9b2b55e0c234955263691d871621d87e4e0c"
+  },
+  {
+    "name": "miopen",
+    "evr": "0:7.1.0-6.fc44",
+    "arch": "x86_64",
+    "filename": "miopen-7.1.0-6.fc44.x86_64.rpm",
+    "sha256": "cf10467ebc08f3e30bb49071af5cb731175b76eb39095d729449469d0b6ca9eb"
+  },
+  {
+    "name": "mpg123-libs",
+    "evr": "0:1.32.10-3.fc44",
+    "arch": "x86_64",
+    "filename": "mpg123-libs-1.32.10-3.fc44.x86_64.rpm",
+    "sha256": "dccdc40cf359eb52d6b4055378f8f967be857f304b3dc906d455f8cd3e29bc0f"
+  },
+  {
+    "name": "mtdev",
+    "evr": "0:1.1.6-12.fc44",
+    "arch": "x86_64",
+    "filename": "mtdev-1.1.6-12.fc44.x86_64.rpm",
+    "sha256": "03a269b7e899a2a57b51aa2328268a82ceec8e456db62bf304d5ab1be56055e6"
+  },
+  {
+    "name": "muParser",
+    "evr": "0:2.3.5-5.fc44",
+    "arch": "x86_64",
+    "filename": "muParser-2.3.5-5.fc44.x86_64.rpm",
+    "sha256": "63c6eac62333a454436b89f484a29c7c03801b43ec0d3a16bf31fc34a6afc71d"
+  },
+  {
+    "name": "netcdf",
+    "evr": "0:4.9.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "netcdf-4.9.3-2.fc44.x86_64.rpm",
+    "sha256": "772afac310af918314b3d410e9d3c9397c3cb9313259fa5fcc59ea6d29222f05"
+  },
+  {
+    "name": "ngtcp2-crypto-gnutls",
+    "evr": "0:1.22.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "ngtcp2-crypto-gnutls-1.22.1-1.fc44.x86_64.rpm",
+    "sha256": "5c6dd2c2d28ce5c1a0f052c899f231e841487a6466cb4e87024fe5ef9168a102"
+  },
+  {
+    "name": "nspr",
+    "evr": "0:4.39.0-4.fc44",
+    "arch": "x86_64",
+    "filename": "nspr-4.39.0-4.fc44.x86_64.rpm",
+    "sha256": "1901cffc72ac9979dc42f27e49b8df4930c0b335197f11d576142769a7ad507b"
+  },
+  {
+    "name": "nss",
+    "evr": "0:3.127.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "nss-3.127.0-1.fc44.x86_64.rpm",
+    "sha256": "ea4eae7456745213eae7135a03478b7921bcf351ec08a6706aa7bbc3804336b5"
+  },
+  {
+    "name": "nss-softokn",
+    "evr": "0:3.127.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "nss-softokn-3.127.0-1.fc44.x86_64.rpm",
+    "sha256": "39ecd6cd8959362228618b5580db4ee1ab8b1b478507ccf0cec582d3d4c68f4d"
+  },
+  {
+    "name": "nss-softokn-freebl",
+    "evr": "0:3.127.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "nss-softokn-freebl-3.127.0-1.fc44.x86_64.rpm",
+    "sha256": "8eb9822bd928eec55572b2555b38663f93e3b496ef4359cf3aa455f3f6c26a72"
+  },
+  {
+    "name": "nss-sysinit",
+    "evr": "0:3.127.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "nss-sysinit-3.127.0-1.fc44.x86_64.rpm",
+    "sha256": "378df00eecd765497d3c010b1eb19fdb40e640fee2ba2682facd73b22009a105"
+  },
+  {
+    "name": "nss-util",
+    "evr": "0:3.127.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "nss-util-3.127.0-1.fc44.x86_64.rpm",
+    "sha256": "bbbf16ea892c5c28d71bf47c4d129eb255d441c00536b7b982b71b474f8126d1"
+  },
+  {
+    "name": "numactl-libs",
+    "evr": "0:2.0.19-4.fc44",
+    "arch": "x86_64",
+    "filename": "numactl-libs-2.0.19-4.fc44.x86_64.rpm",
+    "sha256": "2db3352b24cf45b937ef351513c91a557effe96ede3720634f30a9977cc9d37b"
+  },
+  {
+    "name": "openal-soft",
+    "evr": "0:1.24.2-6.fc44",
+    "arch": "x86_64",
+    "filename": "openal-soft-1.24.2-6.fc44.x86_64.rpm",
+    "sha256": "a01d2799a4f62a9a6f774fe7bcd57421676980f78b453f3c5958a5c2cf0c9616"
+  },
+  {
+    "name": "openapv-libs",
+    "evr": "0:0.2.1.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "openapv-libs-0.2.1.2-1.fc44.x86_64.rpm",
+    "sha256": "5a7088cdd9afec1125fc37aa9038c5a29f960b22a4627855abac8a43b97dbb15"
+  },
+  {
+    "name": "openblas",
+    "evr": "0:0.3.29-2.fc43",
+    "arch": "x86_64",
+    "filename": "openblas-0.3.29-2.fc43.x86_64.rpm",
+    "sha256": "220e1f53c7d475f4893f4ea52c69bc916c03ca98f949a2602d2cdc3d07c1c3ab"
+  },
+  {
+    "name": "openblas-openmp",
+    "evr": "0:0.3.29-2.fc43",
+    "arch": "x86_64",
+    "filename": "openblas-openmp-0.3.29-2.fc43.x86_64.rpm",
+    "sha256": "bc5e09da0a8fc53964a18c65b9e03a8fc7cafea18ae1fed327894d040b74c960"
+  },
+  {
+    "name": "openblas-openmp64",
+    "evr": "0:0.3.29-2.fc43",
+    "arch": "x86_64",
+    "filename": "openblas-openmp64-0.3.29-2.fc43.x86_64.rpm",
+    "sha256": "d59d59d4e61b6f808916738a7357b5fab37ad863b9d6dd9502192c4b1d771e66"
+  },
+  {
+    "name": "opencascade-draw",
+    "evr": "0:7.9.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "opencascade-draw-7.9.3-2.fc44.x86_64.rpm",
+    "sha256": "2744b18f4fe31b9f08c8ca7a4a740d3be6cb34b03d95f6c056ae75bfd5cc3e72"
+  },
+  {
+    "name": "opencascade-foundation",
+    "evr": "0:7.9.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "opencascade-foundation-7.9.3-2.fc44.x86_64.rpm",
+    "sha256": "68a95cc1fb4b690b9743c1a4638b96e1d42fd3ed0804aae1420c89ad9d63a7f3"
+  },
+  {
+    "name": "opencascade-modeling",
+    "evr": "0:7.9.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "opencascade-modeling-7.9.3-2.fc44.x86_64.rpm",
+    "sha256": "6d25f5f1014ad6fb77937ac00bdc42aaa18708c6e86748b1b45118386499dda7"
+  },
+  {
+    "name": "opencascade-ocaf",
+    "evr": "0:7.9.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "opencascade-ocaf-7.9.3-2.fc44.x86_64.rpm",
+    "sha256": "6d1afa4e38f31f8bd0cdf07baffacc6311b4da256cf02fee9cc40fe3f7f208aa"
+  },
+  {
+    "name": "opencascade-visualization",
+    "evr": "0:7.9.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "opencascade-visualization-7.9.3-2.fc44.x86_64.rpm",
+    "sha256": "07d4ad1850c2c5b2afd8f720313ea1a12f4bb6a138cccfa483b345f557277040"
+  },
+  {
+    "name": "opencore-amr",
+    "evr": "0:0.1.6-10.fc44",
+    "arch": "x86_64",
+    "filename": "opencore-amr-0.1.6-10.fc44.x86_64.rpm",
+    "sha256": "81a60260e95fe1360e8451d881bd5471815bad1a38a20a746b701be885c9771d"
+  },
+  {
+    "name": "opencv",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "06acaad1155c3d2946bc1dac7e7eba450dbfe92575a516c7cf1b93bc0a5ab128"
+  },
+  {
+    "name": "opencv-alphamat",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-alphamat-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "088b7ec45e123e85e6af75ef532dc5ed77d0784504c627ecf7734487197faac0"
+  },
+  {
+    "name": "opencv-aruco",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-aruco-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "46baf95d443db09b6c070e86a50303241f9f726076c9b5ee534fe51d4a41ae2f"
+  },
+  {
+    "name": "opencv-bgsegm",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-bgsegm-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "c34fb6ac52cec73e2f8c55eb36dacfb8314441354134dff2069a5f3ea021bab5"
+  },
+  {
+    "name": "opencv-bioinspired",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-bioinspired-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "cbda3bb2c47e2fed20209eb4c0dd4068af272b23d7ea3751777dfffcd4c8f023"
+  },
+  {
+    "name": "opencv-calib3d",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-calib3d-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "a603bf51acc1c940a196c847cf8ea3fb6ee3ea7550b677229a786006539e06c2"
+  },
+  {
+    "name": "opencv-ccalib",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-ccalib-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "a79ec404c671e9596d3a35179abde33ddf0ad039e7bcd543b34a8ddc7d32eef5"
+  },
+  {
+    "name": "opencv-core",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-core-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "6679ed1cf4a5cfd385837aa126c31d8f333b340465c295e41e5b2738f8a3d399"
+  },
+  {
+    "name": "opencv-data",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "noarch",
+    "filename": "opencv-data-4.13.0-1.fc44.noarch.rpm",
+    "sha256": "405bcd9b18baa5be85a74d0e503efe1ee9672281e3db873a5f275dd113647f30"
+  },
+  {
+    "name": "opencv-dnn",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-dnn-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "641bdc2ca95628f6059bde91920624f42af4200efb8d37d8ed7c2b8dc4432341"
+  },
+  {
+    "name": "opencv-dnn_superres",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-dnn_superres-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "3f3b158e5c1977789ded6c44115e80779365dd17829d933924ec14ba0d3d6524"
+  },
+  {
+    "name": "opencv-face",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-face-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "910534034bbd773e508f9f4369c7e95c29fe683fd93987deafef04763eb9e07e"
+  },
+  {
+    "name": "opencv-features2d",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-features2d-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "a2acebbfdba20612ce6e34d091847e26f55c168288e7cb6d3e96ea00e2b948a9"
+  },
+  {
+    "name": "opencv-flann",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-flann-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "6aeefd7e0d79383984f7139eb16bbda57ee342a04c908cecb9630c3420044c28"
+  },
+  {
+    "name": "opencv-freetype",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-freetype-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "cb601ee75d34e339510f27a0ac3baccb63e418e03ed31b1c393fd2f7824a3249"
+  },
+  {
+    "name": "opencv-fuzzy",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-fuzzy-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "a7093ad24de986085804d87583055ecf7dad776d7dffa3ef4b1b8f0f2cf9de68"
+  },
+  {
+    "name": "opencv-gapi",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-gapi-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "8fe246518c51219515e8131d77e3dfb173f3b507df04405ae412f77949dd7405"
+  },
+  {
+    "name": "opencv-hdf",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-hdf-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "2cb5f36bf1bd8c8a6e227d79acc6bbcc79d2eaef76f84ffc09d42ae85e0696e5"
+  },
+  {
+    "name": "opencv-hfs",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-hfs-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "9820e975ea9d75801aa0ff5b1e8ed2c9292bef7817f5a5fe77591718454dd8cc"
+  },
+  {
+    "name": "opencv-highgui",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-highgui-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "d21deedd5dc12bbfefaecc05cee96bbad97579b869da2cb51b2477c80deb178c"
+  },
+  {
+    "name": "opencv-img_hash",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-img_hash-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "212afb924fed22e68d67a2b1a314d7f39638083d98920d7494d668545a2d7a25"
+  },
+  {
+    "name": "opencv-imgcodecs",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-imgcodecs-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "29f552b47b28e3066cd56b1ec3b13ebdaac4a41b7d7c9dc98443d3c84c6edad2"
+  },
+  {
+    "name": "opencv-imgproc",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-imgproc-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "1bbcc35f60dde99717edafccba9f4d94e38ecb21e13693c16ac7d6362fdcaceb"
+  },
+  {
+    "name": "opencv-intensity_transform",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-intensity_transform-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "945b0aa0756cbcf0c6791f04264f7343020f6c1302248488074117433078e8b3"
+  },
+  {
+    "name": "opencv-line_descriptor",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-line_descriptor-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "7ec51b53d1c484b7b6cc78f71ddd0896d6ef2f9dfcd3ec77b718f565b2eb4bb6"
+  },
+  {
+    "name": "opencv-mcc",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-mcc-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "f506db98422236bf07b9741635bdab08f9c1fcf038810aa261d3e29f07da4ac2"
+  },
+  {
+    "name": "opencv-ml",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-ml-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "eaf5426c0cf9b07a8951e151c9b1ce8a055d4e27ec8de5b8f22ea5a128d34893"
+  },
+  {
+    "name": "opencv-objdetect",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-objdetect-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "1c26b6d3ee56f10d2d197f822a0033d3721b114e5f0ef148d1170df67db16870"
+  },
+  {
+    "name": "opencv-optflow",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-optflow-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "cdd58a92b45a2c4a38cbd3f8a8de272be2c4ab7ac6d5bd26b3325ca569a0451c"
+  },
+  {
+    "name": "opencv-phase_unwrapping",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-phase_unwrapping-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "36fdc67644d07013bb61ab0b09c6216778ad14c665205e8904ca267b581ca8d0"
+  },
+  {
+    "name": "opencv-photo",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-photo-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "dcd7059188901f6601774dffacda86979ce6eadf90623b790701950f4314b993"
+  },
+  {
+    "name": "opencv-plot",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-plot-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "415559ac777105c229c998236b942ad074d0299972e4bd92a50dfb440b4fa19f"
+  },
+  {
+    "name": "opencv-quality",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-quality-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "f58edc9b7ec2637df4b8f5e5ee60baaf1fdd234de5d87e7a6a0b3a4f212282b4"
+  },
+  {
+    "name": "opencv-rapid",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-rapid-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "5a46cc8f2752280edcba951d8d46f1f8f634c05156ab1b2593ee5b06bf7d3d5c"
+  },
+  {
+    "name": "opencv-reg",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-reg-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "e2fc72dc2043ea37e878401270d790bfd3a17cca4ef160b61cb1db4ba49ccee3"
+  },
+  {
+    "name": "opencv-rgbd",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-rgbd-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "bf466f38259e3f84c4db26fd28c17728dcc39626cc6949fff9c90f75d23f9996"
+  },
+  {
+    "name": "opencv-saliency",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-saliency-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "0c1bee7c416a35a4dc89fba965cf70acd45c89f71ca747ab129769ba9cd9afb8"
+  },
+  {
+    "name": "opencv-shape",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-shape-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "28f6b55f1fbfd1099c08ca3a5edf82eb76757d853fbf36adda4a11392a84707f"
+  },
+  {
+    "name": "opencv-signal",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-signal-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "312d52d5f89972de4d5b5c3757bfefa809f5e5089a79f774e89a1d5aa9a8362e"
+  },
+  {
+    "name": "opencv-stereo",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-stereo-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "5874900489af9fa7a52749204d1b323fc7fbb8886ead274235b60404f6004d41"
+  },
+  {
+    "name": "opencv-stitching",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-stitching-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "78e7bf944b7d2c05acc4d7e31f9fbc59dc953bffcc41b3bd8ac08221b33da7b1"
+  },
+  {
+    "name": "opencv-structured_light",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-structured_light-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "0f4ef9fa34bc6618175d87aa2ecbffb8f41844ada9028d9841a13bfe2acd35a9"
+  },
+  {
+    "name": "opencv-surface_matching",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-surface_matching-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "d47deae9743f28a5e94c2b5a8870817c900447a84a1212869df71a44d48ffd81"
+  },
+  {
+    "name": "opencv-text",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-text-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "a94d8f16ea3cc0b1deb7f1961d590add7b0a85ba1ef7f5a080edc4189e646bdc"
+  },
+  {
+    "name": "opencv-tracking",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-tracking-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "9eb92ede6998f8f78a60ed96b8861190bd9cb7085dc0d37ad906e0f5d42d7644"
+  },
+  {
+    "name": "opencv-video",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-video-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "b6c45a989b2363253063fdf9bd616ac92091b100525a0583f5671165b22f764e"
+  },
+  {
+    "name": "opencv-videoio",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-videoio-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "252c72e102bacb6be8a5f594c473c33caf375cc7462cbaa2b7b0142aefc6ccfd"
+  },
+  {
+    "name": "opencv-viz",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-viz-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "e6fc5df495f6c72c02f3ad877d95a9d2f16c1c02e080f727b864e3d62d754a86"
+  },
+  {
+    "name": "opencv-wechat_qrcode",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-wechat_qrcode-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "d9485e5ffe9a49c79c21eaacae734847d3ee2c5ba63870554febe5efc0c07d41"
+  },
+  {
+    "name": "opencv-ximgproc",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-ximgproc-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "fb3960c6141952ea04d407446ef0498b06d7f02b83acea4a97d7b16ad153b5a8"
+  },
+  {
+    "name": "opencv-xobjdetect",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-xobjdetect-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "0afe0e6e4f0aac494d78966c6cfcae98a151d5ce5195fa5a8fd73dcb00cbcea5"
+  },
+  {
+    "name": "opencv-xphoto",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "opencv-xphoto-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "6e527979bc83090ff0fcc64fd9c6046e5d54fe298fc69c3f74cb9b8446de5324"
+  },
+  {
+    "name": "openexr-libs",
+    "evr": "0:3.2.4-7.fc44",
+    "arch": "x86_64",
+    "filename": "openexr-libs-3.2.4-7.fc44.x86_64.rpm",
+    "sha256": "ecb33e58d8e5c2c669e84f6990958e8b41eb790f2c2748768da2f732db3dd684"
+  },
+  {
+    "name": "openpgm",
+    "evr": "0:5.3.128-6.fc44",
+    "arch": "x86_64",
+    "filename": "openpgm-5.3.128-6.fc44.x86_64.rpm",
+    "sha256": "b2d4c2d378a26407599f7f44a7d7dabf5340806000fe87021fa07b26c72ff085"
+  },
+  {
+    "name": "openslide",
+    "evr": "0:4.0.0-14.fc44",
+    "arch": "x86_64",
+    "filename": "openslide-4.0.0-14.fc44.x86_64.rpm",
+    "sha256": "8e1e250f66ff6859e0999a302eb430d119023be59ba02872fc881b152dc7dc7c"
+  },
+  {
+    "name": "openssh",
+    "evr": "0:10.2p1-14.fc44",
+    "arch": "x86_64",
+    "filename": "openssh-10.2p1-14.fc44.x86_64.rpm",
+    "sha256": "ba7ae55d89ecc3d5712c8331240ca695caa5b1cb11f3734dd1a9a35389f680fd"
+  },
+  {
+    "name": "openssh-clients",
+    "evr": "0:10.2p1-14.fc44",
+    "arch": "x86_64",
+    "filename": "openssh-clients-10.2p1-14.fc44.x86_64.rpm",
+    "sha256": "10802c946f85b40243a55f774c5b490c28ab3639bfdd9eca96fbd2c6c89b3985"
+  },
+  {
+    "name": "openvr-api",
+    "evr": "0:2.12.14-2.fc44",
+    "arch": "x86_64",
+    "filename": "openvr-api-2.12.14-2.fc44.x86_64.rpm",
+    "sha256": "4cf6d084e61b55e7fdd1834c4694ec231c5598e9edd53e22e603dafdfde3bb1b"
+  },
+  {
+    "name": "openxr-libs",
+    "evr": "0:1.1.63-1.fc44",
+    "arch": "x86_64",
+    "filename": "openxr-libs-1.1.63-1.fc44.x86_64.rpm",
+    "sha256": "8e40a189f32ad59ffba585f5732a78bf80ee19ee1cc9b7ba70dbd0e2bac09e57"
+  },
+  {
+    "name": "opus",
+    "evr": "0:1.6-2.fc44",
+    "arch": "x86_64",
+    "filename": "opus-1.6-2.fc44.x86_64.rpm",
+    "sha256": "f5ed58a24530fae234adad01289e3019a08238c51a012e3b0781ca1518216d22"
+  },
+  {
+    "name": "orc",
+    "evr": "0:0.4.41-3.fc44",
+    "arch": "x86_64",
+    "filename": "orc-0.4.41-3.fc44.x86_64.rpm",
+    "sha256": "0ffa36584a12ce23d6623290ef85a95868d315dbd676444ee5919dfe69e753dc"
+  },
+  {
+    "name": "parquet-libs",
+    "evr": "0:23.0.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "parquet-libs-23.0.1-1.fc44.x86_64.rpm",
+    "sha256": "68c47566e590e77e9872b097d5e751bf26ee4db99999d3c654b16265b2766c33"
+  },
+  {
+    "name": "pcre2-utf16",
+    "evr": "0:10.47-1.fc44.1",
+    "arch": "x86_64",
+    "filename": "pcre2-utf16-10.47-1.fc44.1.x86_64.rpm",
+    "sha256": "a75c0f09747031cdf69d6fbab9e7e5ed1c3793d0ac79065f7cf87adb58c3e525"
+  },
+  {
+    "name": "perl-Error",
+    "evr": "1:0.17030-3.fc44",
+    "arch": "noarch",
+    "filename": "perl-Error-0.17030-3.fc44.noarch.rpm",
+    "sha256": "7185244ba6bd96c9ee2e95540f1c08fcfccbc24ceacba2c3b9eb5e7600019f09"
+  },
+  {
+    "name": "perl-File-Copy",
+    "evr": "0:2.41-525.fc44",
+    "arch": "noarch",
+    "filename": "perl-File-Copy-2.41-525.fc44.noarch.rpm",
+    "sha256": "cd95b607eae59e2a437054642a378922a01a6e62c4d5e340a82fd912abd1a368"
+  },
+  {
+    "name": "perl-File-Which",
+    "evr": "0:1.27-15.fc44",
+    "arch": "noarch",
+    "filename": "perl-File-Which-1.27-15.fc44.noarch.rpm",
+    "sha256": "83629e4bac51254ece9c76ccffccd7f926daed06c31476cdc3df9aed40411433"
+  },
+  {
+    "name": "perl-Git",
+    "evr": "0:2.55.0-1.fc44",
+    "arch": "noarch",
+    "filename": "perl-Git-2.55.0-1.fc44.noarch.rpm",
+    "sha256": "5718eff4f68417fecc063343ea19d597d29bc51e40fda5057bbca7ab863dde94"
+  },
+  {
+    "name": "perl-TermReadKey",
+    "evr": "0:2.38-27.fc44",
+    "arch": "x86_64",
+    "filename": "perl-TermReadKey-2.38-27.fc44.x86_64.rpm",
+    "sha256": "f632151546e2dba1ed7c4bd9a1a5c0c8edd4b114c66b4a2b79a34f165e594050"
+  },
+  {
+    "name": "perl-lib",
+    "evr": "0:0.65-525.fc44",
+    "arch": "x86_64",
+    "filename": "perl-lib-0.65-525.fc44.x86_64.rpm",
+    "sha256": "c569d528a781ba8f654bcf2756c13179e8edb125d6988235daf080e11eb2c3f5"
+  },
+  {
+    "name": "poppler",
+    "evr": "0:26.01.0-3.fc44",
+    "arch": "x86_64",
+    "filename": "poppler-26.01.0-3.fc44.x86_64.rpm",
+    "sha256": "4a7de5b6cd1d6254a40922064d98f7383e8963ba94c7ae0a1f09d5af2b715278"
+  },
+  {
+    "name": "poppler-data",
+    "evr": "0:0.4.11-11.fc44",
+    "arch": "noarch",
+    "filename": "poppler-data-0.4.11-11.fc44.noarch.rpm",
+    "sha256": "91b1ad27888f9aa52d4a8b89c628a3ac1e1a8067572966cac5644c0c7cd05264"
+  },
+  {
+    "name": "proj",
+    "evr": "0:9.8.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "proj-9.8.1-1.fc44.x86_64.rpm",
+    "sha256": "61f410e2bf72ce0242e6f333578fe343bf3bc72ba3ad2061349dc9e5a5c63029"
+  },
+  {
+    "name": "proj-data",
+    "evr": "0:9.8.1-1.fc44",
+    "arch": "noarch",
+    "filename": "proj-data-9.8.1-1.fc44.noarch.rpm",
+    "sha256": "53404ba9888f26be6a2548507a575b18fc3924f589d6c3ba9574d0b4aac47e9b"
+  },
+  {
+    "name": "pulseaudio-libs",
+    "evr": "0:17.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "pulseaudio-libs-17.0-9.fc44.x86_64.rpm",
+    "sha256": "a0cb8816a5694ee5e50e23c8f1233fc9c3a683b137d6c2f0fdb37309392524b4"
+  },
+  {
+    "name": "python3-filelock",
+    "evr": "0:3.15.4-11.fc44",
+    "arch": "noarch",
+    "filename": "python3-filelock-3.15.4-11.fc44.noarch.rpm",
+    "sha256": "0881e1208d96b23aec756b85faad01ac32fcb9faa96315fc22161891ac4e88bf"
+  },
+  {
+    "name": "python3-fsspec",
+    "evr": "0:2026.7.0-1.fc44",
+    "arch": "noarch",
+    "filename": "python3-fsspec-2026.7.0-1.fc44.noarch.rpm",
+    "sha256": "7e17501a44edaee0e2a103102244b859cc9481ddd4602da1cc97ad7987f261c4"
+  },
+  {
+    "name": "python3-jinja2",
+    "evr": "0:3.1.6-7.fc44",
+    "arch": "noarch",
+    "filename": "python3-jinja2-3.1.6-7.fc44.noarch.rpm",
+    "sha256": "fe79213e4a880c39780b8f579605d7efb9b84d1f4059d4d698b21b22645dd740"
+  },
+  {
+    "name": "python3-markupsafe",
+    "evr": "0:3.0.2-7.fc44",
+    "arch": "x86_64",
+    "filename": "python3-markupsafe-3.0.2-7.fc44.x86_64.rpm",
+    "sha256": "7035b4456dbda4c4df2f28f4cc30716227c4999714601bc38f82a7f87aeeef73"
+  },
+  {
+    "name": "python3-mpmath",
+    "evr": "0:1.4.1-2.fc44",
+    "arch": "noarch",
+    "filename": "python3-mpmath-1.4.1-2.fc44.noarch.rpm",
+    "sha256": "bd492de6b3c55870c6440308b9a953d7662bafcb92d26d89db3922148d5eb15a"
+  },
+  {
+    "name": "python3-networkx",
+    "evr": "0:3.6.1-3.fc44",
+    "arch": "noarch",
+    "filename": "python3-networkx-3.6.1-3.fc44.noarch.rpm",
+    "sha256": "6447de91f7fbd42ccd12ef3b3ba1f0d6904baf731997d6e59844759b87381767"
+  },
+  {
+    "name": "python3-numpy",
+    "evr": "1:2.4.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "python3-numpy-2.4.6-1.fc44.x86_64.rpm",
+    "sha256": "a0558338a664bc33ea7b0815000ddd21a18d4c598d763d74c28381e2baecc065"
+  },
+  {
+    "name": "python3-numpy-f2py",
+    "evr": "1:2.4.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "python3-numpy-f2py-2.4.6-1.fc44.x86_64.rpm",
+    "sha256": "2d8ae00276f0d2e0a9bfab7974cb7463e614f6e02653d9e5bc9ade5331464fd2"
+  },
+  {
+    "name": "python3-opencv",
+    "evr": "0:4.13.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "python3-opencv-4.13.0-1.fc44.x86_64.rpm",
+    "sha256": "5fc686680668a1fb0440a713373a442f112eceb7e370082f849d1abe55fdae2f"
+  },
+  {
+    "name": "python3-setuptools",
+    "evr": "0:80.10.2-3.fc44",
+    "arch": "noarch",
+    "filename": "python3-setuptools-80.10.2-3.fc44.noarch.rpm",
+    "sha256": "8f4b2042d23fc8f602f2882c1fdc0198a6ba61c77fbdba2251250c8219df873c"
+  },
+  {
+    "name": "python3-sympy",
+    "evr": "0:1.14.0-11.fc44",
+    "arch": "noarch",
+    "filename": "python3-sympy-1.14.0-11.fc44.noarch.rpm",
+    "sha256": "da1a16884a224c616256d9517e6e6ee39b849f34efaccf6d07fec929f8d19afe"
+  },
+  {
+    "name": "python3-torch",
+    "evr": "0:2.9.1-10.fc44",
+    "arch": "x86_64",
+    "filename": "python3-torch-2.9.1-10.fc44.x86_64.rpm",
+    "sha256": "a3aadb2a243b14eba79c7e079c41b6afd3c0d499b7b48fd881e2ac2b7e25a4d9"
+  },
+  {
+    "name": "python3-vtk",
+    "evr": "0:9.5.2-12.fc44",
+    "arch": "x86_64",
+    "filename": "python3-vtk-9.5.2-12.fc44.x86_64.rpm",
+    "sha256": "d0c8e442bda31ca398126c1a992a22a6786e837cfb2a73d4bbfef651cb37714e"
+  },
+  {
+    "name": "qrencode-libs",
+    "evr": "0:4.1.1-12.fc44",
+    "arch": "x86_64",
+    "filename": "qrencode-libs-4.1.1-12.fc44.x86_64.rpm",
+    "sha256": "2a0eba9c9a36c231743b775ab2d5381472aadc609125004529d67be31f64441c"
+  },
+  {
+    "name": "qt6-filesystem",
+    "evr": "0:6.11.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "qt6-filesystem-6.11.2-1.fc44.x86_64.rpm",
+    "sha256": "d45607a1e6c8bfa9c4e418c06d9abe3e918def590e5c3a1aa90747e770457dd9"
+  },
+  {
+    "name": "qt6-qtbase",
+    "evr": "0:6.11.2-2.fc44",
+    "arch": "x86_64",
+    "filename": "qt6-qtbase-6.11.2-2.fc44.x86_64.rpm",
+    "sha256": "0ecf35ec59c80a12490590dfc81576be022c28e58f3488279ea8aa415cd59d2d"
+  },
+  {
+    "name": "qt6-qtbase-common",
+    "evr": "0:6.11.2-2.fc44",
+    "arch": "noarch",
+    "filename": "qt6-qtbase-common-6.11.2-2.fc44.noarch.rpm",
+    "sha256": "3e234b6a9bf0c804777002bf22b739f039b5585aa9840a30efb3f7d3e12755b7"
+  },
+  {
+    "name": "qt6-qtbase-gui",
+    "evr": "0:6.11.2-2.fc44",
+    "arch": "x86_64",
+    "filename": "qt6-qtbase-gui-6.11.2-2.fc44.x86_64.rpm",
+    "sha256": "7f8d47bd7a968f5bc393874ebf1a4c1c6c7e19c4d458a2acbdcb8e827b12608d"
+  },
+  {
+    "name": "qt6-qtdeclarative",
+    "evr": "0:6.11.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "qt6-qtdeclarative-6.11.2-1.fc44.x86_64.rpm",
+    "sha256": "761b2d971facae031e2c803ef0157f6b6e52eaa28b12fd222bd22d27d5a9a673"
+  },
+  {
+    "name": "qt6-qtsvg",
+    "evr": "0:6.11.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "qt6-qtsvg-6.11.2-1.fc44.x86_64.rpm",
+    "sha256": "6630b3bef4d0bebc0fbabad2e650b08a4dff74d32bda95eb9750a43d25e50d66"
+  },
+  {
+    "name": "re2",
+    "evr": "2:20251105-4.fc44",
+    "arch": "x86_64",
+    "filename": "re2-20251105-4.fc44.x86_64.rpm",
+    "sha256": "553686b1dc8c21c6adddd200e28b5ba5f421f32257ff461c9feb1e5fc223950b"
+  },
+  {
+    "name": "rocblas",
+    "evr": "0:7.1.1-7.fc44",
+    "arch": "x86_64",
+    "filename": "rocblas-7.1.1-7.fc44.x86_64.rpm",
+    "sha256": "d31096a5480f7c863135a6688a1b99c53087a5d1b8725ad10e6f51e80aa588c7"
+  },
+  {
+    "name": "rocfft",
+    "evr": "0:7.1.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "rocfft-7.1.0-7.fc44.x86_64.rpm",
+    "sha256": "868c586a97870dc252d0ef78a65fb1dc8997500f905c31f0f4edd2fd827965dc"
+  },
+  {
+    "name": "rocm-clang",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-clang-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "7dba65b5a3ab5a36794f02ecc3f1c5b12f1a67fc0ebdbf87d93deabe7499e3b5"
+  },
+  {
+    "name": "rocm-clang-devel",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-clang-devel-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "7a10c88eb36e7ca797b7e4b7826eae44e9b6d042cfc04c52f61aa77397d27b95"
+  },
+  {
+    "name": "rocm-clang-libs",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-clang-libs-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "c0e3709e324ed715118cbf164e6d5e3da2781d5857e43bea47cfd14ef4fec991"
+  },
+  {
+    "name": "rocm-clang-runtime-devel",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-clang-runtime-devel-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "5f4622a00ef794741cf58ffbc1763baa56f4c9bfcd0099a448aa951a436c723d"
+  },
+  {
+    "name": "rocm-comgr",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-comgr-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "df5f09ed46c48d21a3ac0bf6bd647bf501ff42cb89efc5a0da8b91ff569663c1"
+  },
+  {
+    "name": "rocm-comgr-devel",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-comgr-devel-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "05767746ac7c489065e514a5893d18dea4406ceb8778a1e4e86f56530f116568"
+  },
+  {
+    "name": "rocm-device-libs",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-device-libs-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "dbc63b69ae6036547ca3de0778f00455925fa293116a8322edb56d8f5cbe2c9d"
+  },
+  {
+    "name": "rocm-hip",
+    "evr": "0:7.1.1-3.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-hip-7.1.1-3.fc44.x86_64.rpm",
+    "sha256": "07477842264a2ca2a89febc36e16d3868127a40a772370c3ff9e475f987ad9ff"
+  },
+  {
+    "name": "rocm-hip-devel",
+    "evr": "0:7.1.1-3.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-hip-devel-7.1.1-3.fc44.x86_64.rpm",
+    "sha256": "ffdb0cb53fa04e74f48f7a4b720d231090e0032f99f7988bc1ce0e6f35398a11"
+  },
+  {
+    "name": "rocm-libc++",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-libc++-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "ed4a5dc862c968443ce4d0d9307845709630c2cdfcf65efcb15a6773eaf70b47"
+  },
+  {
+    "name": "rocm-libc++-devel",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-libc++-devel-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "9e60ab3aa64673fe4fc750a2fadbad30979cf02cca55d058cb5327882c9b4efe"
+  },
+  {
+    "name": "rocm-lld",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-lld-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "39e5de19e73260c1b811b94adbcb86c04832c004cd683a51738c8489d83ed32b"
+  },
+  {
+    "name": "rocm-llvm",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-llvm-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "87b922590ecbd4439e1fb44771bb1c3f3186fb5d8497498134dae7f0de13ac4c"
+  },
+  {
+    "name": "rocm-llvm-devel",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-llvm-devel-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "6dcab2393368c390980c39b61efef39cd91db3a897fdd0bb4c5a5c0b245f5f8d"
+  },
+  {
+    "name": "rocm-llvm-filesystem",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-llvm-filesystem-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "1d2638f25b0e47ea03af7477a08bfc2fd7ba7ce68a2e249a24783a3496aceac4"
+  },
+  {
+    "name": "rocm-llvm-libs",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-llvm-libs-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "110f2414353d9092e2ef1caf48a86858478b1d065743798ed78499b59be6a1e7"
+  },
+  {
+    "name": "rocm-llvm-static",
+    "evr": "0:20-13.rocm7.1.1.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-llvm-static-20-13.rocm7.1.1.fc44.x86_64.rpm",
+    "sha256": "ef556a535bcb6359a5355fefbe482957af17211142a340eb0a67c0f3eaaceb9c"
+  },
+  {
+    "name": "rocm-origami",
+    "evr": "0:7.1.1-4.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-origami-7.1.1-4.fc44.x86_64.rpm",
+    "sha256": "e2ea2c8f5c9ff9a8a75ecc7dca682dc71a3d6ed9a3c55de62cbc163c75302063"
+  },
+  {
+    "name": "rocm-runtime",
+    "evr": "0:7.1.1-6.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-runtime-7.1.1-6.fc44.x86_64.rpm",
+    "sha256": "0503d694512ea6c02f9995d1fa50c4a371caaade2bb0fc4035b567bdc1c06332"
+  },
+  {
+    "name": "rocm-runtime-devel",
+    "evr": "0:7.1.1-6.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-runtime-devel-7.1.1-6.fc44.x86_64.rpm",
+    "sha256": "1ab892ab204bff4ff43c83fa4cf16bf845244314e8d001e1ac31880b9e9b2005"
+  },
+  {
+    "name": "rocm-smi",
+    "evr": "0:7.1.1-3.fc44",
+    "arch": "x86_64",
+    "filename": "rocm-smi-7.1.1-3.fc44.x86_64.rpm",
+    "sha256": "fbc8b5869cf4d974aa5361e7255ab97dc3846f4de90a57268a2a1cc9180b34a4"
+  },
+  {
+    "name": "rocrand",
+    "evr": "0:7.1.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "rocrand-7.1.0-7.fc44.x86_64.rpm",
+    "sha256": "768c71c90e0856e0f26dae644a9aadd0ea96857e02f6a8b164845aa9ffdefa80"
+  },
+  {
+    "name": "rocrand-devel",
+    "evr": "0:7.1.0-7.fc44",
+    "arch": "x86_64",
+    "filename": "rocrand-devel-7.1.0-7.fc44.x86_64.rpm",
+    "sha256": "014a172cf10c3be701ff76cfd54f715168f7dcabd85ff25fee3662570cf5d98c"
+  },
+  {
+    "name": "rocsolver",
+    "evr": "0:7.1.1-4.fc44",
+    "arch": "x86_64",
+    "filename": "rocsolver-7.1.1-4.fc44.x86_64.rpm",
+    "sha256": "63d42ee71b0176fb25e8b1a16400b3af631b2a3a2bf23fd9b5f2b996b696a524"
+  },
+  {
+    "name": "rocsparse",
+    "evr": "0:7.1.0-6.fc44",
+    "arch": "x86_64",
+    "filename": "rocsparse-7.1.0-6.fc44.x86_64.rpm",
+    "sha256": "3be66b84898da6e6f6eec139c025ec15431724af244653930abbf9b676aada7b"
+  },
+  {
+    "name": "roctracer",
+    "evr": "0:7.1.0-5.fc44",
+    "arch": "x86_64",
+    "filename": "roctracer-7.1.0-5.fc44.x86_64.rpm",
+    "sha256": "5f2aaeb721d0a37addfbcf26314dd68530422c95be46e95d0fcf6e4155e7ee80"
+  },
+  {
+    "name": "rubberband-libs",
+    "evr": "0:4.0.0-5.fc44",
+    "arch": "x86_64",
+    "filename": "rubberband-libs-4.0.0-5.fc44.x86_64.rpm",
+    "sha256": "6e8714454a0af2db320dbdd4fdffa2601afa977d444e003ef0b24384a16c8565"
+  },
+  {
+    "name": "samba-client-libs",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "samba-client-libs-4.24.6-1.fc44.x86_64.rpm",
+    "sha256": "8ae61d646a2de26e12e62df4b164f46ee84dc496878056a571a70493b8fe8a2c"
+  },
+  {
+    "name": "samba-common",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "noarch",
+    "filename": "samba-common-4.24.6-1.fc44.noarch.rpm",
+    "sha256": "3ec4a6d6497a8b6ade8144fb800c00cd377874749fb83554053d65c41be6ea02"
+  },
+  {
+    "name": "samba-core-libs",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "samba-core-libs-4.24.6-1.fc44.x86_64.rpm",
+    "sha256": "94b37828304ea56a511f633b05e1e34283eb613b8d3e4faf3072a8d5ab9297cb"
+  },
+  {
+    "name": "samba-ndr-libs",
+    "evr": "2:4.24.6-1.fc44",
+    "arch": "x86_64",
+    "filename": "samba-ndr-libs-4.24.6-1.fc44.x86_64.rpm",
+    "sha256": "7f131013556b102a0e43911b7f0073f3e16e5c50c30596e917300fb9c52019a2"
+  },
+  {
+    "name": "sdl2-compat",
+    "evr": "0:2.32.72-1.fc44",
+    "arch": "x86_64",
+    "filename": "sdl2-compat-2.32.72-1.fc44.x86_64.rpm",
+    "sha256": "57da2908744262bebc2e756d92904946eade736a044fe8db74286a86fc0eba6b"
+  },
+  {
+    "name": "serd",
+    "evr": "0:0.32.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "serd-0.32.8-1.fc44.x86_64.rpm",
+    "sha256": "31e0d5d3b0b39d58a45613b391b0f716efc35430ca1e84c7cb86e2065596aafc"
+  },
+  {
+    "name": "slang",
+    "evr": "0:2.3.3-9.fc44",
+    "arch": "x86_64",
+    "filename": "slang-2.3.3-9.fc44.x86_64.rpm",
+    "sha256": "0e97c106f5edece5c2a05e7e9dfa0d82c48fc2469dc43a40d975a2eabd2b5cf3"
+  },
+  {
+    "name": "sleef",
+    "evr": "0:3.9.0-6.fc44",
+    "arch": "x86_64",
+    "filename": "sleef-3.9.0-6.fc44.x86_64.rpm",
+    "sha256": "1d11fc692046cb75b30c9d7e96d9092505b60f28bef92ca2d63667ce5feea4bd"
+  },
+  {
+    "name": "sord",
+    "evr": "0:0.16.22-1.fc44",
+    "arch": "x86_64",
+    "filename": "sord-0.16.22-1.fc44.x86_64.rpm",
+    "sha256": "38b52fc057185149bdec67320c8d8638a224dbe892cf162e58e86a49a94e1561"
+  },
+  {
+    "name": "soxr",
+    "evr": "0:0.1.3-21.fc44",
+    "arch": "x86_64",
+    "filename": "soxr-0.1.3-21.fc44.x86_64.rpm",
+    "sha256": "e06810ef05658fb8a532a706b6529ebd58f7c4e9b6b6de437bc24962c3f4014a"
+  },
+  {
+    "name": "speex",
+    "evr": "0:1.2.0-21.fc44",
+    "arch": "x86_64",
+    "filename": "speex-1.2.0-21.fc44.x86_64.rpm",
+    "sha256": "a32e5d218260bc9a5642fd83c3732370e824087c023db4c9b75bd50f230d4af2"
+  },
+  {
+    "name": "spirv-tools-libs",
+    "evr": "0:2026.1-1.fc44",
+    "arch": "x86_64",
+    "filename": "spirv-tools-libs-2026.1-1.fc44.x86_64.rpm",
+    "sha256": "1a0aa8095ec306a62bd5a439c33faeaeb0c34749d0263024f756a5cc67f172ea"
+  },
+  {
+    "name": "sratom",
+    "evr": "0:0.6.22-1.fc44",
+    "arch": "x86_64",
+    "filename": "sratom-0.6.22-1.fc44.x86_64.rpm",
+    "sha256": "1131222daae8aa6e03a9f823ca8ee421ee9f13316f702871fd867fb23ad27291"
+  },
+  {
+    "name": "srt-libs",
+    "evr": "0:1.5.7-1.fc44",
+    "arch": "x86_64",
+    "filename": "srt-libs-1.5.7-1.fc44.x86_64.rpm",
+    "sha256": "94acbc01093077ca3ea9ae82cc1eed9729220c6683630e18c5031cc2880ee42d"
+  },
+  {
+    "name": "systemd",
+    "evr": "0:259.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "systemd-259.8-1.fc44.x86_64.rpm",
+    "sha256": "e74bf8412013be3b1c25bbcaa6acb99413488d828ac8a1a7edd3db9f63e6b4cf"
+  },
+  {
+    "name": "systemd-shared",
+    "evr": "0:259.8-1.fc44",
+    "arch": "x86_64",
+    "filename": "systemd-shared-259.8-1.fc44.x86_64.rpm",
+    "sha256": "64bbd2b9e23b808f91973d596e64732f53e9eb4d91b6f00a3fe7517c25aed0b7"
+  },
+  {
+    "name": "tcl",
+    "evr": "1:9.0.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "tcl-9.0.2-1.fc44.x86_64.rpm",
+    "sha256": "25f0fff805e5def8ebe1ba6ed16e747c0786a0c33b15b9ff2d8bc780f8e25047"
+  },
+  {
+    "name": "tesseract-common",
+    "evr": "0:5.5.3-1.fc44",
+    "arch": "noarch",
+    "filename": "tesseract-common-5.5.3-1.fc44.noarch.rpm",
+    "sha256": "2d9c5b9b8faa6559ebec7b79553e81dbd838a53eed7f73c2afd44afcf3e54da0"
+  },
+  {
+    "name": "tesseract-langpack-eng",
+    "evr": "0:4.1.0-12.fc44",
+    "arch": "noarch",
+    "filename": "tesseract-langpack-eng-4.1.0-12.fc44.noarch.rpm",
+    "sha256": "7402c225bff8833d406326bd8d27a7d4bb7b6520a0848ac11a3bbc449ec269f9"
+  },
+  {
+    "name": "tesseract-libs",
+    "evr": "0:5.5.3-1.fc44",
+    "arch": "x86_64",
+    "filename": "tesseract-libs-5.5.3-1.fc44.x86_64.rpm",
+    "sha256": "c1cd6786675d6aed65001a1914b530c5a0a84f0c1b6357b10ae8a89efb21c509"
+  },
+  {
+    "name": "tesseract-tessdata-doc",
+    "evr": "0:4.1.0-12.fc44",
+    "arch": "noarch",
+    "filename": "tesseract-tessdata-doc-4.1.0-12.fc44.noarch.rpm",
+    "sha256": "1236b14e784923d1f51602f3b6976753368b4069a64a6c46b77930ba42c8fa76"
+  },
+  {
+    "name": "thrift",
+    "evr": "0:0.20.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "thrift-0.20.0-9.fc44.x86_64.rpm",
+    "sha256": "2a4a2e2d5e9e31c9fac2c7633874d82cff72aae3bd4245c9e8bcffecc773fb4c"
+  },
+  {
+    "name": "tk",
+    "evr": "1:9.0.2-2.fc44",
+    "arch": "x86_64",
+    "filename": "tk-9.0.2-2.fc44.x86_64.rpm",
+    "sha256": "69a484f6fba1b2b8d664aaa2409d1c1c28f5e843ad0aaf9e93e763606b4f9bfa"
+  },
+  {
+    "name": "tslib",
+    "evr": "0:1.24-2.fc44",
+    "arch": "x86_64",
+    "filename": "tslib-1.24-2.fc44.x86_64.rpm",
+    "sha256": "58e91e2432f762b5b87890709b7b054099f3b46e3303c44fb6cf70ee1ef91b55"
+  },
+  {
+    "name": "twolame-libs",
+    "evr": "0:0.4.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "twolame-libs-0.4.0-9.fc44.x86_64.rpm",
+    "sha256": "dd7f47177a802808f68c53dd4ede9d12e7de9e5f65efd7421989b14139753426"
+  },
+  {
+    "name": "unixODBC",
+    "evr": "0:2.3.14-3.fc44",
+    "arch": "x86_64",
+    "filename": "unixODBC-2.3.14-3.fc44.x86_64.rpm",
+    "sha256": "3274eb101ec148230f6dac57a1f847eba6de6558a95794534fcbee0e78485a24"
+  },
+  {
+    "name": "uriparser",
+    "evr": "0:1.0.2-1.fc44",
+    "arch": "x86_64",
+    "filename": "uriparser-1.0.2-1.fc44.x86_64.rpm",
+    "sha256": "df1a89693dcbd7f022bc087ce231b0fbb81a8f3ab839916a79d458d11cb4145a"
+  },
+  {
+    "name": "utf8proc",
+    "evr": "0:2.11.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "utf8proc-2.11.3-2.fc44.x86_64.rpm",
+    "sha256": "419aaf827c994a0a243bbe79f99dfe80a3c387eb0e9bee529871d64641a70a15"
+  },
+  {
+    "name": "vid.stab",
+    "evr": "0:1.1.1-8.fc44",
+    "arch": "x86_64",
+    "filename": "vid.stab-1.1.1-8.fc44.x86_64.rpm",
+    "sha256": "80d2e0d417d306846a662307c25e98562dfb2eab9fa725947768f981bec3f347"
+  },
+  {
+    "name": "vo-amrwbenc",
+    "evr": "0:0.1.3-24.fc44",
+    "arch": "x86_64",
+    "filename": "vo-amrwbenc-0.1.3-24.fc44.x86_64.rpm",
+    "sha256": "55db9771f8bfe68f71845be99010fca078353ceb846affe5fb3152b061fa647b"
+  },
+  {
+    "name": "vtk",
+    "evr": "0:9.5.2-12.fc44",
+    "arch": "x86_64",
+    "filename": "vtk-9.5.2-12.fc44.x86_64.rpm",
+    "sha256": "17c20644e3670a32d208f5118146d36e95408b5ab912d2f6eb4215bbc298d147"
+  },
+  {
+    "name": "vtk-qt",
+    "evr": "0:9.5.2-12.fc44",
+    "arch": "x86_64",
+    "filename": "vtk-qt-9.5.2-12.fc44.x86_64.rpm",
+    "sha256": "28d841e74225d62d9ec4873783a51845975a74af30a4468cb8500e86939eb908"
+  },
+  {
+    "name": "vulkan-loader",
+    "evr": "0:1.4.341.0-1.fc44",
+    "arch": "x86_64",
+    "filename": "vulkan-loader-1.4.341.0-1.fc44.x86_64.rpm",
+    "sha256": "197f97f29330e8dc232c56033aa4f02c28ba80ad53c5a6a5a987348fbc22927e"
+  },
+  {
+    "name": "xcb-util",
+    "evr": "0:0.4.1-9.fc44",
+    "arch": "x86_64",
+    "filename": "xcb-util-0.4.1-9.fc44.x86_64.rpm",
+    "sha256": "4508bd92581604af0a2c93ae0bcb49620cb270db0e80e594c5c5db31dea55551"
+  },
+  {
+    "name": "xcb-util-cursor",
+    "evr": "0:0.1.6-2.fc44",
+    "arch": "x86_64",
+    "filename": "xcb-util-cursor-0.1.6-2.fc44.x86_64.rpm",
+    "sha256": "31e352ce64beef1036d3d8aa8f9347df0418b1d4ceeeab41a2987467f09bb448"
+  },
+  {
+    "name": "xcb-util-image",
+    "evr": "0:0.4.1-9.fc44",
+    "arch": "x86_64",
+    "filename": "xcb-util-image-0.4.1-9.fc44.x86_64.rpm",
+    "sha256": "75ca5a4f61fcb78276b8cd725fb8558fa1050b91c017d02d12708473db60446e"
+  },
+  {
+    "name": "xcb-util-keysyms",
+    "evr": "0:0.4.1-9.fc44",
+    "arch": "x86_64",
+    "filename": "xcb-util-keysyms-0.4.1-9.fc44.x86_64.rpm",
+    "sha256": "6a6213a79a875bddc370061b546027b29e429276b94ebf37275061b38299d23d"
+  },
+  {
+    "name": "xcb-util-renderutil",
+    "evr": "0:0.3.10-9.fc44",
+    "arch": "x86_64",
+    "filename": "xcb-util-renderutil-0.3.10-9.fc44.x86_64.rpm",
+    "sha256": "5b5fc26b794c237b5edc02915e8aac947989714cb13bf35a40ac9fad95cfc260"
+  },
+  {
+    "name": "xcb-util-wm",
+    "evr": "0:0.4.2-9.fc44",
+    "arch": "x86_64",
+    "filename": "xcb-util-wm-0.4.2-9.fc44.x86_64.rpm",
+    "sha256": "21cd91f6389b4d876a8643c71081fdb2c11685278ea84a4711eeb13c4b5d0ac8"
+  },
+  {
+    "name": "xerces-c",
+    "evr": "0:3.3.0-9.fc44",
+    "arch": "x86_64",
+    "filename": "xerces-c-3.3.0-9.fc44.x86_64.rpm",
+    "sha256": "b88b02cad1a8d8f0d60c3079e022d756a6806f27b1702b3babc1db57ee0996f5"
+  },
+  {
+    "name": "xevd-libs",
+    "evr": "0:0.5.0-6.fc44",
+    "arch": "x86_64",
+    "filename": "xevd-libs-0.5.0-6.fc44.x86_64.rpm",
+    "sha256": "fe37a4b43c03e0c2250723076e0fb8d1534521bab510e50c47682d016d83f302"
+  },
+  {
+    "name": "xeve-libs",
+    "evr": "0:0.5.1-6.fc44",
+    "arch": "x86_64",
+    "filename": "xeve-libs-0.5.1-6.fc44.x86_64.rpm",
+    "sha256": "a645f2e7ad84e753bdee498e7fbf78301718ce34c32a7883362d4ecca40cc808"
+  },
+  {
+    "name": "xkeyboard-config",
+    "evr": "0:2.47-1.fc44",
+    "arch": "noarch",
+    "filename": "xkeyboard-config-2.47-1.fc44.noarch.rpm",
+    "sha256": "9f8656378173b895203e8ea66227b23087dd494b031b274ef88090812c257a54"
+  },
+  {
+    "name": "xprop",
+    "evr": "0:1.2.8-5.fc44",
+    "arch": "x86_64",
+    "filename": "xprop-1.2.8-5.fc44.x86_64.rpm",
+    "sha256": "bbbc626d69aa58a67510477a981f22857edec1fac56402730a4b4d88893de96f"
+  },
+  {
+    "name": "xvidcore",
+    "evr": "0:1.3.7-19.fc44",
+    "arch": "x86_64",
+    "filename": "xvidcore-1.3.7-19.fc44.x86_64.rpm",
+    "sha256": "d7b815cd4d464b88c63e30ded360be1dbaee424a4015b150e0d1c7d604249822"
+  },
+  {
+    "name": "zeromq",
+    "evr": "0:4.3.5-22.fc43",
+    "arch": "x86_64",
+    "filename": "zeromq-4.3.5-22.fc43.x86_64.rpm",
+    "sha256": "3b4c2b223afb877313cedb1541d66f915d4c532eed623f87852770998e586bf0"
+  },
+  {
+    "name": "zimg",
+    "evr": "0:3.0.6-3.fc44",
+    "arch": "x86_64",
+    "filename": "zimg-3.0.6-3.fc44.x86_64.rpm",
+    "sha256": "975cc3cc23e249c53b4147a67857319a2dc5bfba0dc3e623d27ef522da593435"
+  },
+  {
+    "name": "zix",
+    "evr": "0:0.8.0-2.fc44",
+    "arch": "x86_64",
+    "filename": "zix-0.8.0-2.fc44.x86_64.rpm",
+    "sha256": "87043a50e8b9333f51f70bedc6981e21fd486e94741f2467835802f0da2cedf2"
+  },
+  {
+    "name": "zvbi",
+    "evr": "0:0.2.44-3.fc44",
+    "arch": "x86_64",
+    "filename": "zvbi-0.2.44-3.fc44.x86_64.rpm",
+    "sha256": "ede61e217f098b0e0754a13b8ad560d79966933e201cbc3730a843164196e9ae"
+  }
+]

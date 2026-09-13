@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 #![forbid(unsafe_code)]
 
+pub mod candidate_collection;
 pub mod fedora_openvino_package;
 pub mod fedora_package;
 pub mod fedora_profile;
+pub mod kernel_candidate;
 pub mod source_bundle;
 pub mod source_lock;
 

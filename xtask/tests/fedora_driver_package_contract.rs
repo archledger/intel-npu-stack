@@ -12,6 +12,23 @@ use xtask::fedora_package::{
 
 const FIRMWARE_PAYLOAD: &[u8] = b"fixture Lunar Lake firmware\n";
 
+#[test]
+fn production_driver_header_dependencies_exclude_test_fixtures() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask has a repository parent");
+    let output = Command::new("python3")
+        .arg(root.join("packaging/fedora/44/rpm/intel-npu-driver/test-driver-headers.py"))
+        .output()
+        .expect("run production driver header contract");
+    assert!(
+        output.status.success(),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 #[derive(Default)]
 struct FixtureOptions {
     omit_loader_requirement: bool,
@@ -23,6 +40,10 @@ struct FixtureOptions {
     omit_driver_license: bool,
     firmware_executable: bool,
     omit_firmware_license: bool,
+    firmware_notice_mode: Option<&'static str>,
+    firmware_notice_unlicensed: bool,
+    extra_firmware_notice: bool,
+    firmware_license_directory_mode: Option<&'static str>,
     firmware_payload: Option<&'static [u8]>,
 }
 
@@ -228,9 +249,11 @@ Package-contract fixture.
 %install
 install -Dm@FIRMWARE_MODE@ %{SOURCE0} %{buildroot}/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin
 @FIRMWARE_LICENSE_INSTALL@
+@FIRMWARE_NOTICES_INSTALL@
 
 %files
 @FIRMWARE_LICENSE_FILE@
+@FIRMWARE_NOTICES_FILES@
 @FIRMWARE_FILE@
 "#
         .replace(
@@ -263,6 +286,39 @@ install -Dm@FIRMWARE_MODE@ %{SOURCE0} %{buildroot}/usr/lib/firmware/updates/inte
                 ""
             } else {
                 "%license %{_licensedir}/%{name}/COPYRIGHT"
+            },
+        )
+        .replace(
+            "@FIRMWARE_NOTICES_INSTALL@",
+            &if options.install_production_directory_entries {
+                format!(
+                    "printf '{{}}\\n' > %{{buildroot}}%{{_licensedir}}/%{{name}}/SHA256.json\n{}",
+                    if options.extra_firmware_notice {
+                        "touch %{buildroot}%{_licensedir}/%{name}/unexpected"
+                    } else {
+                        ""
+                    }
+                )
+            } else {
+                String::new()
+            },
+        )
+        .replace(
+            "@FIRMWARE_NOTICES_FILES@",
+            &if options.install_production_directory_entries {
+                format!(
+                    "%dir %attr({},root,root) %{{_licensedir}}/%{{name}}\n{} %attr({},root,root) %{{_licensedir}}/%{{name}}/SHA256.json\n{}",
+                    options.firmware_license_directory_mode.unwrap_or("0755"),
+                    if options.firmware_notice_unlicensed { "" } else { "%license" },
+                    options.firmware_notice_mode.unwrap_or("0644"),
+                    if options.extra_firmware_notice {
+                        "%license %{_licensedir}/%{name}/unexpected"
+                    } else {
+                        ""
+                    }
+                )
+            } else {
+                String::new()
             },
         )
         .replace(
@@ -347,6 +403,34 @@ fn accepts_approved_production_directory_ownership() {
         ..FixtureOptions::default()
     });
     assert_eq!(validate_fixture(&fixture, &fixture.firmware_sha256), Ok(()));
+}
+
+#[test]
+fn rejects_unapproved_firmware_notice_paths_and_modes() {
+    for options in [
+        FixtureOptions {
+            extra_firmware_notice: true,
+            ..FixtureOptions::default()
+        },
+        FixtureOptions {
+            firmware_notice_mode: Some("0755"),
+            ..FixtureOptions::default()
+        },
+        FixtureOptions {
+            firmware_notice_unlicensed: true,
+            ..FixtureOptions::default()
+        },
+        FixtureOptions {
+            firmware_license_directory_mode: Some("0777"),
+            ..FixtureOptions::default()
+        },
+    ] {
+        let fixture = fixture_packages(&FixtureOptions {
+            install_production_directory_entries: true,
+            ..options
+        });
+        assert!(validate_fixture(&fixture, &fixture.firmware_sha256).is_err());
+    }
 }
 
 #[test]

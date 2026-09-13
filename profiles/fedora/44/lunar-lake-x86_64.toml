@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Generated candidate; no channel may select it.
-# source_lock_sha256 = b61a1b624587cea188caf9736d395a30a1738eb2a92544ae07e2c5486478d6fb
+# source_lock_sha256 = 88f03eb356da6e5f92f84a53fc41c58f370a72ea1f5cf84df8675cc17db9de5e
 schema_version = 1
 id = "fedora-44-lunar-lake-x86_64"
 stack_release = "0.1.0"
@@ -47,12 +47,12 @@ sha256 = "f1537ee857df8cecde9f5c11077a9358ebb68423b3acac2ca33732ec9f5fbac2"
 [components.level_zero_loader.license]
 expression = "MIT"
 redistribution = "external_only"
-evidence_sha256 = "0c1a4bb93b559d05e0762d17e45d829fb693f76258beb498bfc126a3a4144f7d"
+evidence_sha256 = "65a55062c4a8894eeb5513381744906231c1f06174e2cbaf62396ed50df4de29"
 
 [components.npu_compiler]
 version = "2026.2.0"
 source = "https://github.com/openvinotoolkit/npu_compiler.git"
-sha256 = "e23917160a7426d6ec83dc521ac0bf6ca423b949cb262e86532b71fa0d7cbc8a"
+sha256 = "7d652bd44c09e7ba84f4a6a98418c6bb57c1afda721c3148647ba5847ef799c6"
 
 [components.npu_compiler.provider]
 package = "intel-npu-compiler"
@@ -65,17 +65,17 @@ sha256 = "f1fe62a97af0927331a7abae78f79ed0c20fb60af19b5e89e7bd37a37a8ce3ba"
 
 [[components.npu_compiler.provider.files]]
 path = "/usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_compiler_loader.so"
-sha256 = "010bab47c35e0624485f73498bb6a6cfa214d9df136394289acfff507bad680e"
+sha256 = "1b4e2be70019dff3fb36d8e235684d6100b53f6875d27e0fff1259d61eeff93f"
 
 [components.npu_compiler.license]
-expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
+expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5"
 redistribution = "allowed"
-evidence_sha256 = "f69761c0bfabb0de0722e2cc1dd328ba840ab31ef35cb6823b4379f1af85c733"
+evidence_sha256 = "e54e3daecca977c7ba4250496c9c44ca5bc4fe77441afb4cd52111b65ae1d7bd"
 
 [components.npu_firmware]
 version = "1.35.0"
 source = "https://github.com/intel/linux-npu-driver.git"
-sha256 = "d15b45649245cfc6e50f6d6dcb786849114e844ad7924928e29bb66583db4731"
+sha256 = "2d45f1de00de5da94a548f37b858a541815dfc69224117724c4ecf805b1f6fd6"
 
 [components.npu_firmware.provider]
 package = "intel-npu-stack-firmware"
@@ -89,12 +89,12 @@ sha256 = "4eee75549d47ee4999b7a42a76fcb8a1005aac4aa4c66145c1470fe8f35c16bc"
 [components.npu_firmware.license]
 expression = "LicenseRef-Intel-firmware"
 redistribution = "allowed"
-evidence_sha256 = "0495c87346dae03dd19e8bfd70ec41a3ce137d72b9d48d716e2558973c07fce7"
+evidence_sha256 = "8afe9426b41d452338c78a11b57e651e3520a65c35fd879c5fe05b1cd04be0cb"
 
 [components.npu_userspace_driver]
 version = "1.35.0"
 source = "https://github.com/intel/linux-npu-driver.git"
-sha256 = "56fa09574b26dc4da438a473708cc844499f955724f39770236841f48499f513"
+sha256 = "faf3ca4f2c1d115fb275db3255efe248778e0dda1101ec31bb4c6a8e2a2e24d3"
 
 [components.npu_userspace_driver.provider]
 package = "intel-npu-driver"
@@ -103,17 +103,17 @@ activation = "immediate"
 
 [[components.npu_userspace_driver.provider.files]]
 path = "/usr/lib64/libze_intel_npu.so.1.35.0"
-sha256 = "cce96ad5a1083b3bc0cbbe33ea17cc8fc51ba2036fc65fbaf116c4d3543e6502"
+sha256 = "0658fade70f85f3eadab2d2f514b1d4cb2ef74c4e7f66a741ff96e7aaf40eb80"
 
 [components.npu_userspace_driver.license]
 expression = "MIT AND Apache-2.0"
 redistribution = "allowed"
-evidence_sha256 = "045d9cc6d7048c66e2dca046d6ed0d6bd58b7841ba27492e41de0d09a6fbe0f5"
+evidence_sha256 = "e1b3e5dedb6e51931948703025ffca27377ec221e251568b78561aceba787c80"
 
 [components.openvino_npu_plugin]
 version = "2026.2.0"
 source = "https://github.com/openvinotoolkit/openvino.git"
-sha256 = "d4aa37ab330b9c25af899522a75ff9c180adcf3387a9a10fe855ef3b1ca5fcd0"
+sha256 = "dff0e2f4281ea08bd394ae2a744395a300d26ae07ad795bf520e59ae87876983"
 
 [components.openvino_npu_plugin.provider]
 package = "openvino-plugins"
@@ -147,12 +147,12 @@ sha256 = "0be1316046c8dc73dd74be06e2827355f5ac2dd8bf757eb1f6fb13714870f88f"
 [components.openvino_npu_plugin.license]
 expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 redistribution = "allowed"
-evidence_sha256 = "97fc96e5baf6c7b47b89a32ef9143027098dd7198f5766268aab396c24112cb2"
+evidence_sha256 = "b97a3158db80e458885efd4986aa2492ec81f0f0bfe106c6d4f92324f576069d"
 
 [components.openvino_runtime]
 version = "2026.2.0"
 source = "https://github.com/openvinotoolkit/openvino.git"
-sha256 = "b5a6e25bdc3e06f4a1e07e8d93231c3e1cedaa7f8fddfe79e5eadfca34a9a1f5"
+sha256 = "8edfc181287d836752a9e6b9bb2f3069db69b56887eaeda2953ed9fcf88d3fcf"
 
 [components.openvino_runtime.provider]
 package = "openvino"
@@ -170,4 +170,4 @@ sha256 = "ee02a297c757c5a459b9ce70a5c96bbb3f14d86e4765079515d23353b5e9fc49"
 [components.openvino_runtime.license]
 expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 redistribution = "allowed"
-evidence_sha256 = "8437f20eb86b748481da9ce2586d6ef2fa455c7cf929dbbbfc48389ac6e6a8b1"
+evidence_sha256 = "b9ac1258723f90b54767df7d6776db6357396ccb11e104dd482db5acf52cc3e4"

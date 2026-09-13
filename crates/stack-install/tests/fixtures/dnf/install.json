@@ -1,0 +1,26 @@
+{
+  "rpms":[
+    {
+      "nevra":"intel-npu-stack-tools-0.1.0-1.intelnpu.fc44.x86_64",
+      "action":"Install",
+      "reason":"User",
+      "repo_id":"@stored_transaction(@commandline)",
+      "package_path":".\/packages\/tools.rpm"
+    },
+    {
+      "nevra":"intel-npu-stack-0.1.0-1.intelnpu.fc44.noarch",
+      "action":"Install",
+      "reason":"User",
+      "repo_id":"@stored_transaction(@commandline)",
+      "package_path":".\/packages\/meta.rpm"
+    },
+    {
+      "nevra":"intel-npu-stack-firmware-1.35.0-1.intelnpu.fc44.noarch",
+      "action":"Install",
+      "reason":"User",
+      "repo_id":"@stored_transaction(@commandline)",
+      "package_path":".\/packages\/firmware.rpm"
+    }
+  ],
+  "version":"1.0"
+}

@@ -85,7 +85,15 @@ impl<'a> RpmPackageInspector<'a> {
             return PackageQuery::Failed("PACKAGE_OUTPUT_INVALID");
         }
         match output.termination {
-            Termination::Exit(1) if output.stdout.is_empty() => PackageQuery::Missing,
+            // RPM 6 emits its C-locale missing-package diagnostic on stdout even
+            // with --qf. Accept only the exact queried name; other text is an error.
+            Termination::Exit(1)
+                if output.stdout.is_empty()
+                    || output.stdout
+                        == format!("package {package} is not installed\n").as_bytes() =>
+            {
+                PackageQuery::Missing
+            }
             Termination::Exit(0) => parse_package_output(&output.stdout, package)
                 .map(PackageQuery::Present)
                 .unwrap_or(PackageQuery::Failed("PACKAGE_OUTPUT_INVALID")),

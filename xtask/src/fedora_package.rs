@@ -21,6 +21,8 @@ const DRIVER_VERSIONED: &str = "/usr/lib64/libze_intel_npu.so.1.35.0";
 const DRIVER_UNVERSIONED: &str = "/usr/lib64/libze_intel_npu.so";
 const FIRMWARE_NAME: &str = "intel-npu-stack-firmware";
 const FIRMWARE_ARCH: &str = "noarch";
+const FIRMWARE_LICENSE_DIRECTORY: &str = "/usr/share/licenses/intel-npu-stack-firmware";
+const FIRMWARE_NOTICE_MANIFEST: &str = "/usr/share/licenses/intel-npu-stack-firmware/SHA256.json";
 const FIRMWARE_LICENSE: &str = "/usr/share/licenses/intel-npu-stack-firmware/COPYRIGHT";
 const FIRMWARE_PATH: &str = "/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin";
 const FIRMWARE_PROVIDE: &str = "intel-npu-firmware";
@@ -346,10 +348,14 @@ fn validate_firmware_files(
     files: &[RpmFile],
     expected_sha256: &str,
 ) -> Result<(), FedoraPackageError> {
-    if files
-        .iter()
-        .any(|file| !matches!(file.path.as_str(), FIRMWARE_PATH | FIRMWARE_LICENSE))
-    {
+    if files.iter().any(|file| match file.path.as_str() {
+        FIRMWARE_PATH | FIRMWARE_LICENSE => false,
+        FIRMWARE_LICENSE_DIRECTORY => file.mode != 0o040755,
+        FIRMWARE_NOTICE_MANIFEST => {
+            file.mode != 0o100644 || !file.flags.contains('l') || !is_lower_hex(&file.digest, 64)
+        }
+        _ => true,
+    }) {
         return Err(FedoraPackageError::new(
             "FEDORA_PACKAGE_FILE_INVALID",
             "firmware RPM owns a path outside the approved firmware and license files",

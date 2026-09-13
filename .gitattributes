@@ -1,2 +1,6 @@
 packaging/fedora/44/licenses/** -whitespace
+packaging/fedora/44/rpm/openvino/json-3.12.0-LICENSE.MIT -whitespace
+packaging/fedora/44/rpm/intel-npu-driver/linux-uapi-* -whitespace
 packaging/**/patches/*.patch -whitespace
+# Negative signature fixture deliberately differs by an extra newline.
+crates/stack-install/tests/fixtures/signatures/changed.json -whitespace

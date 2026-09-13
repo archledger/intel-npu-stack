@@ -4,7 +4,9 @@
 
 ## Status and scope
 
-This document defines a candidate-only provider build for Fedora 44 x86_64 on
+The Phase 3A evidence review passed on 2026-09-11 for the exact inputs in
+[the build audit](fedora-44-build-and-audit.md). This document defines a
+candidate-only provider build for Fedora 44 x86_64 on
 Intel Lunar Lake PCI `8086:643e`. It is not qualification evidence, an install
 instruction, or stable-channel authority. No artifact described here may be
 selected by a stable installer until the later disposable-VM and hardware
@@ -41,7 +43,7 @@ replacement device-access service.
 - `intel-npu-stack-firmware` owns only
   `/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin` plus its license. It
   does not replace the distro-owned base firmware file.
-- The metapackage added later owns metadata only and requires exact provider
+- The metapackage owns metadata only and requires exact provider
   NEVRs. It does not use `Conflicts` or `Obsoletes` to remove unrelated GPU or
   CPU providers.
 
@@ -106,11 +108,9 @@ instead of describing those objects as locally compiled source.
 ## License and redistribution decisions
 
 Verbatim upstream license and third-party notice evidence is stored under
-`packaging/fedora/44/licenses/`. The NPU compiler root license lacked a final
-newline upstream; the evidence copy normalizes that single terminal newline,
-while the immutable upstream commit and source archive retain the original
-bytes. Every other copied evidence file is byte-identical to its pinned Git
-blob. `allowed` means only that the reviewed terms permit the planned source
+`packaging/fedora/44/licenses/`. The sealed source lock and final source/package
+audits bind the exact retained bytes, including the compiler root license.
+`allowed` means only that the reviewed terms permit the planned source
 and/or binary redistribution when their notice conditions are preserved; it is
 not a claim about patent suitability or hardware qualification.
 

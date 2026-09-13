@@ -1,0 +1,26 @@
+[
+  {
+    "name": "createrepo_c",
+    "nevr": "0:1.2.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "createrepo_c-1.2.1-5.fc44.x86_64.rpm",
+    "sha256": "d7f5e66841aa5ba43f5d0f2a595250ce97a61043158abf4bbf3c375a234e629b",
+    "role": "runtime"
+  },
+  {
+    "name": "createrepo_c-libs",
+    "nevr": "0:1.2.1-5.fc44",
+    "arch": "x86_64",
+    "filename": "createrepo_c-libs-1.2.1-5.fc44.x86_64.rpm",
+    "sha256": "926810dc9bd5e93e296cce9ccd8be3486e4b5d0e7e645950f8baed40f1ed25dc",
+    "role": "runtime"
+  },
+  {
+    "name": "drpm",
+    "nevr": "0:0.5.3-2.fc44",
+    "arch": "x86_64",
+    "filename": "drpm-0.5.3-2.fc44.x86_64.rpm",
+    "sha256": "aef76b722ef541b469392d1baeae27da4e6b217055d0046559a15019e7eedbf6",
+    "role": "runtime"
+  }
+]

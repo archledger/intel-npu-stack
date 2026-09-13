@@ -1,0 +1,1 @@
+The profile and fourteen RPM identities are the exact Phase3A candidate accepted on 2026-09-11. Repository URL and repomd digest are synthetic, unresolvable parser-test data; this is not authenticated release metadata or an installable release. Candidate status is deliberately preserved.

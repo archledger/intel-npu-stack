@@ -1,0 +1,3043 @@
+{
+  "rpms": [
+    {
+      "nevra": "CharLS-2.4.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/CharLS-2.4.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "PDAL-libs-2.9.3-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/PDAL-libs-2.9.3-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "SDL3-3.4.16-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/SDL3-3.4.16-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "abseil-cpp-20260107.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/abseil-cpp-20260107.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "adwaita-cursor-theme-50.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/adwaita-cursor-theme-50.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "adwaita-icon-theme-50.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/adwaita-icon-theme-50.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "adwaita-icon-theme-legacy-46.2-7.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/adwaita-icon-theme-legacy-46.2-7.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "alembic-libs-1.8.12-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/alembic-libs-1.8.12-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "alsa-lib-1.2.16.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/alsa-lib-1.2.16.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "aribb24-1.0.3^20160216git5e9be27-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/aribb24-1.0.3^20160216git5e9be27-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "armadillo-12.8.1-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/armadillo-12.8.1-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "arpack-3.9.1-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/arpack-3.9.1-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "at-spi2-atk-2.60.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/at-spi2-atk-2.60.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "at-spi2-core-2.60.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/at-spi2-core-2.60.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "atk-2.60.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/atk-2.60.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "avahi-glib-0.9~rc2-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/avahi-glib-0.9~rc2-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "avahi-libs-0.9~rc2-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/avahi-libs-0.9~rc2-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "blosc-1.21.6-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/blosc-1.21.6-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-atomic-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-atomic-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-chrono-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-chrono-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-container-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-container-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-date-time-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-date-time-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-filesystem-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-filesystem-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-program-options-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-program-options-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "boost-thread-1.90.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/boost-thread-1.90.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cdparanoia-libs-10.2-50.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cdparanoia-libs-10.2-50.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cfitsio-4.6.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cfitsio-4.6.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cgnslib-libs-4.5.1-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cgnslib-libs-4.5.1-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cjson-1.7.19-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cjson-1.7.19-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "codec2-1.2.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/codec2-1.2.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "colord-libs-1.4.8-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/colord-libs-1.4.8-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cpuinfo-24.09.26-2.git1e83a2f.fc44.5.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cpuinfo-24.09.26-2.git1e83a2f.fc44.5.x86_64.rpm"
+    },
+    {
+      "nevra": "createrepo_c-1.2.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/createrepo_c-1.2.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "createrepo_c-libs-1.2.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/createrepo_c-libs-1.2.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cryptsetup-libs-2.8.7-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cryptsetup-libs-2.8.7-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "cups-filesystem-1:2.4.19-3.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cups-filesystem-2.4.19-3.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "cups-libs-1:2.4.19-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/cups-libs-2.4.19-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "dbus-1:1.16.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/dbus-1.16.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "dbus-broker-37-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/dbus-broker-37-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "dbus-common-1:1.16.2-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/dbus-common-1.16.2-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "dbus-libs-1:1.16.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/dbus-libs-1.16.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "device-mapper-1.02.212-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/device-mapper-1.02.212-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "device-mapper-libs-1.02.212-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/device-mapper-libs-1.02.212-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "double-conversion-3.4.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/double-conversion-3.4.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "drpm-0.5.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/drpm-0.5.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "duktape-2.7.0-11.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/duktape-2.7.0-11.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "fdk-aac-free-2.0.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/fdk-aac-free-2.0.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "fftw-libs-double-3.3.10-17.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/fftw-libs-double-3.3.10-17.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flac-libs-1.5.0-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flac-libs-1.5.0-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flexiblas-3.5.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flexiblas-3.5.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flexiblas-netlib-3.5.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flexiblas-netlib-3.5.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flexiblas-netlib64-3.5.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flexiblas-netlib64-3.5.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flexiblas-openblas-openmp-3.5.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flexiblas-openblas-openmp-3.5.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flexiblas-openblas-openmp64-3.5.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flexiblas-openblas-openmp64-3.5.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "flite-2.2-13.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/flite-2.2-13.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "freeglut-3.8.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/freeglut-3.8.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "freexl-2.0.0-20.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/freexl-2.0.0-20.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "game-music-emu-0.6.4-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/game-music-emu-0.6.4-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gdal-libs-3.12.4-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gdal-libs-3.12.4-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gdcm-3.0.24-17.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gdcm-3.0.24-17.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "geos-3.14.1-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/geos-3.14.1-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "giflib-6.1.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/giflib-6.1.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "git-2.55.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/git-2.55.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "git-core-2.55.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/git-core-2.55.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "git-core-doc-2.55.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/git-core-doc-2.55.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "glib-networking-2.80.1-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/glib-networking-2.80.1-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "glibmm2.4-2.66.10-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/glibmm2.4-2.66.10-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "glx-utils-9.0.0-11.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/glx-utils-9.0.0-11.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gpgme-2.0.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gpgme-2.0.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gpgmepp-2.0.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gpgmepp-2.0.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "graphene-1.10.8-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/graphene-1.10.8-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gsettings-desktop-schemas-50.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gsettings-desktop-schemas-50.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gsm-1.0.24-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gsm-1.0.24-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gstreamer1-1.28.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gstreamer1-1.28.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gstreamer1-plugins-base-1.28.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gstreamer1-plugins-base-1.28.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gtk-update-icon-cache-3.24.52-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gtk-update-icon-cache-3.24.52-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "gtk3-3.24.52-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/gtk3-3.24.52-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hdf-libs-4.3.0-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hdf-libs-4.3.0-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hdf5-1.14.6-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hdf5-1.14.6-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hicolor-icon-theme-0.18-3.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hicolor-icon-theme-0.18-3.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "hipblas-7.1.0-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipblas-7.1.0-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hipblaslt-7.1.1-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipblaslt-7.1.1-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hipcc-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipcc-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hipfft-7.1.0-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipfft-7.1.0-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hiprand-7.1.0-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hiprand-7.1.0-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hipsolver-7.1.0-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipsolver-7.1.0-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hipsparse-7.1.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipsparse-7.1.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hipsparselt-7.1.1-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hipsparselt-7.1.1-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "hwdata-0.411-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/hwdata-0.411-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "ilbc-3.0.4-19.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/ilbc-3.0.4-19.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "imath-3.1.12-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/imath-3.1.12-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "iso-codes-4.20.1-3.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/iso-codes-4.20.1-3.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "jack-audio-connection-kit-1.9.22-11.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/jack-audio-connection-kit-1.9.22-11.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "jbigkit-libs-2.1-33.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/jbigkit-libs-2.1-33.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "lame-libs-3.100-21.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/lame-libs-3.100-21.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "laszip-3.5.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/laszip-3.5.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "leptonica-1.87.0-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/leptonica-1.87.0-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "less-704-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/less-704-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libICE-1.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libICE-1.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libSM-1.2.5-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libSM-1.2.5-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libX11-xcb-1.8.13-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libX11-xcb-1.8.13-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXcomposite-0.4.6-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXcomposite-0.4.6-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXcursor-1.2.3-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXcursor-1.2.3-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXdamage-1.1.6-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXdamage-1.1.6-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXfixes-6.0.1-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXfixes-6.0.1-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXi-1.8.3-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXi-1.8.3-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXinerama-1.1.5-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXinerama-1.1.5-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXrandr-1.5.4-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXrandr-1.5.4-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXtst-1.2.5-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXtst-1.2.5-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXv-1.0.13-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXv-1.0.13-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libXxf86vm-1.1.6-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libXxf86vm-1.1.6-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libaec-1.1.5-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libaec-1.1.5-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libaribcaption-1.1.1-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libaribcaption-1.1.1-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libarrow-23.0.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libarrow-23.0.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libarrow-acero-libs-23.0.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libarrow-acero-libs-23.0.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libarrow-compute-libs-23.0.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libarrow-compute-libs-23.0.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libarrow-dataset-libs-23.0.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libarrow-dataset-libs-23.0.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libarrow-doc-23.0.1-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libarrow-doc-23.0.1-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "libass-0.17.4-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libass-0.17.4-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libasyncns-0.8-34.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libasyncns-0.8-34.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavc1394-0.5.4-27.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavc1394-0.5.4-27.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavcodec-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavcodec-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavdevice-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavdevice-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavfilter-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavfilter-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavformat-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavformat-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavif-1.3.0-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavif-1.3.0-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libavutil-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libavutil-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libb2-0.98.1-15.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libb2-0.98.1-15.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libbluray-1.4.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libbluray-1.4.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libbs2b-3.1.0-37.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libbs2b-3.1.0-37.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libcaca-0.99-0.82.beta20.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libcaca-0.99-0.82.beta20.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libcdio-2.3.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libcdio-2.3.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libcdio-paranoia-10.2+2.0.2-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libcdio-paranoia-10.2+2.0.2-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libchromaprint-1.6.0-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libchromaprint-1.6.0-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libcloudproviders-0.4.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libcloudproviders-0.4.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libconfig-1.8.2-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libconfig-1.8.2-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdb-5.3.28-67.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdb-5.3.28-67.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdc1394-2.2.7-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdc1394-2.2.7-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdecor-0.2.5-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdecor-0.2.5-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdeflate-1.26-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdeflate-1.26-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdicom-1.2.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdicom-1.2.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdovi-3.3.2-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdovi-3.3.2-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdrm-2.4.134-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdrm-2.4.134-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdvdnav-7.0.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdvdnav-7.0.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libdvdread-7.0.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libdvdread-7.0.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libepoxy-1.5.10-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libepoxy-1.5.10-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libevdev-1.13.7-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libevdev-1.13.7-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libffado-2.4.9-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libffado-2.4.9-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libgeotiff-1.7.4-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libgeotiff-1.7.4-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libgfortran-16.2.1-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libgfortran-16.2.1-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libglvnd-1:1.7.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libglvnd-1.7.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libglvnd-egl-1:1.7.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libglvnd-egl-1.7.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libglvnd-glx-1:1.7.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libglvnd-glx-1.7.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libglvnd-opengl-1:1.7.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libglvnd-opengl-1.7.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libgta-1.2.1-17.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libgta-1.2.1-17.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libgudev-238-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libgudev-238-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libgusb-0.4.9-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libgusb-0.4.9-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libharu-2.4.5-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libharu-2.4.5-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libicu-77.1-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libicu-77.1-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libiec61883-1.2.0-39.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libiec61883-1.2.0-39.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libinput-1.31.3-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libinput-1.31.3-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libklvanc-1.6.0-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libklvanc-1.6.0-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libkml-1.3.0-58.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libkml-1.3.0-58.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "liblas-1.8.2-0.30.git0756b73.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/liblas-1.8.2-0.30.git0756b73.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "liblc3-1.1.3-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/liblc3-1.1.3-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libldb-2:4.24.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libldb-4.24.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "liblerc-4.0.0-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/liblerc-4.0.0-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libmodplug-1:0.8.9.0-29.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libmodplug-0.8.9.0-29.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libmysofa-1.3.3-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libmysofa-1.3.3-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libogg-2:1.3.6-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libogg-1.3.6-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libomp-22.1.8-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libomp-22.1.8-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libopenmpt-0.8.9-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libopenmpt-0.8.9-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "liborc2-2.2.2-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/liborc2-2.2.2-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libpciaccess-0.16-17.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libpciaccess-0.16-17.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libplacebo-7.360.1-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libplacebo-7.360.1-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libpq-18.0-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libpq-18.0-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libproxy-0.5.12-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libproxy-0.5.12-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libqhull_r-1:8.0.2-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libqhull_r-8.0.2-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libquadmath-16.2.1-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libquadmath-16.2.1-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "librabbitmq-0.17.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/librabbitmq-0.17.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libraw1394-2.1.2-25.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libraw1394-2.1.2-25.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "librist-0.2.11-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/librist-0.2.11-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "librttopo-1.1.0-19.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/librttopo-1.1.0-19.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libsamplerate-0.2.2-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libsamplerate-0.2.2-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libshaderc-2026.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libshaderc-2026.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libsigc++20-2.12.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libsigc++20-2.12.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libsmbclient-2:4.24.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libsmbclient-4.24.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libsndfile-1.2.2-11.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libsndfile-1.2.2-11.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libsodium-1.0.22-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libsodium-1.0.22-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libsoup3-3.6.6-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libsoup3-3.6.6-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libspatialite-5.1.0-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libspatialite-5.1.0-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libstemmer-3.0.1-11.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libstemmer-3.0.1-11.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libswresample-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libswresample-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libswscale-free-8.1.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libswscale-free-8.1.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtalloc-2.4.4-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtalloc-2.4.4-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtdb-1.4.15-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtdb-1.4.15-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtevent-0.17.1-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtevent-0.17.1-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtheora-1:1.1.1-41.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtheora-1.1.1-41.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtiff-4.7.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtiff-4.7.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtinysparql-3.11.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtinysparql-3.11.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libtommath-1.3.1~rc1-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libtommath-1.3.1~rc1-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libudfread-1.2.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libudfread-1.2.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libunibreak-6.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libunibreak-6.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libunwind-1.8.3-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libunwind-1.8.3-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libv4l-1.32.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libv4l-1.32.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libva-2.23.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libva-2.23.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libvdpau-1.5-11.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libvdpau-1.5-11.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libvisual-1:0.4.2-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libvisual-0.4.2-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libvorbis-1:1.3.7-14.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libvorbis-1.3.7-14.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libvpl-1:2.17.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libvpl-2.17.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libvpx-1.15.0-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libvpx-1.15.0-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libwacom-2.19.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libwacom-2.19.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libwacom-data-2.19.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libwacom-data-2.19.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "libwayland-client-1.25.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libwayland-client-1.25.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libwayland-cursor-1.25.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libwayland-cursor-1.25.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libwayland-egl-1.25.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libwayland-egl-1.25.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libwbclient-2:4.24.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libwbclient-4.24.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libxkbcommon-1.13.1-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libxkbcommon-1.13.1-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libxkbcommon-x11-1.13.1-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libxkbcommon-x11-1.13.1-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libxml++-2.42.3-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libxml++-2.42.3-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libxshmfence-1.3.2-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libxshmfence-1.3.2-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libyuv-0-0.61.20260213git6067afd.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libyuv-0-0.61.20260213git6067afd.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "libzip-1.11.4-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/libzip-1.11.4-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "lilv-libs-0.26.4-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/lilv-libs-0.26.4-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "lm_sensors-libs-3.6.0-24.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/lm_sensors-libs-3.6.0-24.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "lmdb-libs-0.9.34-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/lmdb-libs-0.9.34-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "lpcnetfreedv-0.5-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/lpcnetfreedv-0.5-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "magma-2.9.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/magma-2.9.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mariadb-connector-c-3.4.9-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mariadb-connector-c-3.4.9-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mariadb-connector-c-config-3.4.9-2.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mariadb-connector-c-config-3.4.9-2.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "mesa-dri-drivers-26.1.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mesa-dri-drivers-26.1.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mesa-filesystem-26.1.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mesa-filesystem-26.1.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mesa-libEGL-26.1.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mesa-libEGL-26.1.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mesa-libGL-26.1.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mesa-libGL-26.1.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mesa-libGLU-9.0.3-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mesa-libGLU-9.0.3-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mesa-libgbm-26.1.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mesa-libgbm-26.1.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "minizip-ng-compat-4.1.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/minizip-ng-compat-4.1.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "miopen-7.1.0-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/miopen-7.1.0-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mpg123-libs-1.32.10-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mpg123-libs-1.32.10-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "mtdev-1.1.6-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/mtdev-1.1.6-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "muParser-2.3.5-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/muParser-2.3.5-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "netcdf-4.9.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/netcdf-4.9.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "ngtcp2-crypto-gnutls-1.22.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/ngtcp2-crypto-gnutls-1.22.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "nspr-4.39.0-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/nspr-4.39.0-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "nss-3.127.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/nss-3.127.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "nss-softokn-3.127.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/nss-softokn-3.127.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "nss-softokn-freebl-3.127.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/nss-softokn-freebl-3.127.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "nss-sysinit-3.127.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/nss-sysinit-3.127.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "nss-util-3.127.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/nss-util-3.127.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "numactl-libs-2.0.19-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/numactl-libs-2.0.19-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openal-soft-1.24.2-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openal-soft-1.24.2-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openapv-libs-0.2.1.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openapv-libs-0.2.1.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openblas-0.3.29-2.fc43.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openblas-0.3.29-2.fc43.x86_64.rpm"
+    },
+    {
+      "nevra": "openblas-openmp-0.3.29-2.fc43.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openblas-openmp-0.3.29-2.fc43.x86_64.rpm"
+    },
+    {
+      "nevra": "openblas-openmp64-0.3.29-2.fc43.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openblas-openmp64-0.3.29-2.fc43.x86_64.rpm"
+    },
+    {
+      "nevra": "opencascade-draw-7.9.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencascade-draw-7.9.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencascade-foundation-7.9.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencascade-foundation-7.9.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencascade-modeling-7.9.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencascade-modeling-7.9.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencascade-ocaf-7.9.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencascade-ocaf-7.9.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencascade-visualization-7.9.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencascade-visualization-7.9.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencore-amr-0.1.6-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencore-amr-0.1.6-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-alphamat-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-alphamat-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-aruco-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-aruco-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-bgsegm-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-bgsegm-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-bioinspired-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-bioinspired-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-calib3d-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-calib3d-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-ccalib-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-ccalib-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-core-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-core-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-data-4.13.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-data-4.13.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "opencv-dnn-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-dnn-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-dnn_superres-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-dnn_superres-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-face-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-face-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-features2d-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-features2d-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-flann-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-flann-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-freetype-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-freetype-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-fuzzy-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-fuzzy-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-gapi-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-gapi-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-hdf-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-hdf-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-hfs-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-hfs-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-highgui-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-highgui-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-img_hash-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-img_hash-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-imgcodecs-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-imgcodecs-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-imgproc-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-imgproc-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-intensity_transform-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-intensity_transform-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-line_descriptor-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-line_descriptor-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-mcc-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-mcc-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-ml-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-ml-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-objdetect-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-objdetect-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-optflow-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-optflow-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-phase_unwrapping-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-phase_unwrapping-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-photo-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-photo-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-plot-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-plot-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-quality-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-quality-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-rapid-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-rapid-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-reg-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-reg-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-rgbd-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-rgbd-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-saliency-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-saliency-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-shape-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-shape-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-signal-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-signal-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-stereo-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-stereo-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-stitching-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-stitching-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-structured_light-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-structured_light-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-surface_matching-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-surface_matching-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-text-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-text-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-tracking-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-tracking-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-video-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-video-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-videoio-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-videoio-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-viz-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-viz-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-wechat_qrcode-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-wechat_qrcode-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-ximgproc-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-ximgproc-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-xobjdetect-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-xobjdetect-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opencv-xphoto-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opencv-xphoto-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openexr-libs-3.2.4-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openexr-libs-3.2.4-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openpgm-5.3.128-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openpgm-5.3.128-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openslide-4.0.0-14.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openslide-4.0.0-14.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openssh-10.2p1-14.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openssh-10.2p1-14.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openssh-clients-10.2p1-14.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openssh-clients-10.2p1-14.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openvr-api-2.12.14-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openvr-api-2.12.14-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "openxr-libs-1.1.63-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/openxr-libs-1.1.63-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "opus-1.6-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/opus-1.6-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "orc-0.4.41-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/orc-0.4.41-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "parquet-libs-23.0.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/parquet-libs-23.0.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "pcre2-utf16-10.47-1.fc44.1.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/pcre2-utf16-10.47-1.fc44.1.x86_64.rpm"
+    },
+    {
+      "nevra": "perl-Error-1:0.17030-3.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/perl-Error-0.17030-3.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "perl-File-Copy-2.41-525.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/perl-File-Copy-2.41-525.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "perl-File-Which-1.27-15.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/perl-File-Which-1.27-15.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "perl-Git-2.55.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/perl-Git-2.55.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "perl-TermReadKey-2.38-27.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/perl-TermReadKey-2.38-27.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "perl-lib-0.65-525.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/perl-lib-0.65-525.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "poppler-26.01.0-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/poppler-26.01.0-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "poppler-data-0.4.11-11.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/poppler-data-0.4.11-11.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "proj-9.8.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/proj-9.8.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "proj-data-9.8.1-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/proj-data-9.8.1-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "pulseaudio-libs-17.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/pulseaudio-libs-17.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "python3-filelock-3.15.4-11.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-filelock-3.15.4-11.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-fsspec-2026.7.0-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-fsspec-2026.7.0-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-jinja2-3.1.6-7.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-jinja2-3.1.6-7.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-markupsafe-3.0.2-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-markupsafe-3.0.2-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "python3-mpmath-1.4.1-2.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-mpmath-1.4.1-2.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-networkx-3.6.1-3.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-networkx-3.6.1-3.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-numpy-1:2.4.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-numpy-2.4.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "python3-numpy-f2py-1:2.4.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-numpy-f2py-2.4.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "python3-opencv-4.13.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-opencv-4.13.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "python3-setuptools-80.10.2-3.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-setuptools-80.10.2-3.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-sympy-1.14.0-11.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-sympy-1.14.0-11.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "python3-torch-2.9.1-10.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-torch-2.9.1-10.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "python3-vtk-9.5.2-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/python3-vtk-9.5.2-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "qrencode-libs-4.1.1-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qrencode-libs-4.1.1-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "qt6-filesystem-6.11.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qt6-filesystem-6.11.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "qt6-qtbase-6.11.2-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qt6-qtbase-6.11.2-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "qt6-qtbase-common-6.11.2-2.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qt6-qtbase-common-6.11.2-2.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "qt6-qtbase-gui-6.11.2-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qt6-qtbase-gui-6.11.2-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "qt6-qtdeclarative-6.11.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qt6-qtdeclarative-6.11.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "qt6-qtsvg-6.11.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/qt6-qtsvg-6.11.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "re2-2:20251105-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/re2-20251105-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocblas-7.1.1-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocblas-7.1.1-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocfft-7.1.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocfft-7.1.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-clang-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-clang-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-clang-devel-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-clang-devel-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-clang-libs-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-clang-libs-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-clang-runtime-devel-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-clang-runtime-devel-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-comgr-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-comgr-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-comgr-devel-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-comgr-devel-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-device-libs-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-device-libs-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-hip-7.1.1-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-hip-7.1.1-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-hip-devel-7.1.1-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-hip-devel-7.1.1-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-libc++-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-libc++-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-libc++-devel-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-libc++-devel-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-lld-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-lld-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-llvm-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-llvm-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-llvm-devel-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-llvm-devel-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-llvm-filesystem-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-llvm-filesystem-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-llvm-libs-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-llvm-libs-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-llvm-static-20-13.rocm7.1.1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-llvm-static-20-13.rocm7.1.1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-origami-7.1.1-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-origami-7.1.1-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-runtime-7.1.1-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-runtime-7.1.1-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-runtime-devel-7.1.1-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-runtime-devel-7.1.1-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocm-smi-7.1.1-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocm-smi-7.1.1-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocrand-7.1.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocrand-7.1.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocrand-devel-7.1.0-7.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocrand-devel-7.1.0-7.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocsolver-7.1.1-4.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocsolver-7.1.1-4.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rocsparse-7.1.0-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rocsparse-7.1.0-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "roctracer-7.1.0-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/roctracer-7.1.0-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "rubberband-libs-4.0.0-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/rubberband-libs-4.0.0-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "samba-client-libs-2:4.24.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/samba-client-libs-4.24.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "samba-common-2:4.24.6-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/samba-common-4.24.6-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "samba-core-libs-2:4.24.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/samba-core-libs-4.24.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "samba-ndr-libs-2:4.24.6-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/samba-ndr-libs-4.24.6-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "sdl2-compat-2.32.72-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/sdl2-compat-2.32.72-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "serd-0.32.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/serd-0.32.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "slang-2.3.3-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/slang-2.3.3-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "sleef-3.9.0-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/sleef-3.9.0-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "sord-0.16.22-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/sord-0.16.22-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "soxr-0.1.3-21.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/soxr-0.1.3-21.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "speex-1.2.0-21.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/speex-1.2.0-21.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "spirv-tools-libs-2026.1-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/spirv-tools-libs-2026.1-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "sratom-0.6.22-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/sratom-0.6.22-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "srt-libs-1.5.7-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/srt-libs-1.5.7-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "systemd-259.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/systemd-259.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "systemd-shared-259.8-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/systemd-shared-259.8-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "tcl-1:9.0.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tcl-9.0.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "tesseract-common-5.5.3-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tesseract-common-5.5.3-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "tesseract-langpack-eng-4.1.0-12.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tesseract-langpack-eng-4.1.0-12.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "tesseract-libs-5.5.3-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tesseract-libs-5.5.3-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "tesseract-tessdata-doc-4.1.0-12.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tesseract-tessdata-doc-4.1.0-12.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "thrift-0.20.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/thrift-0.20.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "tk-1:9.0.2-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tk-9.0.2-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "tslib-1.24-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/tslib-1.24-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "twolame-libs-0.4.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/twolame-libs-0.4.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "unixODBC-2.3.14-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/unixODBC-2.3.14-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "uriparser-1.0.2-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/uriparser-1.0.2-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "utf8proc-2.11.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/utf8proc-2.11.3-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "vid.stab-1.1.1-8.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/vid.stab-1.1.1-8.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "vo-amrwbenc-0.1.3-24.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/vo-amrwbenc-0.1.3-24.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "vtk-9.5.2-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/vtk-9.5.2-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "vtk-qt-9.5.2-12.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/vtk-qt-9.5.2-12.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "vulkan-loader-1.4.341.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/vulkan-loader-1.4.341.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xcb-util-0.4.1-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xcb-util-0.4.1-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xcb-util-cursor-0.1.6-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xcb-util-cursor-0.1.6-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xcb-util-image-0.4.1-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xcb-util-image-0.4.1-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xcb-util-keysyms-0.4.1-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xcb-util-keysyms-0.4.1-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xcb-util-renderutil-0.3.10-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xcb-util-renderutil-0.3.10-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xcb-util-wm-0.4.2-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xcb-util-wm-0.4.2-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xerces-c-3.3.0-9.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xerces-c-3.3.0-9.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xevd-libs-0.5.0-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xevd-libs-0.5.0-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xeve-libs-0.5.1-6.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xeve-libs-0.5.1-6.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xkeyboard-config-2.47-1.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xkeyboard-config-2.47-1.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "xprop-1.2.8-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xprop-1.2.8-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "xvidcore-1.3.7-19.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/xvidcore-1.3.7-19.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "zeromq-4.3.5-22.fc43.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/zeromq-4.3.5-22.fc43.x86_64.rpm"
+    },
+    {
+      "nevra": "zimg-3.0.6-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/zimg-3.0.6-3.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "zix-0.8.0-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/zix-0.8.0-2.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "zvbi-0.2.44-3.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/zvbi-0.2.44-3.fc44.x86_64.rpm"
+    }
+  ],
+  "version": "1.0"
+}

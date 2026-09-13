@@ -5,6 +5,21 @@
 # Keep compilation parallel while serializing debug extraction and compression.
 %global _find_debuginfo_opts %{?_find_debuginfo_opts} -j1
 
+# Debug sources include compiler/LLVM files as well as the OpenVINO runtime.
+# Preserve RPM's standard debugsource template with their combined License tag.
+%define _debugsource_template \
+%package debugsource\
+Summary: Debug sources for package %{name}\
+License: Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5\
+Group: Development/Debug\
+AutoReqProv: 0\
+%description debugsource\
+This package provides debug sources for package %{name}.\
+Debug sources are useful when developing applications that use this\
+package or when debugging this package.\
+%files debugsource -f debugsourcefiles.list\
+%{nil}
+
 Name:           openvino
 Version:        2026.2.0
 Release:        1.intelnpu.fc44
@@ -56,6 +71,10 @@ Source40:       0013-anchor-generic-scheduler-vtable.patch
 Source41:       check-scheduler-odr.py
 Source42:       0014-construct-gpu-broadcast-results-directly.patch
 Source43:       check-gpu-broadcast.py
+Source44:       install-provider-notices.py
+Source45:       provider-sources.toml
+Source46:       provider-license-evidence.tar
+Source47:       json-3.12.0-LICENSE.MIT
 
 ExclusiveArch:  x86_64
 
@@ -115,6 +134,7 @@ OpenVINO automatic, heterogeneous, Intel CPU, GPU, and NPU runtime plugins.
 
 %package -n intel-npu-compiler
 Summary:        Source-built OpenVINO Intel NPU compiler
+License:        Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       intel-npu-driver%{?_isa} = 1.35.0-1.intelnpu.fc44
 
@@ -227,6 +247,11 @@ mv intel-npu-nn-cost-model thirdparty/npu-compiler/thirdparty/vpucostmodel
     -d thirdparty/npu-compiler < %{SOURCE40}
 /usr/bin/patch --batch --forward --fuzz=0 -p1 < %{SOURCE42}
 
+/usr/bin/python3 %{SOURCE44} --kind openvino \
+    --source "$PWD" --archives "$(dirname -- '%{SOURCE0}')" --spec %{_specdir}/openvino.spec \
+    --source-lock %{SOURCE45} --license-evidence %{SOURCE46} \
+    --output ../provider-notices
+
 %build
 # Keep temporary storage on disk for both native and diagnostic LTO links.
 # Keep linker scratch files on the build volume, outside container /tmp tmpfs.
@@ -325,6 +350,9 @@ for component in core core_dev ir onnx paddle pytorch tensorflow tensorflow_lite
     DESTDIR=%{buildroot} /usr/bin/cmake --install %{_vpath_builddir} --component "$component"
 done
 /usr/bin/python3 %{SOURCE34} %{buildroot}
+mkdir -p %{buildroot}%{_licensedir}
+cp -a ../provider-notices/openvino ../provider-notices/intel-npu-compiler \
+    %{buildroot}%{_licensedir}/
 
 %check
 /usr/bin/python3 %{SOURCE32} \
@@ -338,7 +366,7 @@ done
     %{buildroot} %{SOURCE32} %{_vpath_builddir}/installed-compiler-test-results
 
 %files
-%license LICENSE
+%license %{_licensedir}/openvino
 %doc README.md
 %doc %{_docdir}/libopenvino-%{version}
 %{_libdir}/libopenvino.so.%{version}
@@ -370,6 +398,7 @@ done
 %{_libdir}/openvino-%{version}/libopenvino_intel_npu_plugin.so
 
 %files -n intel-npu-compiler
+%license %{_licensedir}/intel-npu-compiler
 %{_libdir}/openvino-%{version}/libopenvino_intel_npu_compiler.so
 %{_libdir}/openvino-%{version}/libopenvino_intel_npu_compiler_loader.so
 

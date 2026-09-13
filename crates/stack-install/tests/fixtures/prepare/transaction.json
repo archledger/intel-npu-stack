@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "rpms": [
+    {
+      "nevra": "intel-npu-stack-0.1.0-1.intelnpu.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/intel-npu-stack-0.1.0-1.intelnpu.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "intel-npu-stack-firmware-1.35.0-1.intelnpu.fc44.noarch",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/intel-npu-stack-firmware-1.35.0-1.intelnpu.fc44.noarch.rpm"
+    },
+    {
+      "nevra": "intel-npu-stack-tools-0.1.0-1.intelnpu.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(@commandline)",
+      "package_path": "./packages/intel-npu-stack-tools-0.1.0-1.intelnpu.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "createrepo_c-libs-1.2.0-1.fc44.x86_64",
+      "action": "Install",
+      "reason": "Dependency",
+      "repo_id": "@stored_transaction(fedora)",
+      "package_path": "./packages/createrepo_c-libs-1.2.0-1.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "drpm-0.5.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "Dependency",
+      "repo_id": "@stored_transaction(updates)",
+      "package_path": "./packages/drpm-0.5.3-2.fc44.x86_64.rpm"
+    }
+  ]
+}

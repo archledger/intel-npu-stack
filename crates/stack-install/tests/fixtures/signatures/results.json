@@ -1,0 +1,111 @@
+{
+  "purpose": "synthetic offline signature fixtures only",
+  "fingerprints": {
+    "good": "92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B",
+    "wrong": "175F949E2149B8F0980A94957D06E6811CB0D013"
+  },
+  "cases": {
+    "valid": {
+      "argv": [
+        "/usr/bin/gpgv",
+        "--homedir",
+        "/tmp/installer-signature-verify-p8jrx5yv",
+        "--keyring",
+        "/evidence/good.gpg",
+        "--status-fd",
+        "1",
+        "--",
+        "/evidence/good.sig",
+        "/evidence/release.json"
+      ],
+      "returncode": 0,
+      "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 0\n[GNUPG:] SIG_ID AdUGdF6G/W9Cyjuao25TIreNkzk 2026-09-11 1789149347\n[GNUPG:] GOODSIG D239EC95BC71556B Installer good fixture <good@example.invalid>\n[GNUPG:] VALIDSIG 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 2026-09-11 1789149347 0 4 0 22 10 00 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\n",
+      "stderr": "gpgv: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpgv:                using EDDSA key 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\ngpgv: Good signature from \"Installer good fixture <good@example.invalid>\"\n"
+    },
+    "changed": {
+      "argv": [
+        "/usr/bin/gpgv",
+        "--homedir",
+        "/tmp/installer-signature-verify-p8jrx5yv",
+        "--keyring",
+        "/evidence/good.gpg",
+        "--status-fd",
+        "1",
+        "--",
+        "/evidence/good.sig",
+        "/evidence/changed.json"
+      ],
+      "returncode": 1,
+      "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 0\n[GNUPG:] BADSIG D239EC95BC71556B Installer good fixture <good@example.invalid>\n",
+      "stderr": "gpgv: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpgv:                using EDDSA key 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\ngpgv: BAD signature from \"Installer good fixture <good@example.invalid>\"\n"
+    },
+    "wrong-missing-key": {
+      "argv": [
+        "/usr/bin/gpgv",
+        "--homedir",
+        "/tmp/installer-signature-verify-p8jrx5yv",
+        "--keyring",
+        "/evidence/good.gpg",
+        "--status-fd",
+        "1",
+        "--",
+        "/evidence/wrong.sig",
+        "/evidence/release.json"
+      ],
+      "returncode": 2,
+      "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] ERRSIG 7D06E6811CB0D013 22 10 00 1789149347 9 175F949E2149B8F0980A94957D06E6811CB0D013\n[GNUPG:] NO_PUBKEY 7D06E6811CB0D013\n",
+      "stderr": "gpgv: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpgv:                using EDDSA key 175F949E2149B8F0980A94957D06E6811CB0D013\ngpgv: Can't check signature: No public key\n"
+    },
+    "wrong-valid-signer": {
+      "argv": [
+        "/usr/bin/gpgv",
+        "--homedir",
+        "/tmp/installer-signature-verify-p8jrx5yv",
+        "--keyring",
+        "/evidence/both.gpg",
+        "--status-fd",
+        "1",
+        "--",
+        "/evidence/wrong.sig",
+        "/evidence/release.json"
+      ],
+      "returncode": 0,
+      "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 175F949E2149B8F0980A94957D06E6811CB0D013 0\n[GNUPG:] SIG_ID T1fu5Z/kgSI1ggE9nsw56gz5AGw 2026-09-11 1789149347\n[GNUPG:] GOODSIG 7D06E6811CB0D013 Installer wrong fixture <wrong@example.invalid>\n[GNUPG:] VALIDSIG 175F949E2149B8F0980A94957D06E6811CB0D013 2026-09-11 1789149347 0 4 0 22 10 00 175F949E2149B8F0980A94957D06E6811CB0D013\n",
+      "stderr": "gpgv: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpgv:                using EDDSA key 175F949E2149B8F0980A94957D06E6811CB0D013\ngpgv: Good signature from \"Installer wrong fixture <wrong@example.invalid>\"\n"
+    },
+    "malformed": {
+      "argv": [
+        "/usr/bin/gpgv",
+        "--homedir",
+        "/tmp/installer-signature-verify-p8jrx5yv",
+        "--keyring",
+        "/evidence/good.gpg",
+        "--status-fd",
+        "1",
+        "--",
+        "/evidence/malformed.sig",
+        "/evidence/release.json"
+      ],
+      "returncode": 2,
+      "stdout": "[GNUPG:] NODATA 1\n[GNUPG:] NODATA 2\n",
+      "stderr": "gpgv: no valid OpenPGP data found.\ngpgv: the signature could not be verified.\nPlease remember that the signature file (.sig or .asc)\nshould be the first file given on the command line.\n"
+    },
+    "missing": {
+      "argv": [
+        "/usr/bin/gpgv",
+        "--homedir",
+        "/tmp/installer-signature-verify-p8jrx5yv",
+        "--keyring",
+        "/evidence/good.gpg",
+        "--status-fd",
+        "1",
+        "--",
+        "/evidence/missing.sig",
+        "/evidence/release.json"
+      ],
+      "returncode": 2,
+      "stdout": "",
+      "stderr": "gpgv: can't open '/evidence/missing.sig': No such file or directory\ngpgv: verify signatures failed: No such file or directory\n"
+    }
+  }
+}

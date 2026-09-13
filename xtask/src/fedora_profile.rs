@@ -151,9 +151,12 @@ fn expected_license(name: &str) -> &'static str {
     match name {
         "intel-npu-stack" => "Apache-2.0",
         "intel-npu-stack-tools" => {
-            "Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0"
+            "Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)"
         }
-        "intel-npu-driver" => "MIT AND Apache-2.0",
+        "intel-npu-compiler" => {
+            "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5"
+        }
+        "intel-npu-driver" => "MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note)",
         "intel-npu-stack-firmware" => "LicenseRef-Intel-firmware",
         "oneapi-level-zero" => "MIT",
         _ => {
@@ -366,9 +369,8 @@ fn license_provider<'a>(
         return Ok(package);
     }
     let owner = &packages["openvino"];
-    let shared_family = package.name == "intel-npu-compiler"
-        || package.name == "openvino-plugins"
-        || package.name.starts_with("libopenvino-");
+    let shared_family =
+        package.name == "openvino-plugins" || package.name.starts_with("libopenvino-");
     let relationship = (
         "openvino(x86-64)".to_owned(),
         "=".to_owned(),

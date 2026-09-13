@@ -166,6 +166,22 @@ impl<'a> RuntimeInspector<'a> {
         facts: &PlatformFacts,
         command: DiagnosticCommand,
     ) -> InspectionResult {
+        let mut result = self.inspect_preflight(profile, facts);
+        result.checks.extend(
+            self.devices
+                .inspect(&self.paths.root, facts.effective_root, command)
+                .checks,
+        );
+        result
+    }
+
+    /// Inspects installed package identities, files, kernel and activation metadata.
+    ///
+    /// The caller must validate platform compatibility first. This operation never
+    /// opens accelerator devices, samples activity counters, or launches runtime
+    /// helpers. Its result is not hardware qualification or proof of device access.
+    #[must_use]
+    pub fn inspect_preflight(&self, profile: &Profile, facts: &PlatformFacts) -> InspectionResult {
         let package_inspection = self.packages.inspect(profile);
         let activation = inspect_activation(
             profile,
@@ -182,16 +198,11 @@ impl<'a> RuntimeInspector<'a> {
         checks.extend(package_inspection.checks.iter().cloned());
         checks.push(kernel_check(facts));
         checks.push(firmware_check(&package_inspection.checks, activation.state));
-        checks.extend(
-            self.devices
-                .inspect(&self.paths.root, facts.effective_root, command)
-                .checks,
-        );
-        InspectionResult {
+        finish(InspectionResult {
             checks,
             reboot_required: activation.reboot_required,
             relogin_required: activation.relogin_required,
-        }
+        })
     }
 
     fn run_level_zero(&self, profile: &Profile) -> ProbeCheck {

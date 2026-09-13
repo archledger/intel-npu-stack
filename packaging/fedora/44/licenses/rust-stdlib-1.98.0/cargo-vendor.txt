@@ -1,0 +1,15 @@
+
+addr2line v0.25.1
+adler2 v2.0.1
+cc v1.2.0
+cfg-if v1.0.4
+getopts v0.2.24
+gimli v0.32.3
+hashbrown v0.17.1
+libc v0.2.185
+memchr v2.7.6
+miniz_oxide v0.8.9
+object v0.37.3
+rustc-demangle v0.1.27
+rustc-literal-escaper v0.0.8
+shlex v1.3.0

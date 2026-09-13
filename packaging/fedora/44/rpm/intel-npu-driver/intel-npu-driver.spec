@@ -5,14 +5,23 @@ Version:        1.35.0
 Release:        1.intelnpu.fc44
 Summary:        Intel Neural Processing Unit userspace driver
 
-License:        MIT AND Apache-2.0
+License:        MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note)
 URL:            https://github.com/intel/linux-npu-driver
 Source0:        linux-npu-driver.tar
 Source1:        level-zero-npu-extensions.tar
 Source2:        npu-compiler-elf-driver.tar
+Source3:        install-provider-notices.py
+Source4:        provider-sources.toml
+Source5:        provider-license-evidence.tar
+Source6:        linux-uapi-GPL-2.0
+Source7:        linux-uapi-Linux-syscall-note
+Source8:        check-driver-headers.py
 Patch0:         0001-use-system-gtest-for-npu-elf-tests.patch
+Patch1:         0002-keep-production-firmware-headers-for-driver.patch
 
 ExclusiveArch:  x86_64
+
+BuildRequires:  python3
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -47,6 +56,11 @@ mv npu-compiler-elf-driver third_party/npu_compiler_elf
 
 %autopatch -p1
 
+/usr/bin/python3 %{SOURCE3} --kind driver \
+    --source "$PWD" --archives "$(dirname -- '%{SOURCE0}')" --spec %{_specdir}/intel-npu-driver.spec \
+    --source-lock %{SOURCE4} --license-evidence %{SOURCE5} \
+    --output ../provider-notices
+
 %build
 %cmake \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -67,6 +81,8 @@ mv npu-compiler-elf-driver third_party/npu_compiler_elf
 
 %install
 %cmake_install
+mkdir -p %{buildroot}%{_licensedir}
+cp -a ../provider-notices/intel-npu-driver %{buildroot}%{_licensedir}/
 rm -rf %{buildroot}/lib/firmware %{buildroot}%{_prefix}/lib/firmware
 rm -f \
     %{buildroot}%{_libdir}/liballocator_utils.so \
@@ -80,6 +96,7 @@ cp -a third_party/npu_compiler_elf/. \
 cp -a umd/. redhat-linux-build/umd/
 
 %check
+/usr/bin/python3 %{SOURCE8} redhat-linux-build
 redhat-linux-build/bin/npu_shared_tests
 # These four suites cross the Task 3 package boundary: they require either the
 # separately packaged NPU compiler or a compiled validation blob that is not in
@@ -93,7 +110,7 @@ redhat-linux-build/bin/ze_intel_npu_tests \
     -j%{_smp_build_ncpus}
 
 %files
-%license LICENSE.md
+%license %{_licensedir}/intel-npu-driver
 %doc README.md
 %{_libdir}/libze_intel_npu.so.1
 %{_libdir}/libze_intel_npu.so.%{version}

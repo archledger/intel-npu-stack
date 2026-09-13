@@ -1,0 +1,323 @@
+{
+  "components": [
+    {
+      "declared_license": "Apache-2.0 OR MIT",
+      "files": [
+        "source/library/vendor/addr2line-0.25.1/Cargo.toml",
+        "source/library/vendor/addr2line-0.25.1/LICENSE-APACHE",
+        "source/library/vendor/addr2line-0.25.1/LICENSE-MIT"
+      ],
+      "name": "addr2line",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.25.1"
+    },
+    {
+      "declared_license": "0BSD OR MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/adler2-2.0.1/Cargo.toml",
+        "source/library/vendor/adler2-2.0.1/LICENSE-0BSD",
+        "source/library/vendor/adler2-2.0.1/LICENSE-APACHE",
+        "source/library/vendor/adler2-2.0.1/LICENSE-MIT"
+      ],
+      "name": "adler2",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "2.0.1"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/cc-1.2.0/Cargo.toml",
+        "source/library/vendor/cc-1.2.0/LICENSE-APACHE",
+        "source/library/vendor/cc-1.2.0/LICENSE-MIT"
+      ],
+      "name": "cc",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "1.2.0"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/cfg-if-1.0.4/Cargo.toml",
+        "source/library/vendor/cfg-if-1.0.4/LICENSE-APACHE",
+        "source/library/vendor/cfg-if-1.0.4/LICENSE-MIT"
+      ],
+      "name": "cfg-if",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "1.0.4"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/getopts-0.2.24/Cargo.toml",
+        "source/library/vendor/getopts-0.2.24/LICENSE-APACHE",
+        "source/library/vendor/getopts-0.2.24/LICENSE-MIT"
+      ],
+      "name": "getopts",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.2.24"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/gimli-0.32.3/Cargo.toml",
+        "source/library/vendor/gimli-0.32.3/LICENSE-APACHE",
+        "source/library/vendor/gimli-0.32.3/LICENSE-MIT"
+      ],
+      "name": "gimli",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.32.3"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/hashbrown-0.17.1/Cargo.toml",
+        "source/library/vendor/hashbrown-0.17.1/LICENSE-APACHE",
+        "source/library/vendor/hashbrown-0.17.1/LICENSE-MIT"
+      ],
+      "name": "hashbrown",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.17.1"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/libc-0.2.185/Cargo.toml",
+        "source/library/vendor/libc-0.2.185/LICENSE-APACHE",
+        "source/library/vendor/libc-0.2.185/LICENSE-MIT"
+      ],
+      "name": "libc",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.2.185"
+    },
+    {
+      "declared_license": "Unlicense OR MIT",
+      "files": [
+        "source/library/vendor/memchr-2.7.6/COPYING",
+        "source/library/vendor/memchr-2.7.6/Cargo.toml",
+        "source/library/vendor/memchr-2.7.6/LICENSE-MIT",
+        "source/library/vendor/memchr-2.7.6/UNLICENSE"
+      ],
+      "name": "memchr",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "2.7.6"
+    },
+    {
+      "declared_license": "MIT OR Zlib OR Apache-2.0",
+      "files": [
+        "source/library/vendor/miniz_oxide-0.8.9/Cargo.toml",
+        "source/library/vendor/miniz_oxide-0.8.9/LICENSE",
+        "source/library/vendor/miniz_oxide-0.8.9/LICENSE-APACHE.md",
+        "source/library/vendor/miniz_oxide-0.8.9/LICENSE-MIT.md",
+        "source/library/vendor/miniz_oxide-0.8.9/LICENSE-ZLIB.md"
+      ],
+      "name": "miniz_oxide",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.8.9"
+    },
+    {
+      "declared_license": "Apache-2.0 OR MIT",
+      "files": [
+        "source/library/vendor/object-0.37.3/Cargo.toml",
+        "source/library/vendor/object-0.37.3/LICENSE-APACHE",
+        "source/library/vendor/object-0.37.3/LICENSE-MIT"
+      ],
+      "name": "object",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.37.3"
+    },
+    {
+      "declared_license": "MIT/Apache-2.0",
+      "files": [
+        "source/library/vendor/rustc-demangle-0.1.27/Cargo.toml",
+        "source/library/vendor/rustc-demangle-0.1.27/LICENSE-APACHE",
+        "source/library/vendor/rustc-demangle-0.1.27/LICENSE-MIT"
+      ],
+      "name": "rustc-demangle",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.1.27"
+    },
+    {
+      "declared_license": "Apache-2.0 OR MIT",
+      "files": [
+        "source/library/vendor/rustc-literal-escaper-0.0.8/Cargo.toml",
+        "source/library/vendor/rustc-literal-escaper-0.0.8/LICENSE-APACHE",
+        "source/library/vendor/rustc-literal-escaper-0.0.8/LICENSE-MIT"
+      ],
+      "name": "rustc-literal-escaper",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "0.0.8"
+    },
+    {
+      "declared_license": "MIT OR Apache-2.0",
+      "files": [
+        "source/library/vendor/shlex-1.3.0/Cargo.toml",
+        "source/library/vendor/shlex-1.3.0/LICENSE-APACHE",
+        "source/library/vendor/shlex-1.3.0/LICENSE-MIT"
+      ],
+      "name": "shlex",
+      "scope": "Fedora std normal/build dependency inventory; not proof of final binary linkage",
+      "selected_license": "MIT",
+      "version": "1.3.0"
+    }
+  ],
+  "files": {
+    "COPYRIGHT-library.html": "e865f7bd5018634399d00f92f049ccfa84a4c1d60c2483d1a81eb63a5038d659",
+    "LICENSE-APACHE": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+    "LICENSE-MIT": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1",
+    "cargo-vendor.txt": "17de06cad999a2d7adb318752d8a4cd87464a88ddd3cc98bbe8c5accde88cb35",
+    "source/LICENSE-APACHE": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+    "source/LICENSE-MIT": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1",
+    "source/LICENSES/LLVM-exception.txt": "e34c58338bd89d43e709e226610d8f32b3e3c47f4ad9a99a8dc1d4ac7842488e",
+    "source/LICENSES/Unicode-3.0.txt": "f5062c9a188d81dfe66b56db4182dcf9e4b17c0d9b0d311a8e20b3a1b075c443",
+    "source/library/Cargo.lock": "d1c5dbdf53bfebd7de60f26a171819db3b28ebfd75f3fa99c3286893a5a7b7a6",
+    "source/library/backtrace/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/backtrace/LICENSE-MIT": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+    "source/library/compiler-builtins/LICENSE.txt": "ab6eec6caf0fa5775e411c7a8bc6a45c4ef2956b0980b157ab74fc5cd62a928b",
+    "source/library/compiler-builtins/compiler-builtins/Cargo.toml": "d89e31fed70f2cad9c6e91b787bf4c0fb680c631196b2a7215c81745aaf7fb7e",
+    "source/library/compiler-builtins/compiler-builtins/src/probestack.rs": "0ee11ae0cce89f3727341bb825e235736a4f666c5f04c9ac5303ba2f30fa460b",
+    "source/library/compiler-builtins/libm/LICENSE.txt": "3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7",
+    "source/library/compiler-builtins/libm/src/math/acos.rs": "efd83a6138061209867f06421c6a756b8ca3aab5c6c0a85c4aba31bedb299da5",
+    "source/library/compiler-builtins/libm/src/math/acosf.rs": "c5c9c74d267725bbe5f9319e6f4a396af6ce46c890b601d3f963a5d74d12e4c3",
+    "source/library/compiler-builtins/libm/src/math/approx/cbrtf64.rs": "7344cf87169de41ffcf2f94d356603cf5093353e7e9b52bfbfb3c34206d5264e",
+    "source/library/compiler-builtins/libm/src/math/asin.rs": "9693a7cb61674ec6fe22be9db8fe20276729c48b1562fd86d5421e372a0a12e4",
+    "source/library/compiler-builtins/libm/src/math/asinf.rs": "25f6b7bbf46fc5aac4ebdd9e00118239747dcd28a79b90b858ddc4633d773d65",
+    "source/library/compiler-builtins/libm/src/math/atan.rs": "54181dbddf4f77b90b32b9f6819ac989da570dc02b791f3685d20a23d51324be",
+    "source/library/compiler-builtins/libm/src/math/atan2.rs": "bb042e1e1b9f080bba1c7b29947f6c4ec9413807fae95000df2c4b50ab97650b",
+    "source/library/compiler-builtins/libm/src/math/atan2f.rs": "b9497b5adb75e2788c404fd121aa64dcfa0e9357b67af3b3e7e6d4624dae1ca1",
+    "source/library/compiler-builtins/libm/src/math/atanf.rs": "197762f16ed5951236e17d0869c529e857acc329cc287df019ff69e5401f3b4d",
+    "source/library/compiler-builtins/libm/src/math/cbrt.rs": "6f25fdb3b8c5cb5950f8d82e28c36a099865bbd4048cf7924e70b72b6f997822",
+    "source/library/compiler-builtins/libm/src/math/cbrtf.rs": "7a2b4f190e8618c52cb23b47c040a4b4eacca739c68393cf14fb3f5d73988127",
+    "source/library/compiler-builtins/libm/src/math/cos.rs": "6e81752899c471bd42d04bdf08e0b22bc10a29f92fa2a343281b995fd342f035",
+    "source/library/compiler-builtins/libm/src/math/cosf.rs": "f48aa954f199fe4f54fd73b4e7886a75f2c08afba7fc31c6a36db5b5f90ced69",
+    "source/library/compiler-builtins/libm/src/math/erf.rs": "5a69f440d5ca88a5c4a45119837c45b14238836a036675230e10fec41d293a3b",
+    "source/library/compiler-builtins/libm/src/math/erff.rs": "62c30876390e532d7dc9ac1f1f1c1f654065fba2b2e534e531964d79e1766196",
+    "source/library/compiler-builtins/libm/src/math/exp.rs": "f48970e2b92d4cc0e997abcd9d54bfaf6b8dd689a8b62916ff1fcc396f6ef700",
+    "source/library/compiler-builtins/libm/src/math/exp2.rs": "7e73d7528d1407670d123a17a207242e98eb2f829a9b0dc91071200379adf63c",
+    "source/library/compiler-builtins/libm/src/math/exp2f.rs": "1c0f02200a85a01e37b4657076963e0c6670f8f3d9dd1db80a64cec268d40027",
+    "source/library/compiler-builtins/libm/src/math/expf.rs": "983bf3922bed804ec889890a0e7d31641fd7098588645dad47920915c2753950",
+    "source/library/compiler-builtins/libm/src/math/expm1.rs": "6cc612ca7cf1384dc15f541b301a1f176efbc79536aff1293408b3121cc30ad3",
+    "source/library/compiler-builtins/libm/src/math/expm1f.rs": "2b517f1bcb6279c906aad737f08c83ac30d7871e3beff266ea50a01fa18ccc81",
+    "source/library/compiler-builtins/libm/src/math/hypot.rs": "9fe0c6983bd0ab90984b40ff7905d17caee6423a772264846e6ae54e2e8f4403",
+    "source/library/compiler-builtins/libm/src/math/j0.rs": "1cb991f0151a626744ad1832d4aedfaca681bcfcecc797de5ac5e9baf2342006",
+    "source/library/compiler-builtins/libm/src/math/j0f.rs": "de97374b6a0019fd8b3d1f553be1708018546491d3b4a5fc650ee2dcdfc9620e",
+    "source/library/compiler-builtins/libm/src/math/j1.rs": "e0a10746fd11a458d55ee61e758d9f016ff0f2203a07eb9907b5aca709a40469",
+    "source/library/compiler-builtins/libm/src/math/j1f.rs": "b747ee287cdddd6d0d0d3f65a186e6605fe6b79bc9c55ffbd27a9205b7a3d07c",
+    "source/library/compiler-builtins/libm/src/math/jn.rs": "ba36d25d4bbada83aadb3b2986879b7d88b91adb7b502061d21bf96ff3942194",
+    "source/library/compiler-builtins/libm/src/math/jnf.rs": "b3861e19644ae669fe17db81d91aeaee9c9f9051b59957ab674017684c98fe32",
+    "source/library/compiler-builtins/libm/src/math/k_cos.rs": "d4867527877c846aa8e2a0b43cf06f03e2d94c321a548acaf8d5171c09ff4057",
+    "source/library/compiler-builtins/libm/src/math/k_cosf.rs": "8f76089d014e217b96c9eca520271e64d467dc0d6542bf313dd70eb96c040f7f",
+    "source/library/compiler-builtins/libm/src/math/k_sin.rs": "dfe6524cb2d530ec51eb1a2ab233aeb65b3f12177c1fb2f50f044ea41170f5d8",
+    "source/library/compiler-builtins/libm/src/math/k_sinf.rs": "cf0e8bbe8d73a6704b7f1f710f5b9d31f190f1c633e894d4f69c4e3bc359eba3",
+    "source/library/compiler-builtins/libm/src/math/k_tan.rs": "dc3f8ece9187bbd65792a7d1068e676092e9c2a0886f28c80579f9bd94d744b7",
+    "source/library/compiler-builtins/libm/src/math/k_tanf.rs": "3381d2d4865bfc98e87aadb96bd8986f7691a389569a58fb1cb8db74fb5d9c20",
+    "source/library/compiler-builtins/libm/src/math/lgamma_r.rs": "46d8850ccb72445128e5fd1c15235730298cd1a5e0726abd946f6d0d3605a12d",
+    "source/library/compiler-builtins/libm/src/math/lgammaf_r.rs": "c77d6d8a3c9e6f306bfdad3930fb7d96d57fca8fa8c1b666fc65f4db18e190f4",
+    "source/library/compiler-builtins/libm/src/math/log.rs": "df5f4d1325e89621bfcd9cf7788d0d7e20a6ef7f429110fe35b370b3c9362615",
+    "source/library/compiler-builtins/libm/src/math/log10.rs": "4a96dd2b6a2a505497f2bb7ea956a50491d068dab1b6055a573aec1724a52e40",
+    "source/library/compiler-builtins/libm/src/math/log10f.rs": "784a576dd4a4071f4f67c670eb9b221cb03014818c4b2d71afbcbd2211431caf",
+    "source/library/compiler-builtins/libm/src/math/log1p.rs": "bb8ce741e54d8f001d9c12450a14a663bd413014da2ade9ba1f5fbc9ff0c9a88",
+    "source/library/compiler-builtins/libm/src/math/log1pf.rs": "8736222a9b9004b061f1339bb819c63c6b54414d4a01ef79d5f5a5f0a70677b5",
+    "source/library/compiler-builtins/libm/src/math/log2.rs": "1ec0cdd94bf4435ff0402d209089b1bdbcb1ba9a4cd5f77807f9c84cf534f980",
+    "source/library/compiler-builtins/libm/src/math/log2f.rs": "7b3b17ba08df6b5a57dacf6f945bfe1a3c088bee0eb11e201ac5affc7f65925a",
+    "source/library/compiler-builtins/libm/src/math/logf.rs": "c7dfa5e89fcca0411624fdc594f64c62d5dfa3b91f061fcb7ac3aea18414f238",
+    "source/library/compiler-builtins/libm/src/math/pow.rs": "581efb544966f82f440137757bbbdec99d873c3121efde0294493c4a9fc9d259",
+    "source/library/compiler-builtins/libm/src/math/powf.rs": "819971cb8e927d80113aded3cfe90dcd501c031e0eb1c562b58842fddd1751be",
+    "source/library/compiler-builtins/libm/src/math/rem_pio2.rs": "931b9b421bc9c485893d5ab1b8c19c67c263ad5e1adab507a00abda5c773336d",
+    "source/library/compiler-builtins/libm/src/math/rem_pio2_large.rs": "494513e8a741239b0e783c5dbf3399ad770e9c8646163ee8694372049b94099a",
+    "source/library/compiler-builtins/libm/src/math/rem_pio2f.rs": "e0716d71239538ef8cfa59292bb807d72d43a039a63822b18bd6c2f9a4027116",
+    "source/library/compiler-builtins/libm/src/math/sin.rs": "9a3779d0b2a59cbafcfba0cf1c07ef42747f145b1e149c7d4ad3beb2bbda3fa0",
+    "source/library/compiler-builtins/libm/src/math/sincos.rs": "a9c414e828c2e78b6bce4d5e4237b1baa93e81d78421aed5cedeab43df64067f",
+    "source/library/compiler-builtins/libm/src/math/sincosf.rs": "af8b801067bc05f25763c2c6530330540bc5cb2d6014f400ec41c2706d62c537",
+    "source/library/compiler-builtins/libm/src/math/sinf.rs": "b17db34d5da39a0f336d831abcb700fab69402c915321823870f1845e66c03d2",
+    "source/library/compiler-builtins/libm/src/math/tan.rs": "2ea87ca18526753db6d149635ed6c895c8fbafd1e0fa7a9c04f7dc44b4eae986",
+    "source/library/compiler-builtins/libm/src/math/tanf.rs": "f7140c4193a57709acde5d290c8f83435562da42924c54cab0aa3a4f26095190",
+    "source/library/portable-simd/LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source/library/portable-simd/LICENSE-MIT": "eb07d497d26e6d68fbc76e793f5e5c9cfa197df2a580e47383569c287a55edf9",
+    "source/library/stdarch/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/stdarch/LICENSE-MIT": "29662666b44dff84977b46e05642cdef910bc3a93a17b5fd86e632bafa59cf21",
+    "source/library/vendor/addr2line-0.25.1/Cargo.toml": "6c371cb14bed07740324acb5b126bd58cf87771be72d4d88366b000f138b8001",
+    "source/library/vendor/addr2line-0.25.1/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/addr2line-0.25.1/LICENSE-MIT": "e99d88d232bf57d70f0fb87f6b496d44b6653f99f8a63d250a54c61ea4bcde40",
+    "source/library/vendor/adler2-2.0.1/Cargo.toml": "8f30dbd092f3acc475b9d339736cd7b64c6489bc47cd234a7f2232fc52e2d490",
+    "source/library/vendor/adler2-2.0.1/LICENSE-0BSD": "861399f8c21c042b110517e76dc6b63a2b334276c8cf17412fc3c8908ca8dc17",
+    "source/library/vendor/adler2-2.0.1/LICENSE-APACHE": "8ada45cd9f843acf64e4722ae262c622a2b3b3007c7310ef36ac1061a30f6adb",
+    "source/library/vendor/adler2-2.0.1/LICENSE-MIT": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+    "source/library/vendor/cc-1.2.0/Cargo.toml": "50debe1b2fc050e8b305bdd514509d98cdbc59e96e5f10888df4b6fca19d3a75",
+    "source/library/vendor/cc-1.2.0/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/cc-1.2.0/LICENSE-MIT": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+    "source/library/vendor/cfg-if-1.0.4/Cargo.toml": "281d508beb1fe3927cf03d3f2f8c9a5117b1e4fe97ae21b9026cf318e8c35273",
+    "source/library/vendor/cfg-if-1.0.4/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/cfg-if-1.0.4/LICENSE-MIT": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+    "source/library/vendor/getopts-0.2.24/Cargo.toml": "819c8d7b776a6e79b08f87eef61cb1dd8b21bd6e65d56a312c5881abfd0df3dc",
+    "source/library/vendor/getopts-0.2.24/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/getopts-0.2.24/LICENSE-MIT": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+    "source/library/vendor/gimli-0.32.3/Cargo.toml": "2b0d60ffc8705bf1de535e36ffa090511284747388d84056d5d96a5acbb0704a",
+    "source/library/vendor/gimli-0.32.3/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/gimli-0.32.3/LICENSE-MIT": "7b63ecd5f1902af1b63729947373683c32745c16a10e8e6292e2e2dcd7e90ae0",
+    "source/library/vendor/hashbrown-0.17.1/Cargo.toml": "afcb0e62d498f756bd4ddf69785c8282d01ee4fa40016158c7eac12ceb302f8c",
+    "source/library/vendor/hashbrown-0.17.1/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/hashbrown-0.17.1/LICENSE-MIT": "ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2",
+    "source/library/vendor/libc-0.2.185/Cargo.toml": "89d682c2bf38c3051425fd0fc4319e31d55d4d20082fc6f3445f4681e95a4b8d",
+    "source/library/vendor/libc-0.2.185/LICENSE-APACHE": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+    "source/library/vendor/libc-0.2.185/LICENSE-MIT": "123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e",
+    "source/library/vendor/memchr-2.7.6/COPYING": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+    "source/library/vendor/memchr-2.7.6/Cargo.toml": "5750ca97e8b2643f2ba1d7e98f54dcf54518c0176899e547876a59eb736198a5",
+    "source/library/vendor/memchr-2.7.6/LICENSE-MIT": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+    "source/library/vendor/memchr-2.7.6/UNLICENSE": "7e12e5df4bae12cb21581ba157ced20e1986a0508dd10d0e8a4ab9a4cf94e85c",
+    "source/library/vendor/miniz_oxide-0.8.9/Cargo.toml": "f0d2683434f1c0d3cd9b8080031e82aa5089c9be1779cc5101e065883258d77d",
+    "source/library/vendor/miniz_oxide-0.8.9/LICENSE": "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b",
+    "source/library/vendor/miniz_oxide-0.8.9/LICENSE-APACHE.md": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+    "source/library/vendor/miniz_oxide-0.8.9/LICENSE-MIT.md": "799e9ca9d179295ef372f25d3769cdda7d25bb2668add6a6a1e22d1e4c678b8d",
+    "source/library/vendor/miniz_oxide-0.8.9/LICENSE-ZLIB.md": "0a54e647fe54104658b5e563c04c6f9edf251710e47bce692e0bd990a4ddaa39",
+    "source/library/vendor/object-0.37.3/Cargo.toml": "9373632c541767e8e6575ee1809ac4397a9e0bc6091691620ef7cefc11454a73",
+    "source/library/vendor/object-0.37.3/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/object-0.37.3/LICENSE-MIT": "0b74dfa0bcee5c420c6b7f67b4b2658f9ab8388c97b8e733975f2cecbdd668a6",
+    "source/library/vendor/rustc-demangle-0.1.27/Cargo.toml": "ec462e775f134cf7646d9dda346c43bbc2c0cd44def02e3af5b678bb6a9d879c",
+    "source/library/vendor/rustc-demangle-0.1.27/LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "source/library/vendor/rustc-demangle-0.1.27/LICENSE-MIT": "378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397",
+    "source/library/vendor/rustc-literal-escaper-0.0.8/Cargo.toml": "42864d0d78afe687857242cd08b274a381d2b0d24f7d0ddb5fd44ec116365335",
+    "source/library/vendor/rustc-literal-escaper-0.0.8/LICENSE-APACHE": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+    "source/library/vendor/rustc-literal-escaper-0.0.8/LICENSE-MIT": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+    "source/library/vendor/shlex-1.3.0/Cargo.toml": "d7eb8c4bce681b4dd1dfc2c98c649754390775f38f4796d491948ddbb53aa2ef",
+    "source/library/vendor/shlex-1.3.0/LICENSE-APACHE": "553fffcd9b1cb158bc3e9edc35da85ca5c3b3d7d2e61c883ebcfa8a65814b583",
+    "source/library/vendor/shlex-1.3.0/LICENSE-MIT": "4455bf75a91154108304cb283e0fea9948c14f13e20d60887cf2552449dea3b1"
+  },
+  "installed_files": {
+    "usr/share/doc/rust/COPYRIGHT-library.html": {
+      "path": "COPYRIGHT-library.html",
+      "sha256": "e865f7bd5018634399d00f92f049ccfa84a4c1d60c2483d1a81eb63a5038d659"
+    },
+    "usr/share/licenses/rust-std-static/cargo-vendor.txt": {
+      "path": "cargo-vendor.txt",
+      "sha256": "17de06cad999a2d7adb318752d8a4cd87464a88ddd3cc98bbe8c5accde88cb35"
+    },
+    "usr/share/licenses/rust/LICENSE-APACHE": {
+      "path": "LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    "usr/share/licenses/rust/LICENSE-MIT": {
+      "path": "LICENSE-MIT",
+      "sha256": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1"
+    }
+  },
+  "schema_version": 1,
+  "scope": "Supplemental source and dependency notices for the pinned Fedora Rust standard library. Final static binary linkage and complete release closure remain separate.",
+  "source_rpm": "rust-1.98.0-1.fc44.src.rpm",
+  "source_rpm_sha256": "56475c3c3d550f89e6ec95de90fc5186199b843a059e3f64d1c21a00717ff308",
+  "source_rpm_signature_verified": false,
+  "source_rpm_url": "https://kojipkgs.fedoraproject.org/packages/rust/1.98.0/1.fc44/src/rust-1.98.0-1.fc44.src.rpm",
+  "source_tar_sha256": "271fa73d8174f53d713c46a8310da7bf7cfdcfb8b7cfd1c2b74b84a83ae9fb1e"
+}

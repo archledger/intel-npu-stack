@@ -286,3 +286,36 @@ The pinned tools previously inherited ten debug workers, exhausting the
 DWZ limits, strict build IDs and separate-debug validation remain enabled.
 The RPM expansion regression executes the generated debug command against an
 argument recorder to verify the effective job override and retained checks.
+
+The compiler has its own `%license` directory. `install-provider-notices.py`
+requires 14 exact source files covering the compiler, ELF library, cost model,
+LLVM, MLIR, and LLVM Support's embedded notices. It copies whole files without
+newline normalization and records their SHA-256 values. Missing files, symlinked
+inputs, source/output overlap, and an existing output fail before installation.
+The native layout gate still runs before these additional notice files are
+installed; its existing runtime/development checks remain intact.
+
+The compiler's License field includes its bundled LLVM terms separately from
+OpenVINO's main package. LLVM's top-level Apache-with-exception and legacy NCSA
+notices are retained together: they are not a blanket choice between licenses
+for every file. The reviewed Support notices include BSD-2-Clause (xxHash),
+BSD-3-Clause and Spencer-94 (regex), ISC (strlcpy), and Unicode-DFS-2015
+(ConvertUTF). BLAKE3's full dual-license text is retained, with its Apache-2.0
+option used in the aggregate expression. `LicenseRef-LLVM-MD5` identifies the
+exact public-domain dedication and fallback permission text in the retained
+MD5 source; it must be included as extracted licensing information in SPDX
+output. This identifier is not a substitution with a differently worded BSD
+license. These are reviewed minimum notices for the pinned graph; source-level
+and binary-level closure review is still a separate release gate.
+
+The upstream NPU compiler LICENSE has no final newline. The source-lock evidence
+now preserves that byte sequence, replacing the earlier copy with an added
+newline. The upstream commit and source archive digest did not change.
+
+The shared notice collector runs at the end of `%prep`, before compilation.
+Source45 carries the sealed source lock and Source46 carries its exact license
+evidence files at their repository-relative paths. All twelve bundled source
+archives must match both the lock and the explicit notice coverage map. The
+prepared notice manifest records archive, spec, source-lock and notice hashes.
+The install phase copies the verified OpenVINO and compiler notice groups into
+their respective package-owned license directories.

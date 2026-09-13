@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "stack_release": "0.1.0",
+  "profile_sha256": "de42376c44bfc01a09ffb83027f3e895a474ab5ae5c3e1187b2904e6a158e050",
+  "repository": {
+    "id": "intel-npu-stack-0.1.0",
+    "base_url": "https://downloads.example.invalid/intel-npu-stack/0.1.0/fedora/44/x86_64/",
+    "repomd_sha256": "d7f0ffda99b56f13a07124b807b17df678fd86b1d9c83746d05cb053a9a3d306"
+  },
+  "packages": [
+    {
+      "name": "intel-npu-stack",
+      "nevr": "0:0.1.0-1.intelnpu.fc44",
+      "arch": "noarch",
+      "filename": "intel-npu-stack-0.1.0-1.intelnpu.fc44.noarch.rpm",
+      "sha256": "2c25282b9cfd50d6385680882ac90fd76576a5449adf5516589918c5043cb58a",
+      "role": "runtime"
+    },
+    {
+      "name": "intel-npu-stack-firmware",
+      "nevr": "0:1.35.0-1.intelnpu.fc44",
+      "arch": "noarch",
+      "filename": "intel-npu-stack-firmware-1.35.0-1.intelnpu.fc44.noarch.rpm",
+      "sha256": "d658beadcba559f7f97b9900a351ed80d511cd4b8493c93c8610585eb7700fe3",
+      "role": "runtime"
+    },
+    {
+      "name": "intel-npu-stack-tools",
+      "nevr": "0:0.1.0-1.intelnpu.fc44",
+      "arch": "x86_64",
+      "filename": "intel-npu-stack-tools-0.1.0-1.intelnpu.fc44.x86_64.rpm",
+      "sha256": "b75c7c04d7cc8e66ae5805110590962d45857b023e7bf9350af6bc9ce1512d7b",
+      "role": "runtime"
+    }
+  ]
+}

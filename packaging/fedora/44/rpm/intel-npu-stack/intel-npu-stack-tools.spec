@@ -7,7 +7,7 @@ Name:           intel-npu-stack-tools
 Version:        0.1.0
 Release:        1.intelnpu.fc44
 Summary:        Read-only Intel NPU stack status and diagnostic tools
-License:        Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0
+License:        Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)
 Source0:        intel-npu-stack-0.1.0.tar
 Source1:        cargo-vendor.tar
 Source2:        installed-manifest.toml
@@ -64,9 +64,8 @@ offline = true
 CONFIG
 python3 packaging/fedora/44/rpm/intel-npu-stack/check-vendor-licenses.py vendor Cargo.lock vendor-licenses
 cmp packaging/fedora/44/installed-manifest.toml %{SOURCE2}
-mkdir rust-stdlib-licenses
-cp /usr/share/licenses/rust/LICENSE-APACHE /usr/share/licenses/rust/LICENSE-MIT rust-stdlib-licenses/
-cp /usr/share/doc/rust/COPYRIGHT-library.html /usr/share/licenses/rust-std-static/cargo-vendor.txt rust-stdlib-licenses/
+python3 packaging/fedora/44/rpm/intel-npu-stack/install-stdlib-notices.py \
+    packaging/fedora/44/licenses/rust-stdlib-1.98.0 / rust-stdlib-licenses
 
 %build
 export CARGO_NET_OFFLINE=true

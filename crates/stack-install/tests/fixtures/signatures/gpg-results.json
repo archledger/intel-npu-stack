@@ -1,0 +1,98 @@
+{
+  "valid": {
+    "argv": [
+      "/usr/bin/gpg",
+      "--no-options",
+      "--batch",
+      "--no-auto-key-retrieve",
+      "--no-auto-key-import",
+      "--no-default-keyring",
+      "--homedir",
+      "/tmp/installer-gpg-verify-tcz5sg27",
+      "--keyring",
+      "/tmp/installer-gpg-verify-tcz5sg27/keyring.gpg",
+      "--status-fd",
+      "1",
+      "--faked-system-time",
+      "1789149347!",
+      "--verify",
+      "/fixtures/good.sig",
+      "/fixtures/release.json"
+    ],
+    "returncode": 0,
+    "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 0\n[GNUPG:] SIG_ID AdUGdF6G/W9Cyjuao25TIreNkzk 2026-09-11 1789149347\n[GNUPG:] GOODSIG D239EC95BC71556B Installer good fixture <good@example.invalid>\n[GNUPG:] VALIDSIG 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 2026-09-11 1789149347 0 4 0 22 10 00 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\n[GNUPG:] TRUST_UNDEFINED 0 pgp\n",
+    "stderr": "gpg: WARNING: running with faked system time: 2026-09-11 17:55:47\ngpg: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpg:                using EDDSA key 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\ngpg: /tmp/installer-gpg-verify-tcz5sg27/trustdb.gpg: trustdb created\ngpg: Good signature from \"Installer good fixture <good@example.invalid>\" [unknown]\ngpg: WARNING: This key is not certified with a trusted signature!\ngpg:          There is no indication that the signature belongs to the owner.\nPrimary key fingerprint: 92D2 3A3F 6FE4 F172 A0BF  D4DD D239 EC95 BC71 556B\n"
+  },
+  "changed": {
+    "argv": [
+      "/usr/bin/gpg",
+      "--no-options",
+      "--batch",
+      "--no-auto-key-retrieve",
+      "--no-auto-key-import",
+      "--no-default-keyring",
+      "--homedir",
+      "/tmp/installer-gpg-verify-guvg3izj",
+      "--keyring",
+      "/tmp/installer-gpg-verify-guvg3izj/keyring.gpg",
+      "--status-fd",
+      "1",
+      "--faked-system-time",
+      "1789149347!",
+      "--verify",
+      "/fixtures/good.sig",
+      "/fixtures/changed.json"
+    ],
+    "returncode": 1,
+    "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 0\n[GNUPG:] BADSIG D239EC95BC71556B Installer good fixture <good@example.invalid>\n[GNUPG:] FAILURE gpg-exit 33554433\n",
+    "stderr": "gpg: WARNING: running with faked system time: 2026-09-11 17:55:47\ngpg: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpg:                using EDDSA key 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\ngpg: /tmp/installer-gpg-verify-guvg3izj/trustdb.gpg: trustdb created\ngpg: BAD signature from \"Installer good fixture <good@example.invalid>\" [unknown]\n"
+  },
+  "wrong-valid-signer": {
+    "argv": [
+      "/usr/bin/gpg",
+      "--no-options",
+      "--batch",
+      "--no-auto-key-retrieve",
+      "--no-auto-key-import",
+      "--no-default-keyring",
+      "--homedir",
+      "/tmp/installer-gpg-verify-1ugf5lto",
+      "--keyring",
+      "/tmp/installer-gpg-verify-1ugf5lto/keyring.gpg",
+      "--status-fd",
+      "1",
+      "--faked-system-time",
+      "1789149347!",
+      "--verify",
+      "/fixtures/wrong.sig",
+      "/fixtures/release.json"
+    ],
+    "returncode": 0,
+    "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 175F949E2149B8F0980A94957D06E6811CB0D013 0\n[GNUPG:] SIG_ID T1fu5Z/kgSI1ggE9nsw56gz5AGw 2026-09-11 1789149347\n[GNUPG:] GOODSIG 7D06E6811CB0D013 Installer wrong fixture <wrong@example.invalid>\n[GNUPG:] VALIDSIG 175F949E2149B8F0980A94957D06E6811CB0D013 2026-09-11 1789149347 0 4 0 22 10 00 175F949E2149B8F0980A94957D06E6811CB0D013\n[GNUPG:] TRUST_UNDEFINED 0 pgp\n",
+    "stderr": "gpg: WARNING: running with faked system time: 2026-09-11 17:55:47\ngpg: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpg:                using EDDSA key 175F949E2149B8F0980A94957D06E6811CB0D013\ngpg: /tmp/installer-gpg-verify-1ugf5lto/trustdb.gpg: trustdb created\ngpg: Good signature from \"Installer wrong fixture <wrong@example.invalid>\" [unknown]\ngpg: WARNING: This key is not certified with a trusted signature!\ngpg:          There is no indication that the signature belongs to the owner.\nPrimary key fingerprint: 175F 949E 2149 B8F0 980A  9495 7D06 E681 1CB0 D013\n"
+  },
+  "expired-key": {
+    "argv": [
+      "/usr/bin/gpg",
+      "--no-options",
+      "--batch",
+      "--no-auto-key-retrieve",
+      "--no-auto-key-import",
+      "--no-default-keyring",
+      "--homedir",
+      "/tmp/installer-gpg-verify-hlfuzz_g",
+      "--keyring",
+      "/tmp/installer-gpg-verify-hlfuzz_g/keyring.gpg",
+      "--status-fd",
+      "1",
+      "--faked-system-time",
+      "1789322147!",
+      "--verify",
+      "/fixtures/good.sig",
+      "/fixtures/release.json"
+    ],
+    "returncode": 0,
+    "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 0\n[GNUPG:] KEYEXPIRED 1789235747\n[GNUPG:] SIG_ID AdUGdF6G/W9Cyjuao25TIreNkzk 2026-09-11 1789149347\n[GNUPG:] EXPKEYSIG D239EC95BC71556B Installer good fixture <good@example.invalid>\n[GNUPG:] VALIDSIG 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B 2026-09-11 1789149347 0 4 0 22 10 00 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\n",
+    "stderr": "gpg: WARNING: running with faked system time: 2026-09-13 17:55:47\ngpg: Signature made Fri Sep 11 17:55:47 2026 UTC\ngpg:                using EDDSA key 92D23A3F6FE4F172A0BFD4DDD239EC95BC71556B\ngpg: /tmp/installer-gpg-verify-hlfuzz_g/trustdb.gpg: trustdb created\ngpg: Good signature from \"Installer good fixture <good@example.invalid>\" [expired]\ngpg: Note: This key has expired!\nPrimary key fingerprint: 92D2 3A3F 6FE4 F172 A0BF  D4DD D239 EC95 BC71 556B\n"
+  }
+}

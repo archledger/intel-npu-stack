@@ -1,0 +1,26 @@
+{
+  "rpms": [
+    {
+      "nevra": "createrepo_c-1.2.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "User",
+      "repo_id": "@stored_transaction(fedora)",
+      "package_path": "./packages/createrepo_c-1.2.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "createrepo_c-libs-1.2.1-5.fc44.x86_64",
+      "action": "Install",
+      "reason": "Dependency",
+      "repo_id": "@stored_transaction(fedora)",
+      "package_path": "./packages/createrepo_c-libs-1.2.1-5.fc44.x86_64.rpm"
+    },
+    {
+      "nevra": "drpm-0.5.3-2.fc44.x86_64",
+      "action": "Install",
+      "reason": "Dependency",
+      "repo_id": "@stored_transaction(fedora)",
+      "package_path": "./packages/drpm-0.5.3-2.fc44.x86_64.rpm"
+    }
+  ],
+  "version": "1.0"
+}

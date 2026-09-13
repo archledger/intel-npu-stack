@@ -7,11 +7,13 @@ import hashlib,json,shutil,subprocess,sys,tempfile,tomllib
 binary=Path(sys.argv[1]).resolve()
 manifest=tomllib.loads(Path('packaging/fedora/44/installed-manifest.toml').read_text())
 packages={p['name']:p for p in manifest['providers']}
-packages['intel-npu-stack-tools']={'nevr':'0:0.1.0-1.intelnpu.fc44','arch':'x86_64','license':'Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0',
+packages['intel-npu-driver']['license'] = 'MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note)'
+packages['intel-npu-stack-tools']={'nevr':'0:0.1.0-1.intelnpu.fc44','arch':'x86_64','license':'Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)',
     'files':[{'path':'/usr/bin/intel-npu-stack'}, {'path':'/usr/libexec/intel-npu-stack/intel-npu-level-zero-probe'},
              {'path':'/usr/libexec/intel-npu-stack/intel-npu-openvino-probe'}, {'path':'/usr/share/intel-npu-stack/installed-manifest.toml'}]}
 packages['intel-npu-stack']={'nevr':'0:0.1.0-1.intelnpu.fc44','arch':'noarch','license':'Apache-2.0','files':[]}
-license_owners={'intel-npu-stack-tools','intel-npu-driver','intel-npu-stack-firmware','oneapi-level-zero','openvino'}
+packages['intel-npu-compiler']['license'] = 'Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5'
+license_owners={'intel-npu-stack-tools','intel-npu-driver','intel-npu-stack-firmware','oneapi-level-zero','openvino','intel-npu-compiler'}
 
 with tempfile.TemporaryDirectory(prefix='profile-rpm-contract-') as temporary:
     root=Path(temporary)
@@ -70,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix='profile-rpm-contract-') as temporary:
         rpm=next(p for p in rpms.iterdir() if p.name.startswith(component['provider']['package']+'-'+component['provider']['version'].split(':')[1]+'.'))
         assert component['sha256']==hashlib.sha256(rpm.read_bytes()).hexdigest()
         assert component['provider']['files']
-    mutation_cases=['wrong-release','wrong-driver','wrong-openvino','wrong-arch','script','overlap','conflicting-requirement','missing-frontend-file','unreviewed-license','missing-shared-license']
+    mutation_cases=['wrong-release','wrong-driver','wrong-openvino','wrong-arch','script','overlap','conflicting-requirement','missing-frontend-file','unreviewed-license','missing-shared-license','missing-compiler-license','legacy-compiler-license','legacy-driver-license','legacy-tools-license']
     accepted_invalid=[]
     for case in ['overwrite','qualified','missing-firmware','duplicate',*mutation_cases]:
         output=root/(case+'.toml');restore=None
@@ -91,6 +93,10 @@ with tempfile.TemporaryDirectory(prefix='profile-rpm-contract-') as temporary:
             if case=='conflicting-requirement':changed=changed.replace('%description -n intel-npu-stack\n','Requires: intel-npu-driver(x86-64) = 1.32.0-1.intelnpu.fc44\n%description -n intel-npu-stack\n')
             if case=='missing-frontend-file':changed=changed.replace('/usr/lib64/libopenvino_ir_frontend.so.2026.2.0','/usr/share/fixture-missing-frontend')
             if case=='unreviewed-license':changed=changed.replace('License: MIT AND Apache-2.0','License: LicenseRef-Unreviewed')
+            if case=='missing-compiler-license':changed=changed.replace('%license /usr/share/licenses/intel-npu-compiler/LICENSE','/usr/share/licenses/intel-npu-compiler/LICENSE')
+            if case=='legacy-compiler-license':changed=changed.replace('License: '+packages['intel-npu-compiler']['license'], 'License: '+packages['openvino']['license'])
+            if case=='legacy-driver-license':changed=changed.replace('License: '+packages['intel-npu-driver']['license'], 'License: MIT AND Apache-2.0')
+            if case=='legacy-tools-license':changed=changed.replace('License: '+packages['intel-npu-stack-tools']['license'], 'License: '+packages['intel-npu-stack-tools']['license'].removesuffix(' AND (Apache-2.0 WITH LLVM-exception)'))
             if case=='missing-shared-license':changed=changed.replace('%license /usr/share/licenses/openvino/LICENSE','/usr/share/licenses/openvino/LICENSE')
             alternate=root/('alternate-'+case)
             for name in ['BUILD','SOURCES','SPECS','RPMS','SRPMS','tmp']:(alternate/name).mkdir(parents=True)

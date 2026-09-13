@@ -11,6 +11,8 @@ rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+stack-core = { path = "../crates/stack-core" }
+stack-platform = { path = "../crates/stack-platform" }
 stack-runtime = { path = "../crates/stack-runtime" }
 stack-schema = { path = "../crates/stack-schema" }
 tar.workspace = true
@@ -19,6 +21,4 @@ thiserror.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
-stack-core = { path = "../crates/stack-core" }
-stack-platform = { path = "../crates/stack-platform" }
 tempfile.workspace = true

@@ -183,6 +183,32 @@ fn rpm_exact_package_version_and_file_ownership_pass() {
 }
 
 #[test]
+fn native_rpm_absence_message_is_missing_but_other_output_remains_a_query_failure() {
+    let (profile, root) = profile_and_root();
+    let provider = &profile.components["npu_firmware"].provider.package;
+    for (stdout, expected) in [
+        (
+            format!("package {provider} is not installed\n"),
+            "PACKAGE_NOT_INSTALLED",
+        ),
+        (
+            "package different-name is not installed\n".to_owned(),
+            "PACKAGE_QUERY_FAILED",
+        ),
+        ("rpm database failure\n".to_owned(), "PACKAGE_QUERY_FAILED"),
+    ] {
+        let runner = FakeRunner::for_profile(&profile);
+        runner.forced.lock().unwrap().insert(
+            provider.clone(),
+            Ok(output(Termination::Exit(1), stdout.into_bytes())),
+        );
+        let result = inspect(&profile, root.path(), &runner);
+        assert_eq!(code(check(&result, "package.npu_firmware")), expected);
+        assert!(!result.packages.contains_key(provider));
+    }
+}
+
+#[test]
 fn missing_package_fails_only_its_capability() {
     let (profile, root) = profile_and_root();
     let runner = FakeRunner::for_profile(&profile);
