@@ -1,0 +1,7 @@
+name: Project source analysis
+
+# These are preserved third-party notice/source excerpts, not compiled project
+# source. Do not generate findings for copied licensing evidence as if maintained
+# here. Project runtime code, installer, tests and CI scripts remain in scope.
+paths-ignore:
+  - packaging/fedora/44/licenses/**

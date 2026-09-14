@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "scope": "CI-only public SDK inputs; not project release packages or hardware qualification",
+  "openvino": {
+    "version": "2026.2.0",
+    "url": "https://files.pythonhosted.org/packages/e2/79/bd9fbb2e2b8a9ab629e00767aa2b7764f0d5bb8e2c57be620932cb31cd60/openvino-2026.2.0-21903-cp312-cp312-manylinux_2_28_x86_64.whl",
+    "sha256": "c0b35490c2b7041d4a3855563bfec1843c508d235a9a287d8e0526330878fcba"
+  },
+  "level_zero": {
+    "version": "1.28.6",
+    "commit": "fd6a69de35eb9e758f266af97809d9468133c18e",
+    "url": "https://codeload.github.com/oneapi-src/level-zero/tar.gz/fd6a69de35eb9e758f266af97809d9468133c18e",
+    "sha256": "d68a436c83fd3b1960e47fb7414744854862fc65c4d11f9be1e3eb8bbb483252"
+  }
+}
