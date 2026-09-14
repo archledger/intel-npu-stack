@@ -30,6 +30,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       ISSUE: ${{ inputs.issue }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Validate the selected watcher issue
         run: |
           set -euo pipefail
@@ -41,9 +44,6 @@ jobs:
           [[ "$labels" == *upstream-update* ]] || { echo "issue $ISSUE lacks the upstream-update label" >&2; exit 2; }
           jq -r .title issue.json > issue-title.txt
           jq -r .body issue.json > issue-body.md
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       - name: Re-resolve the upstream tag against retagging
         run: |
           set -euo pipefail
