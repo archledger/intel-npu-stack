@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$ISSUE" =~ ^[0-9]+$ ]] || { echo "issue input must be a number" >&2; exit 2; }
-          gh issue view "$ISSUE" --json state,labels,title,body > issue.json
+          gh issue view "$ISSUE" --repo "$GITHUB_REPOSITORY" --json state,labels,title,body > issue.json
           state=$(jq -r .state issue.json)
           labels=$(jq -r '[.labels[].name] | join(",")' issue.json)
           [[ "$state" == "open" ]] || { echo "issue $ISSUE is not open" >&2; exit 2; }
