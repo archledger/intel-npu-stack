@@ -246,6 +246,8 @@ class FixtureServer(ThreadingHTTPServer):
 
     def enable_tls(self, certificate, key):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        # Keep the fixture's protocol floor independent of interpreter defaults.
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(certificate, key)
         self.socket = context.wrap_socket(self.socket, server_side=True)
 
