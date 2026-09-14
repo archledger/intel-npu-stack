@@ -18,8 +18,8 @@ hardware pilot on kernel 7.2.4 passed normal-user NPU inference after a
 user-confirmed cold boot and an explicitly tested warm reboot.
 
 **Hardware suspend/resume and final removal/restoration are deferred by the
-maintainer.** Candidate profiles remain unqualified. CI/repository controls,
-production signing and release publication remain separate work; publishing
+maintainer.** Candidate profiles remain unqualified. Hardware qualification,
+release-building automation, production signing and release publication remain separate work; publishing
 this source does not complete those gates.
 
 No stable platform profile is published yet. Fedora 44 x86_64 on allowlisted Lunar Lake hardware is the first planned qualification target, but remains unsupported until all VM, hardware, provenance, signing, rollback, and release gates pass.
@@ -33,6 +33,7 @@ No stable platform profile is published yet. Fedora 44 x86_64 on allowlisted Lun
 - [Candidate qualification tooling](docs/candidate-qualification.md)
 - [Hardware validation progress and deferred tests](docs/hardware-validation.md)
 - [Release readiness](docs/release-readiness.md)
+- [Continuous integration and repository controls](docs/ci.md)
 - [Contributing](CONTRIBUTING.md)
 
 Project-authored source is licensed under Apache-2.0. Third-party components retain their own licenses and redistribution terms.

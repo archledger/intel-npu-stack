@@ -50,7 +50,7 @@ find_file(
   INTEL_NPU_OPENVINO_CONFIG
   NAMES OpenVINOConfig.cmake
   PATHS "${INTEL_NPU_SDK_PREFIX_REAL}"
-  PATH_SUFFIXES openvino/runtime/cmake lib64/cmake/openvino2026.2.0
+  PATH_SUFFIXES openvino/runtime/cmake openvino/cmake lib64/cmake/openvino2026.2.0
   NO_DEFAULT_PATH
   REQUIRED
 )
