@@ -72,3 +72,28 @@ SDK and an empty build directory as documented by `scripts/check-native.sh`.
 
 CI success does not complete the deferred hardware suspend/resume or
 removal/restoration cases, promote a candidate, or establish production trust.
+
+## Upstream watcher
+
+The `Upstream watch` workflow runs daily at a non-round UTC minute and on
+manual dispatch. It compares the primary pinned components
+(Intel Linux NPU driver, OpenVINO, Level Zero and the NPU compiler) in
+`packaging/fedora/44/provider-sources.toml` against their newest non-draft
+upstream GitHub release or tag, resolves release tags to commit SHAs, and
+opens one deduplicated `upstream-update` issue per genuinely new release
+(`upstream:<repository>:<tag>` in the title is the dedup key).
+
+Boundaries:
+
+- Scheduled runs are advisory. GitHub may delay, drop, or disable them; a
+  quiet watcher is not proof that no update exists.
+- Upstream tags, names, URLs and asset metadata are parsed as untrusted data
+  with bounded output. Nothing upstream is executed or interpolated into
+  shell source; issue titles/bodies are passed as data only.
+- A finding is the `update-available` observation: a newer official release
+  exists but is not qualified. A feature release alone is not `outdated`.
+  Failed upstream queries are logged for the next run instead of opening
+  noisy issues.
+- The workflow holds only `contents: read` and `issues: write`. It never
+  creates branches or pull requests, and candidate preparation remains a
+  separately permissioned manual operation.

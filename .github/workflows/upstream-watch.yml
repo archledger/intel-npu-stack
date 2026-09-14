@@ -1,0 +1,75 @@
+name: Upstream watch
+
+# Issue-only observation of new upstream releases. This workflow has no
+# contents-write or pull-request permission, never executes upstream
+# installers, and never promotes or qualifies anything by itself. Scheduled
+# runs are advisory: GitHub may delay, drop, or disable them.
+on:
+  schedule:
+    - cron: "23 4 * * *" # daily at a non-round UTC minute
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Observe upstream releases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Ensure the tracking label exists
+        run: gh label create upstream-update --color 0e8a16 --description "New upstream release observation" || true
+      - name: Collect open tracking issues
+        run: gh issue list --label upstream-update --state open --limit 200 --json title > open-issues.json
+      - name: Compare pinned sources with upstream releases
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check_upstream.py \
+            --open-issues open-issues.json \
+            --report findings.json
+          jq -r '.findings | length' findings.json | xargs -I{} echo "Findings: {}"
+      - name: Open one deduplicated issue per new release
+        if: always()
+        run: |
+          set -euo pipefail
+          count=$(jq '[.findings[] | select(.observation == "update-available")] | length' findings.json)
+          echo "New upstream releases to track: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "No issue creation needed."
+            exit 0
+          fi
+          for index in $(seq 0 $((count - 1))); do
+            finding=$(jq ".findings | map(select(.observation == \"update-available\")) | .[$index]" findings.json)
+            key=$(printf '%s' "$finding" | jq -r '.dedup_key')
+            printf '%s' "$finding" | jq -r 'def commit: if .latest_commit == "" then "(unresolved)" else .latest_commit end;
+              "## Upstream release observation\n\n" +
+              "- Component: \(.component)\n" +
+              "- Repository: \(\.repository)\n" +
+              "- Pinned tag: \(.pinned_tag)\n" +
+              "- Pinned commit: \(.pinned_commit)\n" +
+              "- Latest tag: \(.latest_tag)\n" +
+              "- Latest commit: " + (. | commit) + "\n" +
+              "- Release: \(.latest_url)\n" +
+              (if has("note") then "- Note: \(.note)\n" else "" end) +
+              "\nObservation \`update-available\`: a newer official release exists but is not qualified. " +
+              "A feature release alone is not \`outdated\`. Candidate work happens only through the separately " +
+              "permissioned candidate workflow and the project qualification gates."' > issue-body.md
+            gh issue create \
+              --title "[upstream-update] $key" \
+              --body-file issue-body.md \
+              --label upstream-update
+          done
+      - name: Surface failed upstream queries
+        if: always()
+        run: jq '[.findings[] | select(.observation == "check-failed")] | if length == 0 then "All upstream queries succeeded." else . end' findings.json || echo "No findings report available."
