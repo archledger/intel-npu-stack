@@ -55,15 +55,15 @@ jobs:
             printf '%s' "$finding" | jq -r 'def commit: if .latest_commit == "" then "(unresolved)" else .latest_commit end;
               "## Upstream release observation\n\n" +
               "- Component: \(.component)\n" +
-              "- Repository: \(\.repository)\n" +
+              "- Repository: \(.repository)\n" +
               "- Pinned tag: \(.pinned_tag)\n" +
               "- Pinned commit: \(.pinned_commit)\n" +
               "- Latest tag: \(.latest_tag)\n" +
               "- Latest commit: " + (. | commit) + "\n" +
               "- Release: \(.latest_url)\n" +
               (if has("note") then "- Note: \(.note)\n" else "" end) +
-              "\nObservation \`update-available\`: a newer official release exists but is not qualified. " +
-              "A feature release alone is not \`outdated\`. Candidate work happens only through the separately " +
+              "\nObservation `update-available`: a newer official release exists but is not qualified. " +
+              "A feature release alone is not `outdated`. Candidate work happens only through the separately " +
               "permissioned candidate workflow and the project qualification gates."' > issue-body.md
             gh issue create \
               --title "[upstream-update] $key" \
