@@ -97,3 +97,28 @@ Boundaries:
 - The workflow holds only `contents: read` and `issues: write`. It never
   creates branches or pull requests, and candidate preparation remains a
   separately permissioned manual operation.
+
+## Candidate preparation
+
+The `Prepare candidate` workflow is a separately permissioned
+`workflow_dispatch` operation (design §9). A maintainer supplies one open
+`upstream-update` issue number; the workflow re-resolves the upstream tag
+against retagging, downloads the immutable commit archive to hash it, rewrites
+only that component's entry in the provider source lock, validates the whole
+lock with the offline `xtask validate-source-lock` gate, and opens one DRAFT
+pull request from a `candidate/<component>-<tag>` branch.
+
+Boundaries:
+
+- It refuses to run when any production profile is already `qualified`, when
+  the upstream tag no longer resolves to the commit the watcher recorded, when
+  the target branch or an open PR already exists, and when the lock is already
+  current.
+- The generated commit is authored and signed off by `github-actions[bot]`;
+  it changes source pin metadata only. It never rebuilds provider RPMs, binds
+  or alters profiles, approves workflows, merges, signs, or publishes.
+- The draft PR carries the maintainer checklist: upstream license review,
+  offline provider rebuild with reproducibility evidence, profile regeneration
+  from new RPM evidence, and the unchanged qualification gates. Merging the
+  draft remains an explicit maintainer decision under the standard protected
+  pipeline.
