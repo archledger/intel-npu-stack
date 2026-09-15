@@ -18,12 +18,17 @@ configuration.
 
 ## Compatibility boundary
 
-Intel Linux NPU driver `v1.35.0` is the matrix authority. It names OpenVINO
-`2026.2`, Level Zero `v1.28.2`, and NPU compiler `npu_ud_2026_28_rc1`. Fedora 44
-updates instead provide `oneapi-level-zero-1.28.6-1.fc44`. The candidate uses
-that newer distro-owned loader and headers rather than forcing a downgrade.
-This is an explicit, unqualified deviation: only the later complete hardware
-gate can establish whether it is suitable for promotion.
+Intel Linux NPU driver `v1.38.0` is the matrix authority. It names Level Zero
+`v1.32.0`, OpenVINO `2026.2`, and NPU compiler `npu_ud_2026_28_rc1`. The
+candidate now ships the Intel-matched loader as its own source-locked
+`oneapi-level-zero-1.32.0-1.intelnpu.fc44` runtime package, taking over the
+Fedora identity per the package-identity rule below; the earlier distro-owned
+`1.28.6-1.fc44` deviation is retired. The driver pair and loader pair gates
+build both components reproducibly from the source lock. The tools probes and
+the unchanged OpenVINO RPMs still compile against the distro
+`oneapi-level-zero-devel` 1.28.6 headers; the loader soname
+`libze_loader.so.1` is stable across those versions and the runtime loader is
+the source-locked 1.32.0 candidate.
 
 The Fedora kernel, `intel_vpu` module, and device-node policy remain
 distribution-owned. This project does not build a kernel, DKMS module, or

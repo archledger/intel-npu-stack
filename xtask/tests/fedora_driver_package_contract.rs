@@ -113,7 +113,7 @@ fn fixture_packages(options: &FixtureOptions) -> FixtureRpms {
     fs::create_dir_all(driver_topdir.join("SOURCES")).expect("create driver sources");
     fs::create_dir_all(firmware_topdir.join("SOURCES")).expect("create firmware sources");
     fs::write(
-        driver_topdir.join("SOURCES/libze_intel_npu.so.1.35.0"),
+        driver_topdir.join("SOURCES/libze_intel_npu.so.1.38.0"),
         "fixture driver library\n",
     )
     .expect("write driver payload");
@@ -135,12 +135,12 @@ fn fixture_packages(options: &FixtureOptions) -> FixtureRpms {
 
     let driver_spec = r#"
 Name: intel-npu-driver
-Version: 1.35.0
+Version: 1.38.0
 Release: 1.intelnpu.fc44
 Summary: Intel NPU driver fixture
 License: MIT
 BuildArch: x86_64
-Source0: libze_intel_npu.so.1.35.0
+Source0: libze_intel_npu.so.1.38.0
 Source1: LICENSE.md
 @LOADER_REQUIREMENT@
 
@@ -152,8 +152,8 @@ Package-contract fixture.
 %build
 
 %install
-install -Dm0755 %{SOURCE0} %{buildroot}%{_libdir}/libze_intel_npu.so.1.35.0
-ln -s libze_intel_npu.so.1.35.0 %{buildroot}%{_libdir}/libze_intel_npu.so.1
+install -Dm0755 %{SOURCE0} %{buildroot}%{_libdir}/libze_intel_npu.so.1.38.0
+ln -s libze_intel_npu.so.1.38.0 %{buildroot}%{_libdir}/libze_intel_npu.so.1
 @DRIVER_LICENSE_INSTALL@
 @DRIVER_DIRECTORY_INSTALL@
 @DRIVER_EXTRA_INSTALL@
@@ -162,7 +162,7 @@ ln -s libze_intel_npu.so.1.35.0 %{buildroot}%{_libdir}/libze_intel_npu.so.1
 @DRIVER_DIRECTORY_FILES@
 @DRIVER_LICENSE_FILE@
 %{_libdir}/libze_intel_npu.so.1
-%{_libdir}/libze_intel_npu.so.1.35.0
+%{_libdir}/libze_intel_npu.so.1.38.0
 @DRIVER_EXTRA_FILES@
 @DRIVER_SCRIPT@
 "#
@@ -171,7 +171,7 @@ ln -s libze_intel_npu.so.1.35.0 %{buildroot}%{_libdir}/libze_intel_npu.so.1
         if options.omit_loader_requirement {
             ""
         } else {
-            "Requires: oneapi-level-zero(x86-64) = 1.28.6-1.fc44"
+            "Requires: oneapi-level-zero(x86-64) = 1.32.0-1.intelnpu.fc44"
         },
     )
     .replace(
@@ -230,7 +230,7 @@ ln -s libze_intel_npu.so.1.35.0 %{buildroot}%{_libdir}/libze_intel_npu.so.1
 
     let firmware_spec = r#"
 Name: intel-npu-stack-firmware
-Version: 1.35.0
+Version: 1.38.0
 Release: 1.intelnpu.fc44
 Summary: Intel NPU firmware fixture
 License: LicenseRef-Intel-NPU-Firmware
@@ -261,7 +261,7 @@ install -Dm@FIRMWARE_MODE@ %{SOURCE0} %{buildroot}/usr/lib/firmware/updates/inte
             if options.omit_firmware_provide {
                 ""
             } else {
-                "Provides: intel-npu-firmware = 1.35.0"
+                "Provides: intel-npu-firmware = 1.38.0"
             },
         )
         .replace(
@@ -350,9 +350,9 @@ install -Dm@FIRMWARE_MODE@ %{SOURCE0} %{buildroot}/usr/lib/firmware/updates/inte
 
 fn policy(firmware_sha256: &str) -> DriverPackagePolicy {
     DriverPackagePolicy {
-        driver_nevr: "0:1.35.0-1.intelnpu.fc44".to_owned(),
-        loader_requirement: "oneapi-level-zero(x86-64) = 1.28.6-1.fc44".to_owned(),
-        firmware_nevr: "0:1.35.0-1.intelnpu.fc44".to_owned(),
+        driver_nevr: "0:1.38.0-1.intelnpu.fc44".to_owned(),
+        loader_requirement: "oneapi-level-zero(x86-64) = 1.32.0-1.intelnpu.fc44".to_owned(),
+        firmware_nevr: "0:1.38.0-1.intelnpu.fc44".to_owned(),
         firmware_sha256: firmware_sha256.to_owned(),
     }
 }
