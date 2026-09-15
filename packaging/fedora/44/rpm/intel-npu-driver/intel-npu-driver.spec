@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 Name:           intel-npu-driver
-Version:        1.35.0
+Version:        1.38.0
 Release:        1.intelnpu.fc44
 Summary:        Intel Neural Processing Unit userspace driver
 
@@ -16,6 +16,7 @@ Source5:        provider-license-evidence.tar
 Source6:        linux-uapi-GPL-2.0
 Source7:        linux-uapi-Linux-syscall-note
 Source8:        check-driver-headers.py
+Source9:        level-zero.tar
 Patch0:         0001-use-system-gtest-for-npu-elf-tests.patch
 Patch1:         0002-keep-production-firmware-headers-for-driver.patch
 
@@ -30,12 +31,11 @@ BuildRequires:  gmock-devel = 1.17.0-2.fc44
 BuildRequires:  gtest-devel = 1.17.0-2.fc44
 BuildRequires:  libudev-devel
 BuildRequires:  ninja-build
-BuildRequires:  oneapi-level-zero-devel = 1.28.6-1.fc44
 BuildRequires:  openssl-devel
 BuildRequires:  patch
 BuildRequires:  yaml-cpp-devel = 0.8.0-5.fc44
 
-Requires:       oneapi-level-zero%{?_isa} = 1.28.6-1.fc44
+Requires:       oneapi-level-zero%{?_isa} = 1.32.0-1.intelnpu.fc44
 
 Provides:       bundled(level-zero-npu-extensions) = 0^20260711gitf9ad3bf
 Provides:       bundled(openvino-npu-compiler-elf) = 0^20260711gita301d97
@@ -48,11 +48,13 @@ kernel modules, validation applications, or compiler/runtime consumers.
 %prep
 %autosetup -N -n linux-npu-driver
 
-rm -rf third_party/level-zero-npu-extensions third_party/npu_compiler_elf
+rm -rf third_party/level-zero-npu-extensions third_party/npu_compiler_elf third_party/level-zero
 tar -xf %{SOURCE1}
 tar -xf %{SOURCE2}
+tar -xf %{SOURCE9}
 mv level-zero-npu-extensions third_party/level-zero-npu-extensions
 mv npu-compiler-elf-driver third_party/npu_compiler_elf
+mv level-zero third_party/level-zero
 
 %autopatch -p1
 
@@ -76,7 +78,8 @@ mv npu-compiler-elf-driver third_party/npu_compiler_elf
     -DENABLE_OPENVINO_PACKAGE=OFF \
     -DENABLE_TOOLS_BUILD=OFF \
     -DENABLE_VALIDATION_BUILD=OFF \
-    -DENABLE_YAML_CPP_FROM_SUBMODULE=OFF
+    -DENABLE_YAML_CPP_FROM_SUBMODULE=OFF \
+    -DFETCHCONTENT_SOURCE_DIR_LEVEL_ZERO=$PWD/third_party/level-zero
 %cmake_build
 
 %install
@@ -86,7 +89,12 @@ cp -a ../provider-notices/intel-npu-driver %{buildroot}%{_licensedir}/
 rm -rf %{buildroot}/lib/firmware %{buildroot}%{_prefix}/lib/firmware
 rm -f \
     %{buildroot}%{_libdir}/liballocator_utils.so \
-    %{buildroot}%{_libdir}/libze_intel_npu.so
+    %{buildroot}%{_libdir}/libze_intel_npu.so \
+    %{buildroot}%{_libdir}/libze_loader.so \
+    %{buildroot}%{_libdir}/libze_loader.so.1 \
+    %{buildroot}%{_libdir}/libze_loader.so.1.* \
+    %{buildroot}%{_libdir}/libze_validation_layer.so* \
+    %{buildroot}%{_libdir}/libze_tracing_layer.so*
 
 # DWARF paths are rooted under the CMake build directory. Stage matching
 # source paths there so find-debuginfo can create a complete debugsource RPM.
@@ -116,5 +124,9 @@ redhat-linux-build/bin/ze_intel_npu_tests \
 %{_libdir}/libze_intel_npu.so.%{version}
 
 %changelog
+* Mon Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.38.0-1.intelnpu.fc44
+- Upgrade to the v1.38.0 source pin. Build the in-tree Intel-matched Level Zero
+  1.32.0 loader for linking from the source lock and require the separate
+  oneapi-level-zero 1.32.0 candidate at runtime.
 * Fri Sep 04 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.35.0-1.intelnpu.fc44
 - Build the source-locked Fedora 44 candidate userspace driver.

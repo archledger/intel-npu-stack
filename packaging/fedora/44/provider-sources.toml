@@ -91,15 +91,15 @@ redistribution = "allowed"
 
 [[sources]]
 name = "level-zero"
-role = "compatibility_reference"
+role = "provider_dependency"
 kind = "git_tag"
 url = "https://github.com/oneapi-src/level-zero.git"
-tag = "v1.28.2"
-commit = "6369d8d642e9c7625e67f38664267f171b8e42dc"
-archive_sha256 = "2abb0291b8f18f89d963cd4a1d6066414ca382a821815ee254fbd53b5cf315b2"
+tag = "v1.32.0"
+commit = "d3b3efbdaa27a0aef9a9812cc8fa4260557c1e7c"
+archive_sha256 = "1508ac711ea1bcfc9ab437d810f86ee21beb0d9fbb7ae8336e3c072aee4ba61a"
 license_expression = "MIT"
 license_files = ["packaging/fedora/44/licenses/level-zero-LICENSE"]
-license_evidence_sha256 = "d0f94ca605360602ef6c6a6fa14b6c48790e9b99100c129e9ff96e8d6c7ee939"
+license_evidence_sha256 = "f2e82047a47ca742088331ae2bc85b97949ed1e97dfa057cdafd03e8709fc0a2"
 redistribution = "allowed"
 
 [[sources]]
