@@ -23,7 +23,7 @@ import tomllib
 
 REPO = Path(__file__).resolve().parents[3]
 FEDORA = REPO/'packaging/fedora/44'
-RECIPES = {'firmware': ('intel-npu-stack-firmware', '1.35.0', 'noarch'),
+RECIPES = {'firmware': ('intel-npu-stack-firmware', '1.38.0', 'noarch'),
            'driver': ('intel-npu-driver', '1.38.0', 'x86_64'),
            'level-zero': ('oneapi-level-zero', '1.32.0', 'x86_64'),
            'openvino': ('openvino', '2026.2.0', 'x86_64')}
