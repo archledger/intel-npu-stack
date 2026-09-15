@@ -4,7 +4,7 @@ profile_id = "fedora-44-lunar-lake-x86_64"
 stack_release = "0.1.0"
 status = "candidate"
 reboot_required = true
-source_lock_sha256 = "2653ffaf0ee336e3bf28086dd27e8cced9761dc1830a34b44f91434445e9e8ed"
+source_lock_sha256 = "54cfdc2e998b446ba123933476bd4c8fb57a638d970cc1db67e2bb2416876ab7"
 
 [[providers]]
 name = "intel-npu-compiler"
@@ -22,25 +22,25 @@ sha256 = "1b4e2be70019dff3fb36d8e235684d6100b53f6875d27e0fff1259d61eeff93f"
 
 [[providers]]
 name = "intel-npu-driver"
-nevr = "0:1.35.0-1.intelnpu.fc44"
+nevr = "0:1.38.0-1.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "intel-npu-driver-1.35.0-1.intelnpu.fc44.x86_64.rpm"
-rpm_sha256 = "fe61bf40595679a56ec3d73e2528e3aeb9ef3604e285373a356892d252b33ad7"
+rpm_filename = "intel-npu-driver-1.38.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_sha256 = "370de17c8346fbcb84d3145be3cfa3f7d16d792a2e7f14df5af4266705f96c65"
 license = "MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note)"
 [[providers.files]]
-path = "/usr/lib64/libze_intel_npu.so.1.35.0"
-sha256 = "ee45151f8203dd102af77573d28e9b2e9303e7ab7713d69c085cb2f374df036d"
+path = "/usr/lib64/libze_intel_npu.so.1.38.0"
+sha256 = "5e510e136198b534cf1ae9e719bcd247e4e39e86e402ac2ed432d7029fc8dafe"
 
 [[providers]]
 name = "intel-npu-stack-firmware"
-nevr = "0:1.35.0-1.intelnpu.fc44"
+nevr = "0:1.38.0-1.intelnpu.fc44"
 arch = "noarch"
-rpm_filename = "intel-npu-stack-firmware-1.35.0-1.intelnpu.fc44.noarch.rpm"
-rpm_sha256 = "8b2c0181293cb4d8373841decf15cc0dc251aba25181961371f6cef8baf39950"
+rpm_filename = "intel-npu-stack-firmware-1.38.0-1.intelnpu.fc44.noarch.rpm"
+rpm_sha256 = "640f07f1993fbeff4f0a3fcf530a2e574f0844afae05dca207b574c39025a68d"
 license = "LicenseRef-Intel-firmware"
 [[providers.files]]
 path = "/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin"
-sha256 = "4eee75549d47ee4999b7a42a76fcb8a1005aac4aa4c66145c1470fe8f35c16bc"
+sha256 = "cdfe2ebd66aaec21d896134c93d82d60de2d8eede75a2c62898aeb9006e5a26f"
 
 [[providers]]
 name = "libopenvino-ir-frontend"
@@ -110,20 +110,20 @@ sha256 = "2f1054e2357c8ab83ed68a3c4a64d541c6fc6c6e69404bad7e1c606ef4d1e664"
 
 [[providers]]
 name = "oneapi-level-zero"
-nevr = "0:1.28.6-1.fc44"
+nevr = "0:1.32.0-1.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "oneapi-level-zero-1.28.6-1.fc44.x86_64.rpm"
-rpm_sha256 = "0b61bf4cc439afa7f47ab403d9d69fbc390fda36fa1cb41892c88e7c6eb02a2a"
+rpm_filename = "oneapi-level-zero-1.32.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_sha256 = "9a24e255a02788ef77efa56d25385ccffb70edc86e3d648f708d9ca4a000fb55"
 license = "MIT"
 [[providers.files]]
-path = "/usr/lib64/libze_loader.so.1.28.6"
-sha256 = "9e9060dffd87d7578e4e65bde1f646cfbed62492b92d875f2f17356a27aec9e5"
+path = "/usr/lib64/libze_loader.so.1.32.0"
+sha256 = "ceb4dafce9d34e5d56e426481129da9e2f13aed396f5747d2c16d3e91eaeba7a"
 [[providers.files]]
-path = "/usr/lib64/libze_tracing_layer.so.1.28.6"
-sha256 = "28316f8dd3aaa3679f19dc763c29e5da13da587dfbc45941c2aeefb12e6eebe6"
+path = "/usr/lib64/libze_tracing_layer.so.1.32.0"
+sha256 = "519ec8b3726b67d5efaf38d5bf98569823add3c93ca7387eb38194de571eb0ba"
 [[providers.files]]
-path = "/usr/lib64/libze_validation_layer.so.1.28.6"
-sha256 = "f1537ee857df8cecde9f5c11077a9358ebb68423b3acac2ca33732ec9f5fbac2"
+path = "/usr/lib64/libze_validation_layer.so.1.32.0"
+sha256 = "cb40020b63fba2ce06dd24d86b0379ecb3deb46e1e0aa7bc78ecdae1d529db17"
 
 [[providers]]
 name = "openvino"

@@ -57,9 +57,11 @@ GROUPS = {
                                ('intel-npu-compiler-llvm', 'thirdparty/llvm-project/', LLVM)],
     },
     'driver': {'intel-npu-driver': [('linux-npu-driver', '', DRIVER),
+                                  ('level-zero', 'third_party/level-zero/', ['LICENSE']),
                                   ('level-zero-npu-extensions', 'third_party/level-zero-npu-extensions/', ['LICENSE.txt']),
                                   ('npu-compiler-elf-driver', 'third_party/npu_compiler_elf/', ['LICENCE'])]},
     'firmware': {'intel-npu-stack-firmware': [('linux-npu-driver', '', ['firmware/bin/COPYRIGHT'])]},
+    'loader': {'oneapi-level-zero': [('level-zero', '', ['LICENSE'])]},
 }
 
 # Reviewed source-file attributions, independent of the production collector.
@@ -327,7 +329,7 @@ class ProviderNotices(unittest.TestCase):
         self.assertNotEqual(self.run_prepare().returncode,0);self.assertFalse(self.output.exists())
 
     def test_missing_declared_archive_is_rejected(self):
-        self.fixture('driver');self.spec.write_text(self.spec.read_text().replace('Source0: level-zero-npu-extensions.tar\n',''))
+        self.fixture('driver');self.spec.write_text(self.spec.read_text().replace('Source1: level-zero-npu-extensions.tar\n',''))
         self.assertNotEqual(self.run_prepare().returncode,0);self.assertFalse(self.output.exists())
 
     def test_license_evidence_hash_must_match_the_lock(self):

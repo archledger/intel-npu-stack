@@ -83,11 +83,13 @@ The generation report preserves the inputs needed to reconstruct this record.
 Matching a reviewed expression and binding its notices does not replace the
 release review of actual redistribution and complete source availability.
 
-The Fedora Level Zero RPM remains distro-owned and is recorded as
-`external_only`. Its version is the explicitly unqualified 1.28.6 deviation from
-the upstream compatibility reference. The source lock identifies the source
-matrix; the profile identifier matches the tools' installed manifest. Candidate
-kernel bounds identify a narrow test target, not a qualified support range.
+The Level Zero loader is the project's own source-locked
+`oneapi-level-zero-1.32.0-1.intelnpu.fc44` build matching the driver's matrix
+and is recorded as `allowed`. The earlier distro-owned `external_only`
+recording applied only to the retired Fedora 1.28.6 deviation. The source lock
+identifies the source matrix; the profile identifier matches the tools'
+installed manifest. Candidate kernel bounds identify a narrow test target, not
+a qualified support range.
 
 ## Status and channel policy
 

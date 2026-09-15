@@ -69,11 +69,15 @@ POLICY = {
     },
     'driver': {'intel-npu-driver': (
         ('linux-npu-driver', '', '', DRIVER_NOTICES),
+        ('level-zero', 'third_party/level-zero/', 'third_party/level-zero/', ('LICENSE',)),
         ('level-zero-npu-extensions', 'third_party/level-zero-npu-extensions/', 'third_party/level-zero-npu-extensions/', ('LICENSE.txt',)),
         ('npu-compiler-elf-driver', 'third_party/npu_compiler_elf/', 'third_party/npu_compiler_elf/', ('LICENCE',)),
     )},
     'firmware': {'intel-npu-stack-firmware': (
         ('linux-npu-driver', '', '', ('firmware/bin/COPYRIGHT',)),
+    )},
+    'loader': {'oneapi-level-zero': (
+        ('level-zero', '', '', ('LICENSE',)),
     )},
 }
 

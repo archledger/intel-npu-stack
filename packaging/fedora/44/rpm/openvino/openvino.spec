@@ -22,7 +22,7 @@ package or when debugging this package.\
 
 Name:           openvino
 Version:        2026.2.0
-Release:        1.intelnpu.fc44
+Release:        2.intelnpu.fc44
 Summary:        Toolkit for optimizing and deploying AI inference
 
 License:        Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)
@@ -136,7 +136,7 @@ OpenVINO automatic, heterogeneous, Intel CPU, GPU, and NPU runtime plugins.
 Summary:        Source-built OpenVINO Intel NPU compiler
 License:        Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5
 Requires:       %{name}%{?_isa} = %{version}-%{release}
-Requires:       intel-npu-driver%{?_isa} = 1.35.0-1.intelnpu.fc44
+Requires:       intel-npu-driver%{?_isa} = 1.38.0-1.intelnpu.fc44
 
 %description -n intel-npu-compiler
 The Intel NPU compiler and compiler loader built from the sealed source graph.
@@ -433,5 +433,8 @@ cp -a ../provider-notices/openvino ../provider-notices/intel-npu-compiler \
 %{_libdir}/libopenvino_tensorflow_lite_frontend.so.%{so_ver}
 
 %changelog
+* Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 2026.2.0-2.intelnpu.fc44
+- Rebuild the coupled candidate: intel-npu-compiler requires the 1.38.0
+  userspace driver. Sources are unchanged from 2026.2.0-1.
 * Fri Sep 04 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 2026.2.0-1.intelnpu.fc44
 - Build OpenVINO and the Intel NPU compiler from the sealed Fedora source graph.
