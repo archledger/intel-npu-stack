@@ -124,7 +124,7 @@ redhat-linux-build/bin/ze_intel_npu_tests \
 %{_libdir}/libze_intel_npu.so.%{version}
 
 %changelog
-* Mon Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.38.0-1.intelnpu.fc44
+* Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.38.0-1.intelnpu.fc44
 - Upgrade to the v1.38.0 source pin. Build the in-tree Intel-matched Level Zero
   1.32.0 loader for linking from the source lock and require the separate
   oneapi-level-zero 1.32.0 candidate at runtime.

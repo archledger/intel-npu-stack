@@ -46,8 +46,9 @@ module, driver, or consumer application.
 %cmake_install
 mkdir -p %{buildroot}%{_licensedir}
 cp -a ../provider-notices/oneapi-level-zero %{buildroot}%{_licensedir}/
-# Runtime package only: no SDK headers, samples, tests, or null driver.
+# Runtime package only: no SDK headers, pkg-config, samples, tests, or null driver.
 rm -rf %{buildroot}%{_includedir}
+rm -rf %{buildroot}%{_libdir}/pkgconfig
 rm -f \
     %{buildroot}%{_libdir}/libze_loader.so \
     %{buildroot}%{_libdir}/libze_validation_layer.so \
@@ -63,5 +64,5 @@ rm -f \
 %{_libdir}/libze_tracing_layer.so.%{version}
 
 %changelog
-* Mon Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.32.0-1.intelnpu.fc44
+* Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.32.0-1.intelnpu.fc44
 - Build the Intel-matched Level Zero loader candidate from the source lock.
