@@ -104,7 +104,8 @@ jobs:
               -m "Unqualified candidate pin update generated from upstream-update issue #${ISSUE}. Provider RPMs are not rebuilt by this change.
 
           Signed-off-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
-          git config http.https://github.com/.extraheader "AUTHORIZATION: bearer ${GH_TOKEN}"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git config http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
           git push origin "$branch"
           jq -n --arg component "$component" --arg tag "$tag" --arg issue "$ISSUE" \
             '## Candidate pin update\n\nRe-pins \($component) to \($tag) from watcher issue #\($issue).\n\nThis draft changes source pin metadata only. It does NOT rebuild provider RPMs, does not bind or alter any profile, and does not qualify anything.\n\nMaintainer checklist before merge:\n- Review upstream license changes against the recorded license evidence; update evidence if upstream notices changed.\n- Rebuild provider RPMs offline and produce fresh reproducibility evidence.\n- Regenerate the candidate profile from the new RPM evidence.\n- All qualification gates apply unchanged.\n\nRefs #\($issue)' > pr-body.md
