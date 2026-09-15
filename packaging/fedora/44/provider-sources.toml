@@ -121,7 +121,7 @@ kind = "git_tag"
 url = "https://github.com/intel/linux-npu-driver.git"
 tag = "v1.38.0"
 commit = "aea583dcd86a4723a8d3bb06ad94b6eb2f80c6f2"
-archive_sha256 = "02d3cd25fa7239a62e43887faa67ac422b63b05bee08ec811ed68a4bd1fc1d6d"
+archive_sha256 = "e3fdcf07cd8001cc60ebf2ac4b647b3629b2d69ca37a9d286a6d9b68f485cd0a"
 license_expression = "MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note) AND LicenseRef-Intel-firmware"
 license_files = [
   "packaging/fedora/44/licenses/linux-npu-driver-LICENSE.md",
@@ -174,7 +174,7 @@ source = "level-zero-npu-extensions"
 
 [[sources.gitlinks]]
 path = "third_party/npu_compiler_elf"
-commit = "a301d97e0717fb797c79ec51f8cdc13152878700"
+commit = "d325f45f2cb405b5fa2ff17a30de9469f1641b73"
 disposition = "bundled"
 source = "npu-compiler-elf-driver"
 
@@ -246,8 +246,8 @@ name = "npu-compiler-elf-driver"
 role = "driver_dependency"
 kind = "git_commit"
 url = "https://github.com/openvinotoolkit/npu_compiler_elf.git"
-commit = "a301d97e0717fb797c79ec51f8cdc13152878700"
-archive_sha256 = "72cd7144d65f737e65cbe8953c70344efc2fcb250e892c4a7f5e8f11fe7ec49c"
+commit = "d325f45f2cb405b5fa2ff17a30de9469f1641b73"
+archive_sha256 = "209df1eda8db83e2b15fdb7fae5f6b49dcd0896f5a5beb21691f83db4d0e29c8"
 license_expression = "Apache-2.0"
 license_files = ["packaging/fedora/44/licenses/npu-compiler-elf-LICENCE"]
 license_evidence_sha256 = "48bf40d54713b0bb05709c7cbddff894f012cb344e8e8a806c10efe966e93ff0"
