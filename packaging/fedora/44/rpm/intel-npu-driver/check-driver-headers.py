@@ -28,6 +28,8 @@ def validate_dependencies(records):
         for path in paths:
             if '/third_party/npu_compiler_elf/3rdparty/nnrt_api/' in path:
                 raise ValueError('production object uses test NNRT header: ' + node + ': ' + path)
+            if '/third_party/npu_compiler_elf/3rdparty/nnrt/' in path:
+                raise ValueError('production object uses bundled NNRT header: ' + node + ': ' + path)
             if '/firmware/include/api/' in path:
                 firmware.add(path)
     if not firmware:

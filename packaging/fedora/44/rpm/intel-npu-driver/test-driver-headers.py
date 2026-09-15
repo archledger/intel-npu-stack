@@ -20,6 +20,12 @@ class DriverHeaderTests(unittest.TestCase):
                 '/source/firmware/include/api/vpu_nnrt_api.h',
                 '/source/third_party/npu_compiler_elf/3rdparty/nnrt_api/api/vpu_nnrt_api.h']})
 
+    def test_bundled_upstream_headers_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'bundled NNRT header'):
+            headers.validate_dependencies({'hpi.cpp.o': [
+                '/source/firmware/include/api/vpu_nnrt_api.h',
+                '/source/third_party/npu_compiler_elf/3rdparty/nnrt/details/api/vpu_nnrt_api.h']})
+
     def test_missing_production_header_evidence_is_rejected(self):
         for records in [{}, {'hpi.cpp.o': ['/usr/include/stdint.h']}]:
             with self.subTest(records=records), self.assertRaises(ValueError):

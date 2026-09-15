@@ -1,22 +1,24 @@
 From: Intel NPU Stack maintainers <maintainers@example.invalid>
 Subject: [PATCH] Keep production firmware headers when building the driver
 
-The driver supplies fw_vpu_api_headers as a system include directory. Enabling
-the ELF tests adds their restored NNRT headers as a normal include directory,
-which takes precedence in the production npu_elf target. Keep the standalone
-ELF behavior while allowing the driver target to use its firmware API headers.
-The test fixtures and all test targets remain enabled.
+npu_compiler_elf now ships its own bundled NNRT API headers under
+3rdparty/nnrt and adds that directory as a SYSTEM include on the npu_elf
+target unconditionally. Inside the driver build the production target
+fw_vpu_api_headers already supplies the driver's exact firmware API
+headers, so the ELF copy must not compete with them. Skip the bundled
+directory whenever the driver's firmware header target exists; the
+standalone ELF build keeps its bundled headers and all test targets.
 
 --- a/third_party/npu_compiler_elf/CMakeLists.txt
 +++ b/third_party/npu_compiler_elf/CMakeLists.txt
-@@ -116,7 +116,9 @@
-             OUTPUT_VARIABLE NNRT_PATCH_OUTPUT
-             ERROR_VARIABLE NNRT_PATCH_ERROR)
+@@ -101,7 +101,9 @@
  
--        target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
-+        if(NOT TARGET fw_vpu_api_headers)
-+            target_include_directories(${LIB_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt_api/")
-+        endif()
+ target_compile_definitions(${LIB_NAME} PRIVATE $<$<NOT:$<CONFIG:Release>>:NRELEASE>)
  
-         # Ensure `make clean` also drops restored test-only headers.
-         set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+-target_include_directories(${LIB_NAME} SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt")
++if(NOT TARGET fw_vpu_api_headers)
++    target_include_directories(${LIB_NAME} SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/nnrt")
++endif()
+ 
+ if(ENABLE_NPU_LOADER)
+     include(./cmake/gflags.cmake)
