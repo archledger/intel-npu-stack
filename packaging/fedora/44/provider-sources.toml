@@ -119,9 +119,9 @@ name = "linux-npu-driver"
 role = "npu_userspace_driver"
 kind = "git_tag"
 url = "https://github.com/intel/linux-npu-driver.git"
-tag = "v1.35.0"
-commit = "fd49947db934dc67dda6f4287cec2664a303df27"
-archive_sha256 = "555cb411208c94542fc88f62f77797cf021e70edca2b6c9df6350e5259f25c04"
+tag = "v1.38.0"
+commit = "aea583dcd86a4723a8d3bb06ad94b6eb2f80c6f2"
+archive_sha256 = "02d3cd25fa7239a62e43887faa67ac422b63b05bee08ec811ed68a4bd1fc1d6d"
 license_expression = "MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note) AND LicenseRef-Intel-firmware"
 license_files = [
   "packaging/fedora/44/licenses/linux-npu-driver-LICENSE.md",
