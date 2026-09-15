@@ -270,9 +270,9 @@ name = "openvino"
 role = "inference_runtime"
 kind = "git_tag"
 url = "https://github.com/openvinotoolkit/openvino.git"
-tag = "2026.2.0"
-commit = "52ddc07385712456dd9f8c5ecf05d7e49c6da329"
-archive_sha256 = "17c12aef94919e9a70a33a02fe7c93d51f9017cba10ea218c4624ac94d45d099"
+tag = "2026.3.1"
+commit = "759c5a6ab8c066af5f4bc5ebd04643706012a37d"
+archive_sha256 = "c1249ccc8c459137df6d7ab151a31322bdffd68b3886446c59b7997d5688682a"
 license_expression = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 license_files = [
   "packaging/fedora/44/licenses/openvino-LICENSE",
