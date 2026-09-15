@@ -80,6 +80,10 @@ mv level-zero third_party/level-zero
     -DENABLE_YAML_CPP_FROM_SUBMODULE=OFF \
     -DFETCHCONTENT_SOURCE_DIR_LEVEL_ZERO=$PWD/third_party/level-zero
 %cmake_build
+# The FetchContent'd level-zero targets are EXCLUDE_FROM_ALL and nothing in
+# the driver's default target set links them; build them so the shared
+# cmake_install rules (pruned from the payload afterwards) can proceed.
+%cmake_build --target ze_loader ze_validation_layer ze_tracing_layer
 
 %install
 %cmake_install
