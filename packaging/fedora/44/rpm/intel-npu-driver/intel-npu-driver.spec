@@ -18,7 +18,6 @@ Source7:        linux-uapi-Linux-syscall-note
 Source8:        check-driver-headers.py
 Source9:        level-zero.tar
 Patch0:         0001-use-system-gtest-for-npu-elf-tests.patch
-Patch1:         0002-keep-production-firmware-headers-for-driver.patch
 
 ExclusiveArch:  x86_64
 
