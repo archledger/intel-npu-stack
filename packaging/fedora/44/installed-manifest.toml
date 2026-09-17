@@ -8,9 +8,9 @@ source_lock_sha256 = "54cfdc2e998b446ba123933476bd4c8fb57a638d970cc1db67e2bb2416
 
 [[providers]]
 name = "intel-npu-compiler"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "intel-npu-compiler-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "intel-npu-compiler-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "b4896cb744d39fe6f3ed02cb05e7306f82f2256e2581024d11fa58bd1bfae056"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5"
 [[providers.files]]
@@ -44,9 +44,9 @@ sha256 = "cdfe2ebd66aaec21d896134c93d82d60de2d8eede75a2c62898aeb9006e5a26f"
 
 [[providers]]
 name = "libopenvino-ir-frontend"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "libopenvino-ir-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "libopenvino-ir-frontend-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "a7b2fa09de4153d5442168a5d6a2cd00be36a1c4e43d8406be7400deba3b9ae8"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -55,9 +55,9 @@ sha256 = "913792218224223253be2e28caf61c6f0fb545ddbaa6611fb845577f2fe856e3"
 
 [[providers]]
 name = "libopenvino-onnx-frontend"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "libopenvino-onnx-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "libopenvino-onnx-frontend-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "4489ec6b166fa8b5b7fc554333dfed0b9e9625d50856a336924220383c258113"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -66,9 +66,9 @@ sha256 = "95f70ca3332a2b5e03f25eac8cc87a5e78e8ee83cd883eff06805a4a1a52f86c"
 
 [[providers]]
 name = "libopenvino-paddle-frontend"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "libopenvino-paddle-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "libopenvino-paddle-frontend-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "69a11b3fd9885e001d1dad28812a2129f737e51a806e078a9c12d42d52e8725b"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -77,9 +77,9 @@ sha256 = "357e10276cfdf506dfb744a025fbb8738c174dddc6db793f5fc9794267e98844"
 
 [[providers]]
 name = "libopenvino-pytorch-frontend"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "libopenvino-pytorch-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "libopenvino-pytorch-frontend-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "623df46fdf834509040dd522342dd24645035c17879796a1b8c9e4b47bfaac1c"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -88,9 +88,9 @@ sha256 = "25068b80c2953f3b13593f730e4f37862ed6ff7191466b12e98074199e128baf"
 
 [[providers]]
 name = "libopenvino-tensorflow-frontend"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "libopenvino-tensorflow-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "libopenvino-tensorflow-frontend-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "542948c34d2e60cbcead49ae53bff4fcee5f72cec3a74910e43b02fdaafc00c8"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -99,9 +99,9 @@ sha256 = "653ffe451febdebf4659322add7a615981a7d9f542b91da1fc63a855504eada5"
 
 [[providers]]
 name = "libopenvino-tensorflow-lite-frontend"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "libopenvino-tensorflow-lite-frontend-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "libopenvino-tensorflow-lite-frontend-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "ee02fe1ef40d07662c2f3e34518cda31d4b6f6d0af5fd8f6d74cd7bb3566b3fc"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -127,9 +127,9 @@ sha256 = "cb40020b63fba2ce06dd24d86b0379ecb3deb46e1e0aa7bc78ecdae1d529db17"
 
 [[providers]]
 name = "openvino"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "openvino-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "openvino-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "964c32809395c0bce820fd410e00b6415dcacebff355d888e4e05e81a5f1cfea"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]
@@ -141,9 +141,9 @@ sha256 = "ee02a297c757c5a459b9ce70a5c96bbb3f14d86e4765079515d23353b5e9fc49"
 
 [[providers]]
 name = "openvino-plugins"
-nevr = "0:2026.2.0-1.intelnpu.fc44"
+nevr = "0:2026.2.0-2.intelnpu.fc44"
 arch = "x86_64"
-rpm_filename = "openvino-plugins-2026.2.0-1.intelnpu.fc44.x86_64.rpm"
+rpm_filename = "openvino-plugins-2026.2.0-2.intelnpu.fc44.x86_64.rpm"
 rpm_sha256 = "9cee06382be12cb890ed3789050472bed2503efe23a0da227afb948252924d77"
 license = "Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)"
 [[providers.files]]

@@ -307,7 +307,7 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
 %global __strip /usr/bin/true
 Name: openvino
 Version: 2026.2.0
-Release: 1.intelnpu.fc44
+Release: 2.intelnpu.fc44
 Summary: OpenVINO fixture
 License: Apache-2.0
 Source0: LICENSE
@@ -736,7 +736,7 @@ fn production_spec_declares_the_source_built_openvino_npu_boundary() {
     for required in [
         "Name:           openvino",
         "Version:        2026.2.0",
-        "Release:        1.intelnpu.fc44",
+        "Release:        2.intelnpu.fc44",
         "ExclusiveArch:  x86_64",
         "openvino.tar",
         "npu-compiler.tar",

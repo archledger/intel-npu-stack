@@ -22,7 +22,7 @@ BuildRequires:  gcc-c++ = 16.2.1-2.fc44
 BuildRequires:  ninja-build = 1.13.2-2.fc44
 BuildRequires:  python3 = 3.14.7-1.fc44
 BuildRequires:  oneapi-level-zero-devel = 1.28.6-1.fc44
-BuildRequires:  openvino-devel = 2026.2.0-1.intelnpu.fc44
+BuildRequires:  openvino-devel = 2026.2.0-2.intelnpu.fc44
 BuildRequires:  util-linux-core = 2.41.5-1.fc44
 
 Requires:       oneapi-level-zero%{?_isa} = 1.32.0-1.intelnpu.fc44
