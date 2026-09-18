@@ -25,7 +25,7 @@ jobs:
   prepare:
     name: Re-pin one validated finding
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       GH_TOKEN: ${{ github.token }}
       ISSUE: ${{ inputs.issue }}
@@ -64,20 +64,43 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
         with:
           toolchain: 1.85.0
+      - name: Prepare the canonical source clone
+        run: |
+          set -euo pipefail
+          repository=$(sed -E 's/.*upstream:([^:]+):([^:]+)$/\1/' issue-title.txt)
+          tag=$(sed -E 's/.*upstream:([^:]+):([^:]+)$/\2/' issue-title.txt)
+          commit=$(jq -r .commit resolved.json)
+          git lfs install
+          git clone --quiet --no-checkout "https://github.com/${repository}.git" source-clone
+          git -C source-clone fetch --quiet origin "refs/tags/${tag}:refs/tags/${tag}"
+          git -C source-clone fetch --quiet origin "$commit"
+          # LFS objects for the tagged tree; not every watched repo uses LFS.
+          git -C source-clone lfs fetch origin "refs/tags/${tag}" || true
+          git -C source-clone rev-parse --verify "${commit}^{commit}" >/dev/null
+          # The canonical hasher refuses archive-affecting local git config.
+          if git -C source-clone config --local --get-regexp '^(filter|tar|include|includeif)\.'; then
+            echo "clone carries archive-affecting local config" >&2
+            exit 2
+          fi
       - name: Produce and validate the pin update
         run: |
           set -euo pipefail
+          cargo fetch --locked
+          cargo build -p xtask --locked
+          mkdir -p scratch
           python3 scripts/ci/prepare_candidate.py \
             --issue-title "$(cat issue-title.txt)" \
             --issue-body "$(cat issue-body.md)" \
             --resolved-tag resolved.json \
+            --source-clone source-clone \
+            --xtask target/debug/xtask \
+            --scratch scratch \
             --output updated.toml
           if [[ ! -f updated.toml ]]; then
             echo "Lock already current; nothing to prepare."
             echo "prepared=false" >> "$GITHUB_ENV"
             exit 0
           fi
-          cargo fetch --locked
           cargo run -p xtask --locked --offline -- validate-source-lock --path updated.toml
           echo "prepared=true" >> "$GITHUB_ENV"
       - name: Push the candidate branch and open a draft PR

@@ -7,11 +7,15 @@ from unittest.mock import Mock
 
 from prepare_candidate import (
     archive_url,
+    apply_commit_pin,
     apply_pin,
+    component_gitlinks,
     download_digest,
     finding_from_issue,
     load_lock_source,
+    prepare_update,
     qualified_profiles,
+    update_gitlink_stanza,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -129,13 +133,167 @@ class LockEditing(unittest.TestCase):
         source = load_lock_source(original, 'openvino')
         updated, changed = apply_pin(
             original, 'openvino', tag=source['tag'], commit=source['commit'],
-            tag_object=source.get('tag_object'), archive_sha256='0' * 64)
+            tag_object=source.get('tag_object'),
+            archive_sha256=source['archive_sha256'])
         self.assertFalse(changed)
         self.assertEqual(updated, original)
+
+    def test_stale_digest_self_heals_at_the_same_tag_and_commit(self):
+        import tomllib
+        original = self.lock.read_text()
+        source = load_lock_source(original, 'openvino')
+        updated, changed = apply_pin(
+            original, 'openvino', tag=source['tag'], commit=source['commit'],
+            tag_object=source.get('tag_object'), archive_sha256='0' * 64)
+        self.assertTrue(changed)
+        after = tomllib.loads(updated)
+        record = next(s for s in after['sources'] if s['name'] == 'openvino')
+        self.assertEqual(record['archive_sha256'], '0' * 64)
 
     def test_unknown_component_is_refused(self):
         with self.assertRaises(ValueError):
             load_lock_source(self.lock.read_text(), 'does-not-exist')
+
+
+class GitlinkHandling(unittest.TestCase):
+    lock = REPO_ROOT / 'packaging/fedora/44/provider-sources.toml'
+
+    def test_component_gitlinks_parse_from_the_owning_block(self):
+        links = component_gitlinks(self.lock.read_text(), 'linux-npu-driver')
+        by_path = {link['path']: link for link in links}
+        self.assertEqual(by_path['third_party/npu_compiler_elf']['commit'],
+                         'd325f45f2cb405b5fa2ff17a30de9469f1641b73')
+        self.assertEqual(by_path['third_party/npu_compiler_elf']['disposition'], 'bundled')
+        self.assertEqual(by_path['third_party/npu_compiler_elf']['source'], 'npu-compiler-elf-driver')
+        self.assertEqual(by_path['third_party/googletest']['disposition'], 'system')
+        # Gitlinks belonging to other components are not exposed.
+        self.assertNotIn('third_party/npu_compiler_elf_openvino', by_path)
+
+    def test_component_without_gitlinks_returns_empty(self):
+        self.assertEqual(component_gitlinks(self.lock.read_text(), 'level-zero'), [])
+
+    def test_gitlink_stanza_update_rewrites_only_that_commit(self):
+        import tomllib
+        original = self.lock.read_text()
+        updated = update_gitlink_stanza(
+            original, 'linux-npu-driver', 'third_party/npu_compiler_elf', 'a' * 40)
+        before = tomllib.loads(original)
+        after = tomllib.loads(updated)
+        def gitlinks(document, name):
+            return next(s for s in document['sources'] if s['name'] == name)['gitlinks']
+        self.assertEqual(
+            [g for g in gitlinks(after, 'linux-npu-driver')
+             if g['path'] == 'third_party/npu_compiler_elf'][0]['commit'], 'a' * 40)
+        others = [g for g in gitlinks(after, 'linux-npu-driver')
+                  if g['path'] != 'third_party/npu_compiler_elf']
+        self.assertEqual(
+            [g for g in gitlinks(before, 'linux-npu-driver')
+             if g['path'] != 'third_party/npu_compiler_elf'], others)
+
+    def test_tagless_record_pin_updates_commit_and_digest_only(self):
+        import tomllib
+        original = self.lock.read_text()
+        updated, changed = apply_commit_pin(
+            original, 'npu-compiler-elf-driver', 'b' * 40, 'c' * 64)
+        self.assertTrue(changed)
+        after = tomllib.loads(updated)
+        record = next(s for s in after['sources'] if s['name'] == 'npu-compiler-elf-driver')
+        self.assertEqual(record['commit'], 'b' * 40)
+        self.assertEqual(record['archive_sha256'], 'c' * 64)
+        self.assertNotIn('tag', record)
+        # The tag-bearing linux-npu-driver record is untouched.
+        driver = next(s for s in after['sources'] if s['name'] == 'linux-npu-driver')
+        self.assertEqual(driver['tag'], 'v1.38.0')
+
+    def test_tagless_pin_refuses_a_tagged_record(self):
+        with self.assertRaises(ValueError):
+            apply_commit_pin(self.lock.read_text(), 'linux-npu-driver', 'b' * 40, 'c' * 64)
+
+    def test_noop_tagless_pin_when_commit_unchanged(self):
+        original = self.lock.read_text()
+        updated, changed = apply_commit_pin(
+            original, 'npu-compiler-elf-driver',
+            'd325f45f2cb405b5fa2ff17a30de9469f1641b73', 'c' * 64)
+        self.assertFalse(changed)
+        self.assertEqual(updated, original)
+
+
+class CanonicalPreparation(unittest.TestCase):
+    """The runner-driven flow: xtask hashing plus git ls-tree for gitlinks."""
+
+    lock = REPO_ROOT / 'packaging/fedora/44/provider-sources.toml'
+
+    def test_prepare_updates_gitlinks_and_bundled_records(self):
+        import tempfile, tomllib
+        original = self.lock.read_text()
+        ls_tree = {'third_party/npu_compiler_elf': 'e' * 40,
+                   'third_party/level-zero-npu-extensions': 'f9ad3bf89c2418d714aef2e6b96a5aafb12a1971',
+                   'third_party/googletest': 'b514bdc898e2951020cbdca1304b75f5950d1f59',
+                   'third_party/yaml-cpp': 'f7320141120f720aecc4c32be25586e7da9eb978'}
+        calls = []
+        def fake_xtask(clone, name, commit, scratch):
+            calls.append((name, commit))
+            return 'd' * 64 if name == 'linux-npu-driver' else '9' * 64
+        def fake_ls_tree(clone, commit, path):
+            return ls_tree[path]
+        def fake_clone(url, commit, scratch):
+            calls.append(('clone', url, commit))
+            return '/ignored'
+        with tempfile.TemporaryDirectory() as scratch:
+            updated = prepare_update(
+                original, issue_finding(tag='v1.39.0', commit='5' * 40),
+                source_clone='/clone', xtask='/xtask', scratch=scratch,
+                _hash=fake_xtask, _ls_tree=fake_ls_tree, _clone=fake_clone)
+        after = tomllib.loads(updated)
+        driver = next(s for s in after['sources'] if s['name'] == 'linux-npu-driver')
+        self.assertEqual(driver['tag'], 'v1.39.0')
+        self.assertEqual(driver['commit'], '5' * 40)
+        self.assertEqual(driver['archive_sha256'], 'd' * 64)
+        elf = next(g for g in driver['gitlinks']
+                   if g['path'] == 'third_party/npu_compiler_elf')
+        self.assertEqual(elf['commit'], 'e' * 40)
+        record = next(s for s in after['sources'] if s['name'] == 'npu-compiler-elf-driver')
+        self.assertEqual(record['commit'], 'e' * 40)
+        self.assertEqual(record['archive_sha256'], '9' * 64)
+        # Unchanged bundled and system gitlinks required no hashing or cloning.
+        self.assertEqual(calls.count(('clone', 'https://github.com/openvinotoolkit/npu_compiler_elf.git', 'e' * 40)), 1)
+        self.assertNotIn(('clone', 'https://github.com/oneapi-src/level-zero-npu-extensions.git', 'f9ad3bf89c2418d714aef2e6b96a5aafb12a1971'), calls)
+
+    def test_prepare_refuses_structural_gitlink_changes(self):
+        def fake_ls_tree(clone, commit, path):
+            return None  # path vanished from the new tree
+        with tempfile_dir() as scratch:
+            with self.assertRaisesRegex(ValueError, 'manual completion'):
+                prepare_update(
+                    self.lock.read_text(), issue_finding(tag='v1.39.0', commit='5' * 40),
+                    source_clone='/clone', xtask='/xtask', scratch=scratch,
+                    _hash=lambda *a: 'd' * 64, _ls_tree=fake_ls_tree,
+                    _clone=lambda *a: '/ignored')
+
+    def test_prepare_refuses_changed_system_gitlinks(self):
+        ls_tree = {'third_party/googletest': 'f' * 40,
+                   'third_party/level-zero-npu-extensions': 'f9ad3bf89c2418d714aef2e6b96a5aafb12a1971',
+                   'third_party/npu_compiler_elf': 'd325f45f2cb405b5fa2ff17a30de9469f1641b73',
+                   'third_party/yaml-cpp': 'f7320141120f720aecc4c32be25586e7da9eb978'}
+        with tempfile_dir() as scratch:
+            with self.assertRaisesRegex(ValueError, 'manual completion'):
+                prepare_update(
+                    self.lock.read_text(), issue_finding(tag='v1.39.0', commit='5' * 40),
+                    source_clone='/clone', xtask='/xtask', scratch=scratch,
+                    _hash=lambda *a: 'd' * 64,
+                    _ls_tree=lambda clone, commit, path: ls_tree[path],
+                    _clone=lambda *a: '/ignored')
+
+
+def tempfile_dir():
+    import tempfile
+    return tempfile.TemporaryDirectory()
+
+
+def issue_finding(tag, commit):
+    return {'component': 'linux-npu-driver', 'repository': 'intel/linux-npu-driver',
+            'pinned_tag': 'v1.38.0', 'pinned_commit': 'a' * 40,
+            'latest_tag': tag, 'latest_commit': commit}
 
 
 class ArchiveAcquisition(unittest.TestCase):
