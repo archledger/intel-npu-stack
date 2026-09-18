@@ -81,19 +81,33 @@ def build_rpm(root, key):
     return target
 
 
-def build_tree(root, key):
-    root = Path(root)
-    rpm = build_rpm(root, key)
-    write(root / 'profile.toml', '\n'.join([
+def profile_text(component_digest):
+    return '\n'.join([
         'schema_version = 1', 'id = "fedora-44-verifier-fixture"',
         f'stack_release = "{RELEASE}"', 'status = "qualified"',
         'package_manager = "rpm"', '',
+        '[components.fixture]',
+        'version = "1.0.0"',
+        'source = "https://example.invalid/verifier-fixture.git"',
+        f'sha256 = "{component_digest}"', '',
+        '[components.fixture.provider]',
+        'package = "verifier-fixture"',
+        'version = "0:1.0.0-1"',
+        'activation = "immediate"', '',
         '[qualification]',
         'evidence_id = "verifier-fixture-evidence"',
         'evidence_sha256 = "' + 'a' * 64 + '"',
         'qualified_at = "2026-09-18T00:00:00Z"',
         'hardware_class = "fixture"',
-        'test_suite_version = "1"', '']))
+        'test_suite_version = "1"', ''])
+
+
+def build_tree(root, key):
+    root = Path(root)
+    rpm = build_rpm(root, key)
+    repo_profile = root.parent / 'repo-profile.toml'
+    write(repo_profile, profile_text('0' * 64))
+    write(root / 'profile.toml', profile_text(sha(rpm)))
     release = {
         'schema_version': 1, 'stack_release': RELEASE,
         'profile_sha256': sha(root / 'profile.toml'),
@@ -153,6 +167,7 @@ class PublicationVerifier(unittest.TestCase):
         cls.base = Path(cls.workspace.name)
         cls.key = ThrowawayKey(cls.base / 'keyring')
         cls.tree = build_tree(cls.base / 'tree', cls.key)
+        cls.repo_profile = cls.base / 'repo-profile.toml'
 
     @classmethod
     def tearDownClass(cls):
@@ -166,7 +181,7 @@ class PublicationVerifier(unittest.TestCase):
     def refusal(self, tree, message):
         output = Path(tree) / 'publication-manifest.json'
         with self.assertRaises(ReleaseRefused) as caught:
-            check_release(tree, tree / 'profile.toml', output,
+            check_release(tree, self.repo_profile, output,
                           production_key=self.key.public)
         self.assertIn(message, str(caught.exception))
         self.assertFalse(output.exists())
@@ -174,7 +189,7 @@ class PublicationVerifier(unittest.TestCase):
     def test_verifies_a_signed_production_tree(self):
         tree = self.copy_tree()
         output = Path(tree) / 'publication-manifest.json'
-        result = check_release(tree, tree / 'profile.toml', output,
+        result = check_release(tree, self.repo_profile, output,
                                production_key=self.key.public)
         self.assertTrue(result['passed'])
         self.assertTrue(result['publication_ready'])
@@ -186,17 +201,31 @@ class PublicationVerifier(unittest.TestCase):
 
     def test_candidate_profile_is_refused(self):
         tree = self.copy_tree()
-        text = (tree / 'profile.toml').read_text().replace(
+        text = self.repo_profile.read_text().replace(
             'status = "qualified"', 'status = "candidate"')
-        (tree / 'profile.toml').write_text(text)
-        self.refusal(tree, 'qualified profile')
+        self.repo_profile.write_text(text)
+        try:
+            self.refusal(tree, 'qualified profile')
+        finally:
+            self.repo_profile.write_text(profile_text('0' * 64))
 
     def test_missing_qualification_record_is_refused(self):
         tree = self.copy_tree()
-        text = (tree / 'profile.toml').read_text()
-        (tree / 'profile.toml').write_text(text.replace(
+        text = self.repo_profile.read_text()
+        self.repo_profile.write_text(text.replace(
             '[qualification]', '[not_qualification]'))
-        self.refusal(tree, 'qualification evidence')
+        try:
+            self.refusal(tree, 'qualification evidence')
+        finally:
+            self.repo_profile.write_text(profile_text('0' * 64))
+
+    def test_shipped_profile_must_be_qualified(self):
+        tree = self.copy_tree()
+        text = (tree / 'profile.toml').read_text().replace(
+            'status = "qualified"', 'status = "candidate"')
+        (tree / 'profile.toml').write_text(text)
+        reseal(tree)
+        self.refusal(tree, 'shipped profile must be qualified')
 
     def test_test_only_assembly_is_refused(self):
         tree = self.copy_tree()
@@ -250,7 +279,7 @@ class PublicationVerifier(unittest.TestCase):
         release = json.loads((tree / 'release.json').read_text())
         release['profile_sha256'] = '0' * 64
         (tree / 'release.json').write_text(json.dumps(release))
-        self.refusal(tree, 'profile bytes')
+        self.refusal(tree, 'shipped profile bytes')
 
 
 if __name__ == '__main__':

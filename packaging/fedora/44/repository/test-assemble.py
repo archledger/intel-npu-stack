@@ -227,9 +227,25 @@ class AssemblyContract(unittest.TestCase):
         self.assertIn('production', result.stderr)
         self.assertFalse((self.base/'release/release.json').exists())
 
+    def qualify_profile(self, root):
+        profile = root/'profile.toml'
+        profile.write_text(profile.read_text().replace(
+            'status = "candidate"', 'status = "qualified"'))
+        build = json.loads((root/'profile-rpm-build.json').read_text())
+        build['source_profile_sha256'] = sha(profile.read_bytes())
+        write_json(root/'profile-rpm-build.json', build)
+
+    def test_production_mode_requires_a_qualified_profile(self):
+        make_input(self.base/'input')
+        self.promote_identity(self.base/'input')
+        result = run_assemble(self.base/'input', self.base/'release', production=True)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn('qualified profile', result.stderr)
+
     def test_production_mode_assembles_a_production_manifest(self):
         make_input(self.base/'input')
         self.promote_identity(self.base/'input')
+        self.qualify_profile(self.base/'input')
         result = run_assemble(self.base/'input', self.base/'release', production=True)
         self.assertEqual(result.returncode, 0, (result.stdout, result.stderr))
         manifest = json.loads((self.base/'release/assembly-manifest.json').read_text())

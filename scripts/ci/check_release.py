@@ -13,6 +13,7 @@ Runs gpg and rpmkeys as subprocesses in a throwaway keyring; performs no
 build, signing or publication.
 """
 import argparse
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -49,7 +50,7 @@ def load_json(path):
     return value
 
 
-def verify_profile(profile_path, release):
+def verify_profile(profile_path, release, tree):
     document = tomllib.loads(Path(profile_path).read_text())
     require(document.get('status') == 'qualified',
             'publication requires a qualified profile, found: '
@@ -65,8 +66,31 @@ def verify_profile(profile_path, release):
             'qualification evidence SHA-256 is invalid')
     require(document.get('stack_release') == release['stack_release'],
             'profile release does not match the release metadata')
-    require(sha(profile_path) == release.get('profile_sha256'),
-            'release metadata does not bind the profile bytes')
+
+    shipped_path = Path(tree) / 'profile.toml'
+    require(shipped_path.is_file(), 'release tree profile is missing')
+    shipped = tomllib.loads(shipped_path.read_text())
+    require(shipped.get('status') == 'qualified',
+            'the shipped profile must be qualified for stable selection')
+    require(shipped.get('qualification') == evidence,
+            'shipped profile qualification record differs from the promoted profile')
+    require(sha(shipped_path) == release.get('profile_sha256'),
+            'release metadata does not bind the shipped profile bytes')
+
+    def normalized(doc):
+        doc = copy.deepcopy(doc)
+        for component in doc.get('components', {}).values():
+            component['sha256'] = '<rewritten>'
+        return doc
+    require(normalized(shipped) == normalized(document),
+            'shipped profile diverges from the promoted profile beyond the '
+            'signed-digest rewrite')
+    by_name = {entry['name']: entry['sha256'] for entry in release.get('packages', [])}
+    for capability, component in shipped.get('components', {}).items():
+        provider = component.get('provider', {}).get('package')
+        require(by_name.get(provider) == component.get('sha256'),
+                'shipped profile component digest does not bind its release package: '
+                + capability)
     return document, evidence
 
 
@@ -208,7 +232,7 @@ def check_release(tree, profile, output, production_key=None):
     tree = Path(tree).resolve(strict=True)
     require(not Path(output).exists(), 'publication manifest already exists')
     release = verify_release_metadata(tree)
-    _, evidence = verify_profile(profile, release)
+    _, evidence = verify_profile(profile, release, tree)
     manifest = verify_assembly(tree / 'assembly-manifest.json', release)
     verify_tree_digests(tree, manifest)
     verify_checksums(tree)

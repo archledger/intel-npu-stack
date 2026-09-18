@@ -190,7 +190,12 @@ def assemble(input_root, output, base_url, repository_id, release, production=Fa
             and installed.endswith('.toml'), 'invalid installed profile path')
 
     text = profile_path.read_text()
-    require('status = "candidate"' in text, 'only an evidence-backed candidate may be assembled')
+    if production:
+        require('status = "qualified"' in text,
+                'production assembly requires a qualified profile')
+    else:
+        require('status = "candidate"' in text,
+                'only an evidence-backed candidate may be assembled')
     require(f'stack_release = "{release}"' in text, 'profile release does not match the assembly')
     try:
         profile_document = tomllib.loads(text)
