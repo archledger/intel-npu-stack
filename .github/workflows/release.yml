@@ -63,6 +63,14 @@ jobs:
           set -euo pipefail
           bash scripts/ci/install-fedora-tools.sh
           dnf5 --assumeyes --setopt=install_weak_deps=False install createrepo_c
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: 1.85.0
+      - name: Validate the qualified profile with the canonical schema validator
+        run: |
+          set -euo pipefail
+          cargo fetch --locked
+          cargo run --locked -p xtask -- validate-profiles "$(dirname "$PROFILE")" 
       - name: Verify the release version and inputs digest shape
         run: |
           set -euo pipefail
