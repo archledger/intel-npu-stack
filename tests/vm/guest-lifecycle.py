@@ -215,7 +215,7 @@ def scenario_rollback(server, work):
             with target.open('rb') as stream:
                 assert hashlib.file_digest(stream, 'sha256').hexdigest() == row['sha256'], filename
     baseline_argv = ['dnf5', '--assumeyes', '--setopt=localpkg_gpgcheck=True',
-                     '--setopt=install_weak_deps=False', 'install',
+                     '--setopt=install_weak_deps=False', '--disable-repo=*', 'install',
                      *[str(work/row['filename']) for row in fedora['packages']+rollback_index]]
     baseline_step = run('old-fedora-baseline', baseline_argv, expect=0)
     old = inventory()
