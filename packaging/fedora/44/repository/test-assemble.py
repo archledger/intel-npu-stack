@@ -137,11 +137,13 @@ def make_input(root, *, profile_status='candidate', cycle=False):
 
 
 def run_assemble(input_root, output, *, base_url=BASE_URL, repository_id=REPOSITORY_ID,
-                 release=RELEASE):
-    return subprocess.run(
-        [sys.executable, str(ASSEMBLE), '--input-root', str(input_root), '--output', str(output),
-         '--base-url', base_url, '--repository-id', repository_id, '--release-version', release],
-        capture_output=True, text=True)
+                 release=RELEASE, production=False):
+    command = [sys.executable, str(ASSEMBLE), '--input-root', str(input_root),
+               '--output', str(output), '--base-url', base_url,
+               '--repository-id', repository_id, '--release-version', release]
+    if production:
+        command.append('--production')
+    return subprocess.run(command, capture_output=True, text=True)
 
 
 def assemble_ok(input_root, output):
@@ -211,6 +213,38 @@ class AssemblyContract(unittest.TestCase):
         assemble_ok(self.base/'input', first)
         assemble_ok(self.base/'input', second)
         self.assertEqual(self.output_tree(first), self.output_tree(second))
+
+    def promote_identity(self, root):
+        identity = json.loads((root/'signed-identity.json').read_text())
+        identity['test_only'] = False
+        identity['production_ready'] = True
+        write_json(root/'signed-identity.json', identity)
+
+    def test_production_mode_requires_a_production_identity(self):
+        make_input(self.base/'input')
+        result = run_assemble(self.base/'input', self.base/'release', production=True)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn('production', result.stderr)
+        self.assertFalse((self.base/'release/release.json').exists())
+
+    def test_production_mode_assembles_a_production_manifest(self):
+        make_input(self.base/'input')
+        self.promote_identity(self.base/'input')
+        result = run_assemble(self.base/'input', self.base/'release', production=True)
+        self.assertEqual(result.returncode, 0, (result.stdout, result.stderr))
+        manifest = json.loads((self.base/'release/assembly-manifest.json').read_text())
+        self.assertTrue(manifest['passed'])
+        self.assertFalse(manifest['test_only'])
+        self.assertFalse(manifest['release_ready'])
+        self.assertTrue((self.base/'release/release.json').is_file())
+        self.assertTrue((self.base/'release/release.json.sig').is_file())
+
+    def test_test_mode_refuses_a_production_identity(self):
+        make_input(self.base/'input')
+        self.promote_identity(self.base/'input')
+        result = run_assemble(self.base/'input', self.base/'release')
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertFalse((self.base/'release/release.json').exists())
 
     def refusal(self, mutate, *, base_url=BASE_URL, repository_id=REPOSITORY_ID):
         make_input(self.base/'input')

@@ -89,7 +89,7 @@ def copy_tree(source, target):
         shutil.copyfile(entry, destination)
 
 
-def assemble(input_root, output, base_url, repository_id, release):
+def assemble(input_root, output, base_url, repository_id, release, production=False):
     require(release_version(release), 'release version must be a numeric triple')
     require(identifier(repository_id), 'invalid repository identity')
     require(repository_url(base_url, release), 'base URL must be an immutable versioned HTTPS location')
@@ -100,8 +100,13 @@ def assemble(input_root, output, base_url, repository_id, release):
     require(all(entry.is_file() and not entry.is_symlink() for entry in packages+repodata),
             'repository payload must be regular files')
     identity = load_json(input_root/'signed-identity.json')
-    require(identity.get('passed') is True and identity.get('test_only') is True,
-            'signed repository evidence must be the passed test-only record')
+    if production:
+        require(identity.get('passed') is True and identity.get('test_only') is False
+                and identity.get('production_ready') is True,
+                'production assembly requires a passed production-ready signed identity')
+    else:
+        require(identity.get('passed') is True and identity.get('test_only') is True,
+                'signed repository evidence must be the passed test-only record')
     require(digest(identity.get('primary_fingerprint', '')) is False
             or re.fullmatch(r'[0-9A-F]{40}', identity.get('primary_fingerprint', '')),
             'invalid release key fingerprint record')
@@ -261,10 +266,13 @@ def assemble(input_root, output, base_url, repository_id, release):
               for path in sorted(input_root.rglob('*')) if path.is_file()}
     manifest = {
         'passed': True,
-        'test_only': True,
+        'test_only': not production,
         'release_ready': False,
-        'scope': 'deterministic offline release composition from accepted signed inputs; '
-                 'no build, signing, publication, VM or hardware qualification',
+        'scope': ('deterministic offline production release composition from accepted '
+                  'production-signed inputs; qualification, publication and hardware '
+                  'gates remain separate' if production else
+                  'deterministic offline release composition from accepted signed inputs; '
+                  'no build, signing, publication, VM or hardware qualification'),
         'release_version': release,
         'repository_id': repository_id,
         'base_url': base_url,
@@ -284,10 +292,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['input-root', 'output', 'base-url', 'repository-id', 'release-version']:
         parser.add_argument('--'+name, required=True)
+    parser.add_argument('--production', action='store_true',
+                        help='compose a production release from production-signed inputs')
     args = parser.parse_args(argv)
     try:
         assemble(Path(args.input_root).resolve(strict=True), Path(args.output),
-                 args.base_url, args.repository_id, args.release_version)
+                 args.base_url, args.repository_id, args.release_version,
+                 production=args.production)
     except (OSError, ValueError, KeyError, StopIteration) as error:
         parser.exit(1, 'Fedora release assembly: '+str(error)+'\n')
     return 0
