@@ -40,8 +40,11 @@ def load_json(path):
 
 def load_identity(path):
     identity = load_json(path)
-    require(identity.get('passed') is True and identity.get('test_only') is True,
-            'signed identity must be the passed test-only record')
+    test_only = identity.get('test_only')
+    require(identity.get('passed') is True and
+            (test_only is True or
+             (test_only is False and identity.get('production_ready') is True)),
+            'signed identity must be a passed test-only or production-ready record')
     packages = identity.get('packages')
     require(isinstance(packages, list) and packages, 'signed identity lists no packages')
     by_name = {}
@@ -163,7 +166,7 @@ def generate(candidate, identity_path, output, record):
         record.parent.mkdir(parents=True, exist_ok=True)
         record.write_text(json.dumps({
             'passed': True,
-            'test_only': True,
+            'test_only': identity.get('test_only') is True,
             'scope': 'candidate-to-release profile digest rewrite from the passed '
                      'signed-identity inventory; no build, signing or qualification',
             'schema_version': 1,
