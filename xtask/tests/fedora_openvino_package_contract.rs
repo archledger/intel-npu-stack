@@ -63,8 +63,8 @@ fn package_name(package: &Path) -> String {
 
 fn policy() -> OpenvinoPackagePolicy {
     OpenvinoPackagePolicy {
-        openvino_nevr: "0:2026.2.0-1.intelnpu.fc44".to_owned(),
-        driver_requirement: "intel-npu-driver(x86-64) = 1.35.0-1.intelnpu.fc44".to_owned(),
+        openvino_nevr: "0:2026.2.0-2.intelnpu.fc44".to_owned(),
+        driver_requirement: "intel-npu-driver(x86-64) = 1.38.0-1.intelnpu.fc44".to_owned(),
     }
 }
 
@@ -307,7 +307,7 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
 %global __strip /usr/bin/true
 Name: openvino
 Version: 2026.2.0
-Release: 1.intelnpu.fc44
+Release: 2.intelnpu.fc44
 Summary: OpenVINO fixture
 License: Apache-2.0
 Source0: LICENSE
@@ -469,7 +469,7 @@ install -Dm0755 %{SOURCE11} %{buildroot}%{_libdir}/libopenvino_tensorflow_lite_f
             if options.omit_driver_requirement {
                 ""
             } else {
-                "Requires: intel-npu-driver%{?_isa} = 1.35.0-1.intelnpu.fc44"
+                "Requires: intel-npu-driver%{?_isa} = 1.38.0-1.intelnpu.fc44"
             },
         )
         .replace(
@@ -736,7 +736,7 @@ fn production_spec_declares_the_source_built_openvino_npu_boundary() {
     for required in [
         "Name:           openvino",
         "Version:        2026.2.0",
-        "Release:        1.intelnpu.fc44",
+        "Release:        2.intelnpu.fc44",
         "ExclusiveArch:  x86_64",
         "openvino.tar",
         "npu-compiler.tar",

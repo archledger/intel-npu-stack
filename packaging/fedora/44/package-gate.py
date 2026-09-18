@@ -23,9 +23,10 @@ import tomllib
 
 REPO = Path(__file__).resolve().parents[3]
 FEDORA = REPO/'packaging/fedora/44'
-RECIPES = {'firmware': ('intel-npu-stack-firmware', '1.35.0', 'noarch'),
-           'driver': ('intel-npu-driver', '1.35.0', 'x86_64'),
-           'openvino': ('openvino', '2026.2.0', 'x86_64')}
+RECIPES = {'firmware': ('intel-npu-stack-firmware', '1.38.0-1.intelnpu.fc44', 'noarch'),
+           'driver': ('intel-npu-driver', '1.38.0-1.intelnpu.fc44', 'x86_64'),
+           'level-zero': ('oneapi-level-zero', '1.32.0-1.intelnpu.fc44', 'x86_64'),
+           'openvino': ('openvino', '2026.2.0-2.intelnpu.fc44', 'x86_64')}
 
 
 def require(value, message):
@@ -104,7 +105,7 @@ def recipe_names(kind):
     name, _, _ = RECIPES[kind]
     if kind == 'firmware':
         return {name}
-    if kind == 'driver':
+    if kind in ('driver', 'level-zero'):
         return {name, name+'-debuginfo', name+'-debugsource'}
     runtime = {'openvino', 'openvino-plugins', 'intel-npu-compiler'} | {
         'libopenvino-'+frontend+'-frontend' for frontend in ['ir', 'onnx', 'paddle', 'pytorch', 'tensorflow', 'tensorflow-lite']}
@@ -191,7 +192,7 @@ def prepare(args):
 def inspect_binary(rpm, args):
     name, version, arch, digest_algo = query(rpm, '%{NAME}\n%{EPOCHNUM}:%{VERSION}-%{RELEASE}\n%{ARCH}\n%{FILEDIGESTALGO}').splitlines()
     require(name in recipe_names(args.recipe), 'unexpected binary RPM')
-    require(version == '0:'+RECIPES[args.recipe][1]+'-1.intelnpu.fc44', 'RPM version differs')
+    require(version == '0:'+RECIPES[args.recipe][1], 'RPM version differs')
     require(arch == RECIPES[args.recipe][2] and digest_algo == '8', 'RPM architecture/digest algorithm differs')
     for option in ['--scripts', '--triggers', '--filetriggers']:
         require(not run(['rpm', '--noplugins', '-qp', option, rpm], capture_output=True, text=True).stdout.strip(), 'RPM scripts are forbidden')

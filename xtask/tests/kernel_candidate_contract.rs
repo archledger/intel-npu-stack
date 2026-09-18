@@ -24,9 +24,13 @@ fn new_kernel_candidate_preserves_all_provider_and_license_bindings() {
     restored.id = original.id.clone();
     restored.kernel = original.kernel.clone();
     assert_eq!(restored, original);
-    assert!(output.contains(
-        "# source_lock_sha256 = 88f03eb356da6e5f92f84a53fc41c58f370a72ea1f5cf84df8675cc17db9de5e"
-    ));
+    // The source-lock comment must survive retargeting verbatim; its value is
+    // branch state, so derive the expectation from the input profile.
+    let lock_comment = ORIGINAL
+        .lines()
+        .find(|line| line.starts_with("# source_lock_sha256 = "))
+        .expect("base profile carries a source lock comment");
+    assert!(output.contains(lock_comment));
 }
 
 #[test]

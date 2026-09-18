@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 Name:           intel-npu-stack-firmware
-Version:        1.35.0
+Version:        1.38.0
 Release:        1.intelnpu.fc44
 Summary:        Source-locked Intel Lunar Lake NPU firmware override
 
@@ -45,5 +45,7 @@ cp -a ../provider-notices/intel-npu-stack-firmware %{buildroot}%{_licensedir}/
 /usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin
 
 %changelog
+* Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.38.0-1.intelnpu.fc44
+- Upgrade the firmware override to the v1.38.0 Linux NPU driver source pin.
 * Fri Sep 04 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 1.35.0-1.intelnpu.fc44
 - Package only the source-locked Lunar Lake firmware override.

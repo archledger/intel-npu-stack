@@ -128,19 +128,19 @@ fn expected_packages() -> BTreeMap<String, (String, String)> {
     ] {
         packages.insert(
             name.to_owned(),
-            ("0:2026.2.0-1.intelnpu.fc44".to_owned(), "x86_64".to_owned()),
+            ("0:2026.2.0-2.intelnpu.fc44".to_owned(), "x86_64".to_owned()),
         );
     }
     for (name, nevr, arch) in [
-        ("intel-npu-driver", "0:1.35.0-1.intelnpu.fc44", "x86_64"),
+        ("intel-npu-driver", "0:1.38.0-1.intelnpu.fc44", "x86_64"),
         (
             "intel-npu-stack-firmware",
-            "0:1.35.0-1.intelnpu.fc44",
+            "0:1.38.0-1.intelnpu.fc44",
             "noarch",
         ),
-        ("oneapi-level-zero", "0:1.28.6-1.fc44", "x86_64"),
-        ("intel-npu-stack", "0:0.1.0-1.intelnpu.fc44", "noarch"),
-        ("intel-npu-stack-tools", "0:0.1.0-1.intelnpu.fc44", "x86_64"),
+        ("oneapi-level-zero", "0:1.32.0-1.intelnpu.fc44", "x86_64"),
+        ("intel-npu-stack", "0:0.1.0-2.intelnpu.fc44", "noarch"),
+        ("intel-npu-stack-tools", "0:0.1.0-2.intelnpu.fc44", "x86_64"),
     ] {
         packages.insert(name.to_owned(), (nevr.to_owned(), arch.to_owned()));
     }
@@ -174,12 +174,12 @@ fn required_payload(name: &str) -> Vec<String> {
             "/usr/libexec/intel-npu-stack/intel-npu-openvino-probe",
             "/usr/share/intel-npu-stack/installed-manifest.toml",
         ],
-        "intel-npu-driver" => &["/usr/lib64/libze_intel_npu.so.1.35.0"],
+        "intel-npu-driver" => &["/usr/lib64/libze_intel_npu.so.1.38.0"],
         "intel-npu-stack-firmware" => &["/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin"],
         "oneapi-level-zero" => &[
-            "/usr/lib64/libze_loader.so.1.28.6",
-            "/usr/lib64/libze_tracing_layer.so.1.28.6",
-            "/usr/lib64/libze_validation_layer.so.1.28.6",
+            "/usr/lib64/libze_loader.so.1.32.0",
+            "/usr/lib64/libze_tracing_layer.so.1.32.0",
+            "/usr/lib64/libze_validation_layer.so.1.32.0",
         ],
         "openvino" => &[
             "/usr/lib64/libopenvino.so.2026.2.0",
@@ -374,7 +374,7 @@ fn license_provider<'a>(
     let relationship = (
         "openvino(x86-64)".to_owned(),
         "=".to_owned(),
-        "2026.2.0-1.intelnpu.fc44".to_owned(),
+        "2026.2.0-2.intelnpu.fc44".to_owned(),
     );
     require(
         shared_family
@@ -547,13 +547,13 @@ pub fn generate_candidate(
             "level_zero_loader",
             "oneapi-level-zero",
             "level-zero",
-            "/usr/lib64/libze_loader.so.1.28.6",
+            "/usr/lib64/libze_loader.so.1.32.0",
         ),
         (
             "npu_userspace_driver",
             "intel-npu-driver",
             "linux-npu-driver",
-            "/usr/lib64/libze_intel_npu.so.1.35.0",
+            "/usr/lib64/libze_intel_npu.so.1.38.0",
         ),
         (
             "npu_compiler",
@@ -640,11 +640,7 @@ pub fn generate_candidate(
                 },
                 license: LicenseRecord {
                     expression: package.license.clone(),
-                    redistribution: if name == "oneapi-level-zero" {
-                        RedistributionVerdict::ExternalOnly
-                    } else {
-                        RedistributionVerdict::Allowed
-                    },
+                    redistribution: RedistributionVerdict::Allowed,
                     evidence_sha256: digest_bytes(&license_record),
                 },
             },

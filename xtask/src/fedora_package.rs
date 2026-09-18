@@ -17,7 +17,7 @@ const DRIVER_NAME: &str = "intel-npu-driver";
 const DRIVER_ARCH: &str = "x86_64";
 const DRIVER_LICENSE: &str = "/usr/share/licenses/intel-npu-driver/LICENSE.md";
 const DRIVER_SONAME: &str = "/usr/lib64/libze_intel_npu.so.1";
-const DRIVER_VERSIONED: &str = "/usr/lib64/libze_intel_npu.so.1.35.0";
+const DRIVER_VERSIONED: &str = "/usr/lib64/libze_intel_npu.so.1.38.0";
 const DRIVER_UNVERSIONED: &str = "/usr/lib64/libze_intel_npu.so";
 const FIRMWARE_NAME: &str = "intel-npu-stack-firmware";
 const FIRMWARE_ARCH: &str = "noarch";
@@ -26,7 +26,7 @@ const FIRMWARE_NOTICE_MANIFEST: &str = "/usr/share/licenses/intel-npu-stack-firm
 const FIRMWARE_LICENSE: &str = "/usr/share/licenses/intel-npu-stack-firmware/COPYRIGHT";
 const FIRMWARE_PATH: &str = "/usr/lib/firmware/updates/intel/vpu/vpu_40xx_v1.bin";
 const FIRMWARE_PROVIDE: &str = "intel-npu-firmware";
-const FIRMWARE_PROVIDE_VERSION: &str = "1.35.0";
+const FIRMWARE_PROVIDE_VERSION: &str = "1.38.0";
 
 /// Exact Fedora driver/firmware package files to inspect.
 #[derive(Debug, Clone, PartialEq, Eq)]

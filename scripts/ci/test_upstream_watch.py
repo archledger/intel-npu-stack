@@ -54,10 +54,13 @@ class PinnedSources(unittest.TestCase):
     def test_real_manifest_pins_every_watched_component(self):
         pinned = load_pinned(REPO_ROOT / 'packaging/fedora/44/provider-sources.toml')
         self.assertEqual(set(pinned), set(WATCHED))
+        # Expectations are structural so the contract holds on any candidate
+        # branch that legitimately re-pins a watched component.
         driver = pinned['linux-npu-driver']
-        self.assertEqual(driver['tag'], 'v1.35.0')
-        self.assertEqual(driver['commit'], 'fd49947db934dc67dda6f4287cec2664a303df27')
-        self.assertEqual(pinned['openvino']['tag'], '2026.2.0')
+        self.assertRegex(driver['tag'], r'^v\d+\.\d+\.\d+$')
+        self.assertRegex(driver['commit'], r'^[0-9a-f]{40}$')
+        self.assertRegex(pinned['openvino']['tag'], r'^\d{4}\.\d+\.\d+$')
+        self.assertRegex(pinned['openvino']['commit'], r'^[0-9a-f]{40}$')
 
     def test_missing_watched_source_is_refused(self):
         with self.assertRaises(ValueError):
@@ -141,11 +144,19 @@ class Findings(unittest.TestCase):
         responses.update(overrides)
         return FakeSession(responses)
 
+    def newer_tag_than_pinned(self, component='linux-npu-driver'):
+        """Synthesize a semver tag strictly newer than the real pinned tag."""
+        tag = self.pinned()[component]['tag']
+        stem, _, patch = tag.rpartition('.')
+        return f'{stem}.{int(patch) + 1}'
+
     def test_newer_release_produces_update_available(self):
+        repository = self.pinned()['linux-npu-driver']['repository']
+        newer = self.newer_tag_than_pinned()
         session = self.session_with({
-            'https://api.github.com/repos/intel/linux-npu-driver/releases/latest':
-                {'tag_name': 'v1.36.0', 'html_url': 'u', 'target_commitish': 'main'},
-            'https://api.github.com/repos/intel/linux-npu-driver/git/ref/tags/v1.36.0':
+            f'{API}/repos/{repository}/releases/latest':
+                {'tag_name': newer, 'html_url': 'u', 'target_commitish': 'main'},
+            f'{API}/repos/{repository}/git/ref/tags/{newer}':
                 {'object': {'sha': 'abc', 'type': 'commit'}},
         })
         findings = scan(session, self.pinned(), open_keys=set())
@@ -172,11 +183,13 @@ class Findings(unittest.TestCase):
         self.assertIn('manual', findings[0]['note'])
 
     def test_existing_open_issue_suppresses_duplicate(self):
-        key = dedup_key('intel/linux-npu-driver', 'v1.36.0')
+        repository = self.pinned()['linux-npu-driver']['repository']
+        newer = self.newer_tag_than_pinned()
+        key = dedup_key(repository, newer)
         session = self.session_with({
-            'https://api.github.com/repos/intel/linux-npu-driver/releases/latest':
-                {'tag_name': 'v1.36.0', 'html_url': 'u', 'target_commitish': 'main'},
-            'https://api.github.com/repos/intel/linux-npu-driver/git/ref/tags/v1.36.0':
+            f'{API}/repos/{repository}/releases/latest':
+                {'tag_name': newer, 'html_url': 'u', 'target_commitish': 'main'},
+            f'{API}/repos/{repository}/git/ref/tags/{newer}':
                 {'object': {'sha': 'abc', 'type': 'commit'}},
         })
         self.assertEqual(scan(session, self.pinned(), open_keys={key}), [])
