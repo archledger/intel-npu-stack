@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tomllib
 import urllib.error
@@ -24,6 +25,10 @@ TAGS = ('linux-npu-driver', 'openvino', 'level-zero', 'npu-compiler')
 
 KEY = re.compile(r'^upstream:(?P<repository>[^:\s]+):(?P<tag>[^:\s]+)$')
 BODY_FIELD = re.compile(r'^- (?P<name>[A-Za-z ]+): (?P<value>\S.*)$')
+MANUAL_COMPLETION = ('automated preparation stopped; manual completion required: '
+                     'finish the pin on a trusted offline host with the source cache '
+                     '(xtask hash-cached-source + bundle-sources) and record the '
+                     'canonical digests and gitlink decisions by hand')
 
 
 class _Response:
@@ -107,7 +112,8 @@ def load_lock_source(text, component):
             source = {'kind': record.get('kind', '').strip('"'),
                       'tag': record.get('tag', '').strip('"') or None,
                       'commit': record.get('commit', '').strip('"'),
-                      'tag_object': record.get('tag_object', '').strip('"') or None}
+                      'tag_object': record.get('tag_object', '').strip('"') or None,
+                      'archive_sha256': record.get('archive_sha256', '').strip('"') or None}
             if not source['commit']:
                 raise ValueError(f'{component} entry has no pinned commit')
             return source
@@ -122,6 +128,74 @@ def _replace_or_remove(lines, index, key, value):
         lines[index] = f'{key} = "{value}"'
 
 
+def component_gitlinks(text, component):
+    """The gitlink stanzas owned by one component's source block."""
+    for block in _blocks(text)[1:]:
+        if f'name = "{component}"' not in _own_scalars(block):
+            continue
+        links = []
+        for stanza in block.split('[[sources.gitlinks]]')[1:]:
+            record = {}
+            for line in stanza.splitlines():
+                match = re.match(r'^(path|commit|disposition|source) = "(.+)"$', line)
+                if match:
+                    record[match.group(1)] = match.group(2)
+            if 'path' in record and 'commit' in record:
+                links.append(record)
+        return links
+    raise ValueError(f'unknown provider source: {component}')
+
+
+def update_gitlink_stanza(text, component, path, commit):
+    """Rewrite exactly one gitlink stanza commit inside the component's block."""
+    blocks = _blocks(text)
+    for position, block in enumerate(blocks[1:], start=1):
+        if f'name = "{component}"' not in _own_scalars(block):
+            continue
+        stanzas = block.split('[[sources.gitlinks]]')
+        for index, stanza in enumerate(stanzas[1:], start=1):
+            if f'path = "{path}"' not in stanza:
+                continue
+            lines = stanza.splitlines()
+            for offset, line in enumerate(lines):
+                if line.startswith('commit = '):
+                    lines[offset] = f'commit = "{commit}"'
+                    stanzas[index] = '\n'.join(lines) + ('\n' if stanza.endswith('\n') else '')
+                    blocks[position] = '[[sources.gitlinks]]'.join(stanzas)
+                    return '[[sources]]'.join(blocks)
+            raise ValueError(f'gitlink {path} stanza has no commit line')
+        raise ValueError(f'gitlink {path} not found under {component}')
+    raise ValueError(f'unknown provider source: {component}')
+
+
+def apply_commit_pin(text, component, commit, archive_sha256):
+    """Re-pin a tagless `git_commit` record's commit and canonical digest."""
+    current = load_lock_source(text, component)
+    if current['kind'] != 'git_commit' or current['tag']:
+        raise ValueError(f'{component} is not a tagless git_commit record')
+    if current['commit'] == commit:
+        return text, False
+    blocks = _blocks(text)
+    for position, block in enumerate(blocks[1:], start=1):
+        if f'name = "{component}"' not in _own_scalars(block):
+            continue
+        scalars = _own_scalars(block)
+        indexes = {}
+        for index, line in enumerate(scalars):
+            for key in ('commit', 'archive_sha256'):
+                if line.startswith(key + ' = '):
+                    indexes[key] = index
+        for key in ('commit', 'archive_sha256'):
+            if key not in indexes:
+                raise ValueError(f'{component} entry lacks a {key} line')
+        scalars[indexes['commit']] = f'commit = "{commit}"'
+        scalars[indexes['archive_sha256']] = f'archive_sha256 = "{archive_sha256}"'
+        rebuilt = '\n'.join(scalars) + block[len('\n'.join(_own_scalars(block))):]
+        blocks[position] = rebuilt if rebuilt.endswith('\n') else rebuilt + '\n'
+        return '[[sources]]'.join(blocks), True
+    raise ValueError(f'unknown provider source: {component}')
+
+
 def apply_pin(text, component, tag, commit, tag_object, archive_sha256):
     """Return (updated_text, changed) with only the component's pin lines edited."""
     blocks = _blocks(text)
@@ -130,7 +204,8 @@ def apply_pin(text, component, tag, commit, tag_object, archive_sha256):
             continue
         lines = block.splitlines()
         current = load_lock_source(text, component)
-        if current['commit'] == commit and current['tag'] == tag:
+        if (current['commit'] == commit and current['tag'] == tag
+                and current.get('archive_sha256') == archive_sha256):
             return text, False
         scalars = _own_scalars(block)
         indexes = {}
@@ -170,6 +245,80 @@ def archive_url(source_url, commit):
     return f'https://codeload.github.com/{repository}/tar.gz/{commit}'
 
 
+def _xtask_hash(xtask, clone, name, commit, scratch):
+    """Canonical deterministic bundle digest via the locked xtask tooling."""
+    archive = (Path(scratch) / f'{name}-{commit}.tar').resolve()
+    result = subprocess.run(
+        [str(Path(xtask).resolve()), 'hash-cached-source',
+         '--repository', str(Path(clone).resolve()),
+         '--name', name, '--commit', commit, '--output', str(archive)],
+        check=True, capture_output=True, text=True)
+    return result.stdout.split()[0]
+
+
+def _git_ls_tree(clone, commit, path):
+    """The gitlink SHA at one path, or None when the path left the tree."""
+    result = subprocess.run(
+        ['git', '-C', str(clone), 'ls-tree', commit, '--', path],
+        check=True, capture_output=True, text=True)
+    line = result.stdout.strip()
+    if not line:
+        return None
+    mode, kind, sha = line.split()[:3]
+    if kind != 'commit':
+        raise ValueError(f'{path} in the new tag is a {kind}, not a bundled gitlink')
+    return sha
+
+
+def _clone_at(url, commit, scratch):
+    """A no-checkout clone with one upstream commit fetched by SHA."""
+    target = (Path(scratch) / f'clone-{commit[:12]}').resolve()
+    subprocess.run(['git', 'clone', '--quiet', '--no-checkout', url, str(target)],
+                   check=True)
+    subprocess.run(['git', '-C', str(target), 'fetch', '--quiet', 'origin', commit],
+                   check=True)
+    return str(target)
+
+
+def prepare_update(text, finding, source_clone, xtask, scratch, tag_object=None,
+                   _hash=None, _ls_tree=_git_ls_tree, _clone=_clone_at):
+    """One complete, buildable pin update.
+
+    Computes the component's canonical archive digest with the locked xtask
+    tooling, then walks the component's gitlinks: SHA-only moves of bundled
+    gitlinks re-pin their companion source records canonically; system
+    gitlinks and structural gitlink changes refuse with manual-completion
+    instructions instead of producing a non-buildable lock.
+    """
+    if _hash is None:
+        def _canonical_hash(clone, name, commit, scratch):
+            return _xtask_hash(xtask, clone, name, commit, scratch)
+    else:
+        _canonical_hash = _hash
+    component = finding['component']
+    digest = _canonical_hash(source_clone, component, finding['latest_commit'], scratch)
+    text, _ = apply_pin(text, component, finding['latest_tag'],
+                        finding['latest_commit'], tag_object, digest)
+    for link in component_gitlinks(text, component):
+        new_commit = _ls_tree(source_clone, finding['latest_commit'], link['path'])
+        if new_commit is None:
+            raise ValueError(
+                f'gitlink {link["path"]} left the {component} tree; {MANUAL_COMPLETION}')
+        if new_commit == link['commit']:
+            continue
+        if link.get('disposition') != 'bundled':
+            raise ValueError(
+                f'system gitlink {link["path"]} moved to {new_commit}; '
+                f'{MANUAL_COMPLETION}')
+        record = link.get('source')
+        url = _source_url(text, record)
+        record_clone = _clone(url, new_commit, scratch)
+        record_digest = _canonical_hash(record_clone, record, new_commit, scratch)
+        text = update_gitlink_stanza(text, component, link['path'], new_commit)
+        text, _ = apply_commit_pin(text, record, new_commit, record_digest)
+    return text
+
+
 def download_digest(session, url, limit=MAX_DOWNLOAD):
     """Stream one bounded download and return its SHA256 hex digest."""
     import io
@@ -198,8 +347,16 @@ def main(argv=None):
                         default=Path(__file__).resolve().parents[2] / 'profiles')
     parser.add_argument('--resolved-tag', help='JSON from live tag re-resolution '
                         '{"commit": .., "tag_object": ..} guarding against retagging')
-    parser.add_argument('--archive-digest', help='pre-computed archive digest; '
-                        'the download is skipped when given and matching')
+    parser.add_argument('--source-clone', type=Path, help='no-checkout clone of the '
+                        'component at the new commit; enables canonical digest '
+                        'computation and gitlink re-pinning')
+    parser.add_argument('--xtask', type=Path, help='built xtask binary used for '
+                        'canonical archive hashing')
+    parser.add_argument('--scratch', type=Path, help='work directory for archives '
+                        'and auxiliary clones')
+    parser.add_argument('--archive-digest', help='pre-computed CANONICAL archive '
+                        'digest; skips xtask hashing but leaves gitlinks to manual '
+                        'completion')
     parser.add_argument('--output', type=Path, help='write the updated lock here')
     args = parser.parse_args(argv)
     finding = finding_from_issue(args.issue_title, args.issue_body)
@@ -209,20 +366,27 @@ def main(argv=None):
               ', '.join(path.name for path in blocked), file=sys.stderr)
         return 3
     text = args.lock.read_text()
-    session = HttpSession()
     resolution = json.loads(Path(args.resolved_tag).read_text()) if args.resolved_tag else None
     if resolution is not None and resolution.get('commit') != finding['latest_commit']:
         print('refusing: upstream tag no longer resolves to the recorded commit',
               file=sys.stderr)
         return 4
     tag_object = resolution.get('tag_object') if resolution else None
-    digest = args.archive_digest
-    if not digest:
-        digest = download_digest(session, archive_url(
-            _source_url(text, finding['component']), finding['latest_commit']))
-    updated, changed = apply_pin(text, finding['component'], finding['latest_tag'],
-                                 finding['latest_commit'], tag_object, digest)
-    if not changed:
+    if args.source_clone is not None and args.xtask is not None and args.scratch is not None:
+        args.scratch.mkdir(parents=True, exist_ok=True)
+        updated = prepare_update(text, finding, args.source_clone, args.xtask,
+                                 args.scratch, tag_object=tag_object)
+    elif args.archive_digest:
+        updated, _ = apply_pin(text, finding['component'], finding['latest_tag'],
+                               finding['latest_commit'], tag_object,
+                               args.archive_digest)
+    else:
+        print('refusing: canonical hashing inputs are required (--source-clone, '
+              '--xtask, --scratch) or an explicitly supplied canonical '
+              '--archive-digest; codeload digests are not lock digests',
+              file=sys.stderr)
+        return 5
+    if updated == text:
         print(json.dumps({'status': 'already-current', 'component': finding['component']}))
         return 0
     if args.output:
