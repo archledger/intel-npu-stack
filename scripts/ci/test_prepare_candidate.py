@@ -284,6 +284,38 @@ class CanonicalPreparation(unittest.TestCase):
                     _ls_tree=lambda clone, commit, path: ls_tree[path],
                     _clone=lambda *a: '/ignored')
 
+    def test_prepare_updates_openvino_disabled_gitlinks_without_records(self):
+        import tempfile, tomllib
+        ls_tree = {
+            'src/plugins/intel_cpu/thirdparty/ComputeLibrary': '7' * 40,
+            'src/plugins/intel_cpu/thirdparty/kleidiai': '8' * 40,
+        }
+        def fake_ls_tree(clone, commit, path):
+            return ls_tree.get(path, before[path])
+        original = self.lock.read_text()
+        before = {g['path']: g['commit'] for g in
+                  next(s for s in tomllib.loads(original)['sources']
+                       if s['name'] == 'openvino')['gitlinks']}
+        finding = {'component': 'openvino', 'repository': 'openvinotoolkit/openvino',
+                   'pinned_tag': '2026.2.0', 'pinned_commit': '5' * 40,
+                   'latest_tag': '2026.4.0', 'latest_commit': '9' * 40}
+        clones = []
+        with tempfile_dir() as scratch:
+            updated = prepare_update(
+                original, finding, source_clone='/clone', xtask='/xtask',
+                scratch=scratch, _hash=lambda *a: 'd' * 64,
+                _ls_tree=fake_ls_tree,
+                _clone=lambda url, commit, scratch: (clones.append((url, commit)), '/ignored')[1])
+        after = tomllib.loads(updated)
+        ov = next(s for s in after['sources'] if s['name'] == 'openvino')
+        self.assertEqual(ov['tag'], '2026.4.0')
+        by_path = {g['path']: g['commit'] for g in ov['gitlinks']}
+        self.assertEqual(by_path['src/plugins/intel_cpu/thirdparty/ComputeLibrary'], '7' * 40)
+        self.assertEqual(by_path['src/plugins/intel_cpu/thirdparty/kleidiai'], '8' * 40)
+        # Disabled moves must not open auxiliary clones; unchanged gitlinks stay.
+        self.assertEqual(clones, [])
+        self.assertEqual(by_path['thirdparty/gflags/gflags'], before['thirdparty/gflags/gflags'])
+
 
 def tempfile_dir():
     import tempfile

@@ -306,7 +306,12 @@ def prepare_update(text, finding, source_clone, xtask, scratch, tag_object=None,
                 f'gitlink {link["path"]} left the {component} tree; {MANUAL_COMPLETION}')
         if new_commit == link['commit']:
             continue
-        if link.get('disposition') != 'bundled':
+        disposition = link.get('disposition')
+        if disposition == 'disabled':
+            # Inert by build option; only the recorded stanza commit moves.
+            text = update_gitlink_stanza(text, component, link['path'], new_commit)
+            continue
+        if disposition != 'bundled':
             raise ValueError(
                 f'system gitlink {link["path"]} moved to {new_commit}; '
                 f'{MANUAL_COMPLETION}')
