@@ -48,7 +48,7 @@ class ThrowawayKey:
                            env=self.env, check=True, stdout=stream)
 
     def sign(self, path, output=None):
-        subprocess.run(['gpg', '--batch', '--pinentry-mode', 'loopback',
+        subprocess.run(['gpg', '--batch', '--yes', '--pinentry-mode', 'loopback',
                         '--passphrase', '', '--armor', '--detach-sign',
                         '--local-user', self.fingerprint,
                         '--output', str(output or (str(path) + '.sig')), str(path)],
@@ -108,40 +108,43 @@ def build_tree(root, key):
     repo_profile = root.parent / 'repo-profile.toml'
     write(repo_profile, profile_text('0' * 64))
     write(root / 'profile.toml', profile_text(sha(rpm)))
+    repomd = root / 'repodata/repomd.xml'
+    write(repomd, '<repomd/>\n')
+    key.sign(repomd, output=str(repomd) + '.asc')
     release = {
-        'schema_version': 1, 'stack_release': RELEASE,
+        'schema_version': 1, 'stack_release': RELEASE, 'test_only': False,
         'profile_sha256': sha(root / 'profile.toml'),
         'repository': {'id': 'intel-npu-stack-' + RELEASE,
                        'base_url': f'https://example.invalid/intel-npu-stack/{RELEASE}/fedora/44/x86_64/',
-                       'repomd_sha256': ''},
+                       'repomd_sha256': sha(root / 'repodata/repomd.xml')},
         'packages': [{'name': 'verifier-fixture', 'nevr': '0:1.0.0-1',
                       'arch': 'noarch', 'filename': rpm.name,
                       'sha256': sha(rpm), 'role': 'runtime'}],
     }
     write(root / 'release.json', json.dumps(release, indent=2, sort_keys=True) + '\n')
     key.sign(root / 'release.json')
-    repomd = root / 'repodata/repomd.xml'
-    write(repomd, '<repomd/>\n')
-    key.sign(repomd, output=str(repomd) + '.asc')
     for relative in ['evidence/spdx/doc.spdx.json', 'evidence/notices/LICENSE',
                      'evidence/rollback/rollback-index.json']:
         write(root / relative, '{}\n')
     files = [p for p in sorted(root.rglob('*')) if p.is_file()
-             and p.name not in {'checksums.sha256', 'assembly-manifest.json'}]
+             and p.name not in {'checksums.sha256', 'checksums.sha256.sig',
+                                'assembly-manifest.json'}]
     write(root / 'checksums.sha256',
           '\n'.join(f'{sha(p)}  {p.relative_to(root).as_posix()}' for p in files) + '\n')
+    key.sign(root / 'checksums.sha256')
     manifest = {
         'passed': True, 'test_only': False, 'release_ready': False,
         'package_count': 1,
         'output_digests': {p.relative_to(root).as_posix(): sha(p)
                            for p in sorted(root.rglob('*')) if p.is_file()
-                           and p.name != 'assembly-manifest.json'},
+                           and p.name not in {'assembly-manifest.json',
+                                              'checksums.sha256.sig'}},
     }
     write(root / 'assembly-manifest.json', json.dumps(manifest, indent=2) + '\n')
     return root
 
 
-def reseal(root, *, checksums=True):
+def reseal(root, *, checksums=True, key=None):
     """Recompute the assembly output digests (and optionally the checksums
     file) after an intended mutation so later gates are exercised. The
     checksums file is written before the digests are recorded, mirroring the
@@ -149,14 +152,18 @@ def reseal(root, *, checksums=True):
     root = Path(root)
     if checksums:
         files = [p for p in sorted(root.rglob('*')) if p.is_file()
-                 and p.name not in {'checksums.sha256', 'assembly-manifest.json'}]
+                 and p.name not in {'checksums.sha256', 'checksums.sha256.sig',
+                                    'assembly-manifest.json'}]
         (root / 'checksums.sha256').write_text(
             '\n'.join(f'{sha(p)}  {p.relative_to(root).as_posix()}' for p in files) + '\n')
+        if key is not None:
+            key.sign(root / 'checksums.sha256')
     manifest_path = root / 'assembly-manifest.json'
     manifest = json.loads(manifest_path.read_text())
     manifest['output_digests'] = {p.relative_to(root).as_posix(): sha(p)
                                   for p in sorted(root.rglob('*')) if p.is_file()
-                                  and p.name != 'assembly-manifest.json'}
+                                  and p.name not in {'assembly-manifest.json',
+                                                     'checksums.sha256.sig'}}
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
 
 
@@ -224,7 +231,7 @@ class PublicationVerifier(unittest.TestCase):
         text = (tree / 'profile.toml').read_text().replace(
             'status = "qualified"', 'status = "candidate"')
         (tree / 'profile.toml').write_text(text)
-        reseal(tree)
+        reseal(tree, key=self.key)
         self.refusal(tree, 'shipped profile must be qualified')
 
     def test_test_only_assembly_is_refused(self):
@@ -244,7 +251,7 @@ class PublicationVerifier(unittest.TestCase):
     def test_missing_release_signature_is_refused(self):
         tree = self.copy_tree()
         (tree / 'release.json.sig').unlink()
-        reseal(tree)
+        reseal(tree, key=self.key)
         self.refusal(tree, 'signature is missing')
 
     def test_signature_from_a_different_key_is_refused(self):
@@ -252,19 +259,19 @@ class PublicationVerifier(unittest.TestCase):
         other = ThrowawayKey(Path(self.base) / 'other-keyring')
         (tree / 'release.json.sig').unlink()
         other.sign(tree / 'release.json')
-        reseal(tree)
+        reseal(tree, key=self.key)
         self.refusal(tree, 'not from the pinned release key')
 
     def test_missing_evidence_is_refused(self):
         tree = self.copy_tree()
         shutil.rmtree(tree / 'evidence/rollback')
-        reseal(tree)
+        reseal(tree, key=self.key)
         self.refusal(tree, 'required evidence is missing')
 
     def test_checksums_drift_is_refused(self):
         tree = self.copy_tree()
         (tree / 'evidence/notices/LICENSE').write_text('changed\n')
-        reseal(tree, checksums=False)
+        reseal(tree, checksums=False, key=self.key)
         self.refusal(tree, 'checksums drift')
 
     def test_assembly_output_digest_drift_is_refused(self):
@@ -273,6 +280,48 @@ class PublicationVerifier(unittest.TestCase):
         manifest['output_digests']['profile.toml'] = '0' * 64
         (tree / 'assembly-manifest.json').write_text(json.dumps(manifest))
         self.refusal(tree, 'assembly output digest drift')
+
+    def test_signed_test_only_metadata_is_refused(self):
+        tree = self.copy_tree()
+        release = json.loads((tree / 'release.json').read_text())
+        release['test_only'] = True
+        (tree / 'release.json').write_text(json.dumps(release))
+        self.refusal(tree, 'production composition')
+
+    def test_repomd_binding_mismatch_is_refused(self):
+        tree = self.copy_tree()
+        release = json.loads((tree / 'release.json').read_text())
+        release['repository']['repomd_sha256'] = '0' * 64
+        (tree / 'release.json').write_text(json.dumps(release))
+        self.refusal(tree, 'repository metadata bytes')
+
+    def test_manifest_path_traversal_is_refused(self):
+        tree = self.copy_tree()
+        manifest = json.loads((tree / 'assembly-manifest.json').read_text())
+        manifest['output_digests']['../outside'] = '0' * 64
+        (tree / 'assembly-manifest.json').write_text(json.dumps(manifest))
+        self.refusal(tree, 'unsafe relative path')
+
+    def test_extra_package_is_refused(self):
+        tree = self.copy_tree()
+        extra = next((tree / 'packages').glob('*.rpm'))
+        shutil.copyfile(extra, tree / 'packages/extra.rpm')
+        reseal(tree, key=self.key)
+        self.refusal(tree, 'release metadata inventory')
+
+    def test_malformed_profile_is_refused_cleanly(self):
+        tree = self.copy_tree()
+        self.repo_profile.write_text('not = = toml\n')
+        try:
+            self.refusal(tree, 'malformed release input')
+        finally:
+            self.repo_profile.write_text(profile_text('0' * 64))
+
+    def test_missing_checksums_signature_is_refused(self):
+        tree = self.copy_tree()
+        reseal(tree, key=self.key)
+        (tree / 'checksums.sha256.sig').unlink()
+        self.refusal(tree, 'checksums signature is missing')
 
     def test_profile_metadata_mismatch_is_refused(self):
         tree = self.copy_tree()

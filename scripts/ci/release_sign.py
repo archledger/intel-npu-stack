@@ -278,6 +278,11 @@ def main(argv=None):
         require('[GNUPG:] VALIDSIG ' + args.fingerprint + ' ' in verify,
                 'final release metadata signature did not verify')
 
+        run(['gpg', '--batch', '--pinentry-mode', 'loopback',
+             '--passphrase', passphrase, '--armor', '--detach-sign',
+             '--local-user', args.fingerprint,
+             '--output', str(final_tree / 'checksums.sha256.sig'),
+             str(final_tree / 'checksums.sha256')], env=env)
         result = {
             'passed': True, 'test_only': False, 'release_ready': False,
             'scope': 'production release signing and deterministic composition from '

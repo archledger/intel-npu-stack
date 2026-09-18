@@ -251,6 +251,7 @@ def assemble(input_root, output, base_url, repository_id, release, production=Fa
     release_manifest = {
         'schema_version': 1,
         'stack_release': release,
+        'test_only': not production,
         'profile_sha256': profile_sha,
         'repository': {'id': repository_id, 'base_url': base_url,
                        'repomd_sha256': identity['repomd_sha256']},

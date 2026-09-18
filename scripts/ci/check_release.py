@@ -44,6 +44,14 @@ def sha(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def safe_relative(relative):
+    require(isinstance(relative, str) and relative
+            and not relative.startswith('/') and '\\' not in relative
+            and all(part not in {'', '.', '..'} for part in relative.split('/')),
+            'unsafe relative path in release evidence: ' + repr(relative))
+    return relative
+
+
 def load_json(path):
     value = json.loads(Path(path).read_text())
     require(isinstance(value, dict), 'unexpected JSON shape in ' + str(path))
@@ -110,6 +118,7 @@ def verify_tree_digests(tree, manifest):
     recorded = manifest.get('output_digests')
     require(isinstance(recorded, dict) and recorded, 'assembly records no output digests')
     for relative, expected in recorded.items():
+        safe_relative(relative)
         path = tree / relative
         require(path.is_file() and not path.is_symlink(),
                 'assembly output is missing: ' + relative)
@@ -121,6 +130,8 @@ def verify_release_metadata(tree):
     require(release_path.is_file(), 'release metadata is missing')
     release = load_json(release_path)
     require(release.get('schema_version') == 1, 'unsupported release schema version')
+    require(release.get('test_only') is False,
+            'signed release metadata must record a production composition')
     packages = release.get('packages')
     require(isinstance(packages, list) and packages, 'release metadata lists no packages')
     for entry in packages:
@@ -141,6 +152,10 @@ def verify_release_metadata(tree):
     require(base_url.startswith('https://') and base_url.endswith('/')
             and '?' not in base_url and '#' not in base_url,
             'release base URL must be an immutable HTTPS location')
+    repomd = tree / 'repodata' / 'repomd.xml'
+    require(repomd.is_file() and not repomd.is_symlink(), 'signed repomd is missing')
+    require(repository.get('repomd_sha256') == sha(repomd),
+            'release metadata does not bind the repository metadata bytes')
     return release
 
 
@@ -153,13 +168,15 @@ def verify_checksums(tree):
         if match is None:
             raise ReleaseRefused('malformed checksums line')
         digest, relative = match.group(1), match.group(2)
+        safe_relative(relative)
         require(relative not in recorded, 'duplicate checksums entry: ' + relative)
         recorded[relative] = digest
     for path in sorted(tree.rglob('*')):
         if not path.is_file():
             continue
         relative = path.relative_to(tree).as_posix()
-        if relative in {'checksums.sha256', 'assembly-manifest.json'}:
+        if relative in {'checksums.sha256', 'checksums.sha256.sig',
+                        'assembly-manifest.json'}:
             continue
         require(relative in recorded, 'file missing from checksums: ' + relative)
         require(sha(path) == recorded[relative], 'checksums drift: ' + relative)
@@ -189,7 +206,9 @@ def gpg_verify(keyring, public_key, signature, signed, expected_fingerprint):
             raise ReleaseRefused('signature is not from the pinned release key: '
                                  + str(signature))
         raise ReleaseRefused('signature verification failed: ' + str(signature))
-    require('[GNUPG:] VALIDSIG ' + expected_fingerprint + ' ' in result.stdout,
+    valid = [line.split() for line in result.stdout.splitlines()
+             if line.startswith('[GNUPG:] VALIDSIG ')]
+    require(any(fields[-1] == expected_fingerprint for fields in valid),
             'signature is not from the pinned release key: ' + str(signature))
 
 
@@ -200,6 +219,11 @@ def verify_signatures(tree, production_key, fingerprint):
         require(release_signature.is_file(), 'detached release metadata signature is missing')
         gpg_verify(keyring, production_key, release_signature,
                    tree / 'release.json', fingerprint)
+        checksums_signature = tree / 'checksums.sha256.sig'
+        require(checksums_signature.is_file(),
+                'detached checksums signature is missing')
+        gpg_verify(keyring, production_key, checksums_signature,
+                   tree / 'checksums.sha256', fingerprint)
         repomd = tree / 'repodata' / 'repomd.xml'
         repomd_signature = tree / 'repodata' / 'repomd.xml.asc'
         require(repomd.is_file() and repomd_signature.is_file(),
@@ -207,9 +231,14 @@ def verify_signatures(tree, production_key, fingerprint):
         gpg_verify(keyring, production_key, repomd_signature, repomd, fingerprint)
 
 
-def verify_rpm_signatures(tree, production_key, fingerprint):
+def verify_rpm_signatures(tree, production_key, fingerprint, release):
     packages = sorted((tree / 'packages').glob('*.rpm'))
     require(packages, 'no release packages found')
+    expected = {entry['filename'] for entry in release['packages']}
+    require({package.name for package in packages} == expected,
+            'package files do not match the release metadata inventory')
+    require(len(packages) == len(release['packages']),
+            'package count does not match the release metadata')
     with tempfile.TemporaryDirectory() as dbpath:
         subprocess.run(['rpm', '--dbpath', dbpath, '--import', str(production_key)],
                        check=True, capture_output=True)
@@ -219,8 +248,8 @@ def verify_rpm_signatures(tree, production_key, fingerprint):
                 capture_output=True, text=True)
             lines = {line.strip() for line in result.stdout.splitlines()}
             signature = re.compile(
-                r'Header OpenPGP V4 EdDSA(?:/SHA\d+)? signature, key fingerprint: '
-                + fingerprint.lower() + r': OK')
+                r'Header OpenPGP V4 (?:RSA/SHA256|RSA/SHA384|RSA/SHA512|EdDSA/SHA512) '
+                r'signature, key fingerprint: ' + fingerprint.lower() + r': OK')
             require(result.returncode == 0
                     and any(signature.fullmatch(line) for line in lines)
                     and {'Header SHA256 digest: OK', 'Payload SHA256 digest: OK'} <= lines,
@@ -229,6 +258,16 @@ def verify_rpm_signatures(tree, production_key, fingerprint):
 
 
 def check_release(tree, profile, output, production_key=None):
+    try:
+        return _check_release(tree, profile, output, production_key)
+    except ReleaseRefused:
+        raise
+    except (tomllib.TOMLDecodeError, json.JSONDecodeError, OSError,
+            subprocess.CalledProcessError) as error:
+        raise ReleaseRefused('malformed release input: ' + str(error)) from error
+
+
+def _check_release(tree, profile, output, production_key=None):
     tree = Path(tree).resolve(strict=True)
     require(not Path(output).exists(), 'publication manifest already exists')
     release = verify_release_metadata(tree)
@@ -253,7 +292,7 @@ def check_release(tree, profile, output, production_key=None):
     require(fingerprint is not None and FINGERPRINT_RE.fullmatch(fingerprint),
             'cannot read the pinned production fingerprint')
     verify_signatures(tree, production_key, fingerprint)
-    rpm_count = verify_rpm_signatures(tree, production_key, fingerprint)
+    rpm_count = verify_rpm_signatures(tree, production_key, fingerprint, release)
     result = {
         'passed': True,
         'publication_ready': True,
@@ -285,6 +324,10 @@ def main(argv=None):
         result = check_release(args.release_tree, args.profile, args.output)
     except ReleaseRefused as error:
         parser.exit(1, 'Publication refused: ' + str(error) + '\n')
+    except (tomllib.TOMLDecodeError, json.JSONDecodeError, OSError,
+            subprocess.CalledProcessError) as error:
+        parser.exit(1, 'Publication refused: malformed release input: '
+                    + str(error) + '\n')
     print(json.dumps({'passed': True, 'publication_ready': True,
                       'release_version': result['release_version'],
                       'package_count': result['package_count'],
