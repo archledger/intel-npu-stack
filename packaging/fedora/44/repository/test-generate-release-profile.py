@@ -245,6 +245,23 @@ class GenerationContract(Workspace):
         message = self.refusal(identity=identity)
         self.assertIn('passed', message)
 
+    def test_production_identity_is_accepted_and_preserves_its_class(self):
+        identity = identity_record()
+        identity['test_only'] = False
+        identity['production_ready'] = True
+        record_path = self.base/'generation.json'
+        root = self.make_inputs(identity=identity)
+        self.generate_ok(root, record=record_path)
+        record = json.loads(record_path.read_text())
+        self.assertTrue(record['passed'])
+        self.assertFalse(record['test_only'])
+
+    def test_incomplete_production_identity_is_refused(self):
+        identity = identity_record()
+        identity['test_only'] = False
+        message = self.refusal(identity=identity)
+        self.assertIn('production-ready', message)
+
     def test_invalid_identity_digest_is_refused(self):
         identity = identity_record()
         identity['packages'][0]['signed_sha256'] = 'not-a-digest'
