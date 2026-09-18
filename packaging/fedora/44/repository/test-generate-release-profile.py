@@ -245,16 +245,39 @@ class GenerationContract(Workspace):
         message = self.refusal(identity=identity)
         self.assertIn('passed', message)
 
-    def test_production_identity_is_accepted_and_preserves_its_class(self):
+    def qualified_text(self):
+        return candidate_text().replace(
+            'status = "candidate"', 'status = "qualified"') + (
+            '\n[qualification]\n'
+            'evidence_id = "synthetic-evidence"\n'
+            'evidence_sha256 = "' + 'a' * 64 + '"\n'
+            'qualified_at = "2026-09-18T00:00:00Z"\n'
+            'hardware_class = "synthetic"\ntest_suite_version = "1"\n')
+
+    def production_identity(self):
         identity = identity_record()
         identity['test_only'] = False
         identity['production_ready'] = True
+        return identity
+
+    def test_production_identity_rewrites_a_qualified_profile(self):
+        identity = self.production_identity()
         record_path = self.base/'generation.json'
-        root = self.make_inputs(identity=identity)
+        root = self.make_inputs(candidate=self.qualified_text(), identity=identity)
         self.generate_ok(root, record=record_path)
         record = json.loads(record_path.read_text())
         self.assertTrue(record['passed'])
         self.assertFalse(record['test_only'])
+        self.assertEqual(record['profile_status'], 'qualified')
+
+    def test_production_identity_refuses_a_candidate_profile(self):
+        identity = self.production_identity()
+        message = self.refusal(identity=identity)
+        self.assertIn('qualified', message)
+
+    def test_test_identity_refuses_a_qualified_profile(self):
+        message = self.refusal(candidate=self.qualified_text())
+        self.assertIn('candidate', message)
 
     def test_incomplete_production_identity_is_refused(self):
         identity = identity_record()

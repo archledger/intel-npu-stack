@@ -62,14 +62,19 @@ def load_identity(path):
     return identity, by_name
 
 
-def rewrite(candidate_bytes, by_name):
+def rewrite(candidate_bytes, by_name, expected_status='candidate'):
     text = candidate_bytes.decode('utf-8')
     try:
         document = tomllib.loads(text)
     except tomllib.TOMLDecodeError as error:
         raise ValueError('candidate profile is not valid TOML: '+str(error)) from error
     require(document.get('schema_version') == 1, 'unsupported candidate schema version')
-    require(document.get('status') == 'candidate', 'only a candidate profile may be rewritten')
+    require(document.get('status') == expected_status,
+            'profile status must be '+expected_status+' for this identity class')
+    if expected_status == 'qualified':
+        evidence = document.get('qualification')
+        require(isinstance(evidence, dict) and evidence.get('evidence_sha256'),
+                'qualified profile requires its qualification evidence record')
     require(document.get('package_manager') == 'rpm', 'candidate is not an rpm profile')
     release = document.get('stack_release')
     require(isinstance(release, str) and RELEASE_VERSION.fullmatch(release),
@@ -129,7 +134,7 @@ def rewrite(candidate_bytes, by_name):
         rewritten = tomllib.loads(output)
     except tomllib.TOMLDecodeError as error:
         raise ValueError('rewritten profile is not valid TOML: '+str(error)) from error
-    require(rewritten.get('status') == 'candidate', 'rewrite changed the profile status')
+    require(rewritten.get('status') == expected_status, 'rewrite changed the profile status')
     rewritten_components = rewritten.get('components')
     if not isinstance(rewritten_components, dict) or not rewritten_components:
         raise ValueError('rewritten profile lost its components')
@@ -156,8 +161,9 @@ def component_records(document, by_name, rewrites):
 
 def generate(candidate, identity_path, output, record):
     identity, by_name = load_identity(identity_path)
+    expected_status = 'candidate' if identity.get('test_only') is True else 'qualified'
     candidate_bytes = candidate.read_bytes()
-    output_bytes, document, rewrites = rewrite(candidate_bytes, by_name)
+    output_bytes, document, rewrites = rewrite(candidate_bytes, by_name, expected_status)
     require(not output.exists(), 'output already exists: '+str(output))
     require(record is None or not record.exists(), 'record already exists: '+str(record))
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -167,6 +173,7 @@ def generate(candidate, identity_path, output, record):
         record.write_text(json.dumps({
             'passed': True,
             'test_only': identity.get('test_only') is True,
+            'profile_status': expected_status,
             'scope': 'candidate-to-release profile digest rewrite from the passed '
                      'signed-identity inventory; no build, signing or qualification',
             'schema_version': 1,
