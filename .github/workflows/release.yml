@@ -1,0 +1,122 @@
+name: Release
+
+# Protected publication (design section 11): consumes previously built and
+# qualified artifact digests, signs and composes the exact release tree with
+# the production key from the protected `release` environment, verifies every
+# gate, and publishes the release assets. It never rebuilds provider packages
+# and cannot run without a maintainer approval on the protected environment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      inputs_url:
+        description: 'HTTPS URL of the prepared release-inputs tarball'
+        required: true
+      inputs_sha256:
+        description: 'SHA-256 of that tarball'
+        required: true
+      release_version:
+        description: 'Release version (numeric triple)'
+        required: true
+      base_url:
+        description: 'Immutable versioned HTTPS base URL for the published assets'
+        required: true
+      profile:
+        description: 'Qualified profile path in this repository'
+        required: true
+        default: 'profiles/fedora/44/lunar-lake-x86_64.toml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.release_version }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Sign, verify and publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: release
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+      RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
+      RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
+      GH_TOKEN: ${{ github.token }}
+      INPUTS_URL: ${{ inputs.inputs_url }}
+      INPUTS_SHA256: ${{ inputs.inputs_sha256 }}
+      RELEASE_VERSION: ${{ inputs.release_version }}
+      BASE_URL: ${{ inputs.base_url }}
+      PROFILE: ${{ inputs.profile }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install signing and repository tools
+        run: |
+          set -euo pipefail
+          bash scripts/ci/install-fedora-tools.sh
+          dnf5 --assumeyes --setopt=install_weak_deps=False install createrepo_c
+      - name: Verify the release version and inputs digest shape
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "release version must be a numeric triple" >&2; exit 2; }
+          [[ "$INPUTS_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "inputs digest must be lowercase SHA256" >&2; exit 2; }
+          [[ "$INPUTS_URL" == https://* ]] || { echo "inputs URL must be HTTPS" >&2; exit 2; }
+          [[ "$BASE_URL" == https://* ]] || { echo "base URL must be HTTPS" >&2; exit 2; }
+          [[ "$RELEASE_SIGNING_FINGERPRINT" =~ ^[0-9A-F]{40}$ ]] || { echo "RELEASE_SIGNING_FINGERPRINT repository variable is required" >&2; exit 2; }
+      - name: Download and verify the prepared release inputs
+        run: |
+          set -euo pipefail
+          curl --disable --fail --location --proto '=https' --proto-redir '=https' \
+            --connect-timeout 30 --max-time 600 --max-filesize 4294967296 \
+            --output release-inputs.tar.gz -- "$INPUTS_URL"
+          printf '%s  %s\n' "$INPUTS_SHA256" release-inputs.tar.gz | sha256sum --check --status
+          mkdir release-inputs
+          tar -xzf release-inputs.tar.gz -C release-inputs
+      - name: Import the production signing key
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$PWD/release-keyring"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s' "$RELEASE_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --with-colons --list-secret-keys | grep -q "fpr:::::::::$RELEASE_SIGNING_FINGERPRINT:"
+      - name: Sign and compose the production release tree
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$PWD/release-keyring"
+          python3 scripts/ci/release_sign.py \
+            --inputs release-inputs \
+            --source "$PWD" \
+            --output release-out \
+            --work release-work \
+            --fingerprint "$RELEASE_SIGNING_FINGERPRINT" \
+            --gpg-home "$GNUPGHOME" \
+            --base-url "$BASE_URL" \
+            --release-version "$RELEASE_VERSION"
+      - name: Verify every publication gate
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check_release.py \
+            --release-tree release-out/release-tree \
+            --profile "$PROFILE" \
+            --output release-out/publication-manifest.json
+      - name: Publish the release assets
+        run: |
+          set -euo pipefail
+          tar -C release-out/release-tree -czf release-tree.tar.gz .
+          gh release create "v$RELEASE_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Intel NPU Stack $RELEASE_VERSION" \
+            --notes "Signed release tree for Fedora 44 x86_64; see publication-manifest.json for the verified digests and qualification evidence." \
+            release-tree.tar.gz \
+            release-out/publication-manifest.json \
+            release-out/release-tree/checksums.sha256 \
+            release-out/release-tree/release.json \
+            release-out/release-tree/release.json.sig
