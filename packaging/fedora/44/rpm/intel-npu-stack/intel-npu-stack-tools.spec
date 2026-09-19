@@ -5,7 +5,7 @@
 
 Name:           intel-npu-stack-tools
 Version:        0.1.0
-Release:        2.intelnpu.fc44
+Release:        3.intelnpu.fc44
 Summary:        Read-only Intel NPU stack status and diagnostic tools
 License:        Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)
 Source0:        intel-npu-stack-0.1.0.tar
@@ -104,6 +104,8 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure --no-tests=error
 %{_datadir}/intel-npu-stack/installed-manifest.toml
 
 %changelog
+* Sat Sep 19 2026 Wisbendji Fimerlus <archledger236@gmail.com> - 0.1.0-3.intelnpu.fc44
+- Keep native probe JSON separate from SDK stdout and shutdown diagnostics.
 * Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 0.1.0-2.intelnpu.fc44
 - Require the coupled candidate set: driver 1.38.0, firmware 1.38.0, the
   Intel-matched oneapi-level-zero 1.32.0 source-locked loader replacing the

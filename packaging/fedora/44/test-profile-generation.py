@@ -8,17 +8,17 @@ binary=Path(sys.argv[1]).resolve()
 manifest=tomllib.loads(Path('packaging/fedora/44/installed-manifest.toml').read_text())
 packages={p['name']:p for p in manifest['providers']}
 packages['intel-npu-driver']['license'] = 'MIT AND Apache-2.0 AND (GPL-2.0-only WITH Linux-syscall-note)'
-packages['intel-npu-stack-tools']={'nevr':'0:0.1.0-2.intelnpu.fc44','arch':'x86_64','license':'Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)',
+packages['intel-npu-stack-tools']={'nevr':'0:0.1.0-3.intelnpu.fc44','arch':'x86_64','license':'Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)',
     'files':[{'path':'/usr/bin/intel-npu-stack'}, {'path':'/usr/libexec/intel-npu-stack/intel-npu-level-zero-probe'},
              {'path':'/usr/libexec/intel-npu-stack/intel-npu-openvino-probe'}, {'path':'/usr/share/intel-npu-stack/installed-manifest.toml'}]}
-packages['intel-npu-stack']={'nevr':'0:0.1.0-2.intelnpu.fc44','arch':'noarch','license':'Apache-2.0','files':[]}
+packages['intel-npu-stack']={'nevr':'0:0.1.0-3.intelnpu.fc44','arch':'noarch','license':'Apache-2.0','files':[]}
 packages['intel-npu-compiler']['license'] = 'Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause) AND (Apache-2.0 WITH LLVM-exception) AND NCSA AND BSD-2-Clause AND ISC AND Spencer-94 AND Unicode-DFS-2015 AND LicenseRef-LLVM-MD5'
 license_owners={'intel-npu-stack-tools','intel-npu-driver','intel-npu-stack-firmware','oneapi-level-zero','openvino','intel-npu-compiler'}
 
 with tempfile.TemporaryDirectory(prefix='profile-rpm-contract-') as temporary:
     root=Path(temporary)
     for name in ['BUILD','SOURCES','SPECS','RPMS','SRPMS','tmp']:(root/name).mkdir()
-    spec=['%global debug_package %{nil}', 'Name: intel-npu-stack-tools', 'Version: 0.1.0', 'Release: 2.intelnpu.fc44',
+    spec=['%global debug_package %{nil}', 'Name: intel-npu-stack-tools', 'Version: 0.1.0', 'Release: 3.intelnpu.fc44',
           'Summary: Profile generation fixture','License: '+packages['intel-npu-stack-tools']['license'],
           'Requires: oneapi-level-zero(x86-64) = 1.32.0-1.intelnpu.fc44',
           'Requires: openvino(x86-64) = 2026.2.0-2.intelnpu.fc44','%description','Fixture.']

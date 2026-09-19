@@ -143,6 +143,13 @@ install(
 )
 
 if(BUILD_TESTING)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(noisy_openvino_probe openvino/main.cpp tests/noisy_openvino_stub.cpp)
+  target_include_directories(noisy_openvino_probe PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  intel_npu_harden_target(noisy_openvino_probe)
+  add_test(NAME probe_output COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/probe_output_test.py" "$<TARGET_FILE:noisy_openvino_probe>")
+
   add_executable(json_writer_test tests/json_writer_test.cpp)
   target_link_libraries(json_writer_test PRIVATE intel_npu_json)
   intel_npu_harden_target(json_writer_test)
