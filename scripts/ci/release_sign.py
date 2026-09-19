@@ -28,6 +28,14 @@ import tarfile
 
 EPOCH = 1789084800
 PROFILE_ID = 'fedora-44-lunar-lake-x86_64'
+# Fedora providers replaced by the coupled stack, including the loader takeover.
+ROLLBACK_PACKAGES = {
+    'intel-npu-compiler', 'intel-npu-driver', 'libopenvino-ir-frontend',
+    'libopenvino-onnx-frontend', 'libopenvino-paddle-frontend',
+    'libopenvino-pytorch-frontend', 'libopenvino-tensorflow-frontend',
+    'libopenvino-tensorflow-lite-frontend', 'oneapi-level-zero',
+    'openvino', 'openvino-devel', 'openvino-plugins',
+}
 
 
 class SigningRefused(Exception):
@@ -114,6 +122,20 @@ def build_profile_rpm(source, inputs, work, env, fingerprint, passphrase, profil
         pair.append(produced[0])
     require(sha(pair[0]) == sha(pair[1]), 'profile RPM pair is not reproducible')
     return pair[0]
+
+
+def copy_rollback(inputs, output):
+    rows = json.loads((inputs / 'rollback-index.json').read_text())
+    require(len(rows) == len(ROLLBACK_PACKAGES)
+            and {row['name'] for row in rows} == ROLLBACK_PACKAGES,
+            'rollback package set is incomplete or duplicated')
+    output.mkdir(parents=True)
+    for row in rows:
+        origin = inputs / 'rollback-rpms' / row['filename']
+        require(origin.is_file() and sha(origin) == row['sha256'],
+                'rollback RPM digest drift: ' + row['filename'])
+        shutil.copyfile(origin, output / row['filename'])
+    shutil.copyfile(inputs / 'rollback-index.json', output / 'rollback-index.json')
 
 
 def main(argv=None):
@@ -235,16 +257,7 @@ def main(argv=None):
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(origin, destination)
         shutil.copytree(inputs / 'notices', assembly / 'evidence/notices')
-        rollback = assembly / 'evidence/rollback'
-        rollback.mkdir(parents=True)
-        rollback_index = json.loads((inputs / 'rollback-index.json').read_text())
-        require(len(rollback_index) == 11, 'rollback index is incomplete')
-        for row in rollback_index:
-            origin = inputs / 'rollback-rpms' / row['filename']
-            require(origin.is_file() and sha(origin) == row['sha256'],
-                    'rollback RPM digest drift: ' + row['filename'])
-            shutil.copyfile(origin, rollback / row['filename'])
-        shutil.copyfile(inputs / 'rollback-index.json', rollback / 'rollback-index.json')
+        copy_rollback(inputs, assembly / 'evidence/rollback')
 
         assemble = source / 'packaging/fedora/44/repository/assemble.py'
         (assembly / 'release-metadata.sig').write_bytes(

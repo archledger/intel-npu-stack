@@ -47,6 +47,18 @@ class GuestContract(unittest.TestCase):
                 guest.resume_reboot_record(record, boot, packages)
         self.assertTrue(guest.resume_reboot_record(record, 'new', record['after'])['reboot_verified'])
 
+    def test_rollback_inventory_preserves_duplicate_counts_and_reports_drift(self):
+        before = ['unrelated|0:1-1|noarch|100', 'gpg-pubkey|0:old|noarch|1']
+        restored = ['unrelated|0:1-1|noarch|200', 'gpg-pubkey|0:new|noarch|2']
+        guest.verify_rollback_inventory(before, restored)
+        for after, diagnostic in [
+                (restored + [restored[0]], 'unrelated|0:1-1|noarch'),
+                ([], 'unrelated|0:1-1|noarch'),
+                (['unrelated|0:2-1|noarch|200'], 'unrelated|0:2-1|noarch')]:
+            with self.subTest(after=after), self.assertRaises(AssertionError) as error:
+                guest.verify_rollback_inventory(before, after)
+            self.assertIn(diagnostic, str(error.exception))
+
     def test_removal_leftovers_fail_the_scenario(self):
         records = []
         with patch.dict(guest.SCENARIOS, {'removal': lambda *_: {'remaining_stack': ['leftover']}}), \
