@@ -139,8 +139,8 @@ fn expected_packages() -> BTreeMap<String, (String, String)> {
             "noarch",
         ),
         ("oneapi-level-zero", "0:1.32.0-1.intelnpu.fc44", "x86_64"),
-        ("intel-npu-stack", "0:0.1.0-2.intelnpu.fc44", "noarch"),
-        ("intel-npu-stack-tools", "0:0.1.0-2.intelnpu.fc44", "x86_64"),
+        ("intel-npu-stack", "0:0.1.0-3.intelnpu.fc44", "noarch"),
+        ("intel-npu-stack-tools", "0:0.1.0-3.intelnpu.fc44", "x86_64"),
     ] {
         packages.insert(name.to_owned(), (nevr.to_owned(), arch.to_owned()));
     }

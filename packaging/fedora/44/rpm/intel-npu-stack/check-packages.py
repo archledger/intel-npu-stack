@@ -37,7 +37,7 @@ require(manifest.get('schema_version') == 1 and manifest.get('status') == 'candi
         and manifest.get('reboot_required') is True, 'manifest candidate/activation policy')
 required = {
     'intel-npu-stack': {
-        ('intel-npu-stack-tools(x86-64)', '=', '0.1.0-2.intelnpu.fc44'),
+        ('intel-npu-stack-tools(x86-64)', '=', '0.1.0-3.intelnpu.fc44'),
         ('intel-npu-driver(x86-64)', '=', '1.38.0-1.intelnpu.fc44'),
         ('intel-npu-stack-firmware', '=', '1.38.0-1.intelnpu.fc44'),
         ('oneapi-level-zero(x86-64)', '=', '1.32.0-1.intelnpu.fc44'),
@@ -69,7 +69,7 @@ for argument in sys.argv[3:]:
     require(name in required and name not in packages, 'exact two distinct package identities')
     packages.add(name)
     expected_arch = 'noarch' if name == 'intel-npu-stack' else 'x86_64'
-    require(nevr == '0:0.1.0-2.intelnpu.fc44' and arch == expected_arch and algorithm == '8', 'RPM version/arch/SHA256')
+    require(nevr == '0:0.1.0-3.intelnpu.fc44' and arch == expected_arch and algorithm == '8', 'RPM version/arch/SHA256')
     for option in ['--scripts', '--triggers', '--filetriggers']:
         require(not query(rpm, option).strip(), 'script-free package: ' + name)
     relations = set()
