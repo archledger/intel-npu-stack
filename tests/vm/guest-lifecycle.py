@@ -12,6 +12,7 @@ with synthetic allowlisted facts; that harness authorizes nothing outside
 these throwaway machines.
 """
 from pathlib import Path
+from collections import Counter
 import argparse
 import json
 import os
@@ -196,6 +197,18 @@ def verify_expected_packages(expected, actual):
         assert identities == [[row['nevr'], row.get('arch', 'x86_64')]], (row['name'], identities)
 
 
+def verify_rollback_inventory(before, after):
+    # Key imports and install times may change; payload identity multiplicity may not.
+    def identities(rows):
+        return Counter('|'.join(line.split('|')[:3]) for line in rows
+                       if line.split('|')[0] != 'gpg-pubkey')
+    old_ids, after_ids = identities(before), identities(after)
+    assert old_ids == after_ids, (
+        'rollback changed the baseline package set: '
+        + repr({'missing': sorted((old_ids - after_ids).items())[:20],
+                'added': sorted((after_ids - old_ids).items())[:20]}))
+
+
 def scenario_rollback(server, work):
     # Establish the actual old Fedora baseline first. A fresh Cloud image is
     # not a rollback baseline for these providers and their dependency set.
@@ -215,7 +228,8 @@ def scenario_rollback(server, work):
             with target.open('rb') as stream:
                 assert hashlib.file_digest(stream, 'sha256').hexdigest() == row['sha256'], filename
     baseline_argv = ['dnf5', '--assumeyes', '--setopt=localpkg_gpgcheck=True',
-                     '--setopt=install_weak_deps=False', 'install',
+                     '--setopt=install_weak_deps=False', '--disable-repo=*',
+                     'install', '--allowerasing',
                      *[str(work/row['filename']) for row in fedora['packages']+rollback_index]]
     baseline_step = run('old-fedora-baseline', baseline_argv, expect=0)
     old = inventory()
@@ -234,9 +248,7 @@ def scenario_rollback(server, work):
     verify_expected_packages(rollback_index, after)
     # RPM import adds one public-key record; payload identities must otherwise
     # exactly match the old baseline. Record installtimes separately as evidence.
-    identities = lambda rows: sorted('|'.join(line.split('|')[:3]) for line in rows
-                                     if line.split('|')[0] != 'gpg-pubkey')
-    assert identities(old) == identities(after), 'rollback changed the baseline package set'
+    verify_rollback_inventory(old, after)
     restored = {row['name']: row['nevr'] for row in rollback_index}
     return {'steps': steps, 'old_baseline': old, 'after_install': record['after'],
             'after': after, 'restored_expected': restored, 'verified_install_count': 16}
