@@ -215,7 +215,8 @@ def scenario_rollback(server, work):
             with target.open('rb') as stream:
                 assert hashlib.file_digest(stream, 'sha256').hexdigest() == row['sha256'], filename
     baseline_argv = ['dnf5', '--assumeyes', '--setopt=localpkg_gpgcheck=True',
-                     '--setopt=install_weak_deps=False', 'install',
+                     '--setopt=install_weak_deps=False', '--disable-repo=*',
+                     'install', '--allowerasing',
                      *[str(work/row['filename']) for row in fedora['packages']+rollback_index]]
     baseline_step = run('old-fedora-baseline', baseline_argv, expect=0)
     old = inventory()
@@ -236,7 +237,10 @@ def scenario_rollback(server, work):
     # exactly match the old baseline. Record installtimes separately as evidence.
     identities = lambda rows: sorted('|'.join(line.split('|')[:3]) for line in rows
                                      if line.split('|')[0] != 'gpg-pubkey')
-    assert identities(old) == identities(after), 'rollback changed the baseline package set'
+    old_ids, after_ids = set(identities(old)), set(identities(after))
+    assert old_ids == after_ids, (
+        'rollback changed the baseline package set: '
+        + repr(sorted(old_ids ^ after_ids)[:20]))
     restored = {row['name']: row['nevr'] for row in rollback_index}
     return {'steps': steps, 'old_baseline': old, 'after_install': record['after'],
             'after': after, 'restored_expected': restored, 'verified_install_count': 16}
