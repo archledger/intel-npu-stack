@@ -31,9 +31,13 @@ for the observed cases and remaining gaps.
 ## Metadata-only preflight
 
 From the repository root, supply the candidate file for the installed package
-set and its independently verified SHA256:
+set and its independently verified SHA256. Set `CANDIDATE_PROFILE` to the
+reviewed local file path and `CANDIDATE_SHA256` to the expected digest recorded
+for that file:
 
 ```sh
+: "${CANDIDATE_PROFILE:?Set the reviewed candidate file path}"
+: "${CANDIDATE_SHA256:?Set its expected SHA256 from the input record}"
 cargo run --locked --offline -p xtask -- collect-candidate \
   --profile "$CANDIDATE_PROFILE" \
   --profile-sha256 "$CANDIDATE_SHA256" \
@@ -83,12 +87,15 @@ passing/degraded probe diagnostics, not qualification or release readiness.
 ## Release artifacts
 
 A changed profile requires a separately built profile RPM and corresponding
-release metadata. The 7.2.4 preparation includes an unsigned data-only profile
-RPM, built twice identically. It is excluded from the initial 14-signed-runtime
-RPM hardware pilot. The candidate file is supplied directly to the collector
-with its pinned digest.
+release metadata. The current 7.2.5 hardware pilot supplies its candidate file
+directly to the collector with the pinned digest. The profile RPM and optional
+development package are excluded from that 14-runtime-package pilot.
 
-The old isolated test key's private half was destroyed. New profile/repository
-signatures require separately authorized signing. An unsigned preparation
-manifest and an observation cannot replace a signed installer release or the
-independent qualification and promotion gates.
+The earlier 7.2.4 preparation produced an unsigned data-only profile RPM twice
+with identical bytes. That is retained historical evidence for the earlier
+profile, not a release artifact for the current 7.2.5 candidate.
+
+Qualification keys' private halves were destroyed after signing. New profile
+and repository signatures require separately authorized signing. An unsigned
+preparation manifest and an observation cannot replace a signed installer
+release or the independent qualification and promotion gates.

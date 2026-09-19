@@ -15,17 +15,19 @@ A release directory (produced by
 `packaging/fedora/44/repository/assemble.py` from digest-verified inputs)
 contains:
 
-- `release.json` — the installer metadata: stack release, profile digest,
+- `release.json`: installer metadata including stack release, profile digest,
   repository id/URL, repomd digest, and every package with its exact NEVR,
   architecture, filename, SHA256 and role (`runtime`, `devel`, `profile`).
-- `packages/` — the exact signed RPM set (0.1.0 test assembly: 16 packages).
-- `repodata/` — signed repository metadata, including `repomd.xml.asc`.
-- `profile.toml` — the platform profile the installer authenticates against
-  `release.json`. It stays `status = "candidate"`; qualification is recorded
-  by hardware gates, never by installation.
-- `evidence/spdx`, `evidence/notices`, `evidence/rollback` — SBOM documents,
-  license notices, and the eleven exact Fedora rollback RPMs with their index.
-- `checksums.sha256` and `assembly-manifest.json` — reproducible output
+- `packages/`: the exact signed RPM set (0.1.0 test assembly: 16 packages).
+- `repodata/`: signed repository metadata, including `repomd.xml.asc`.
+- `profile.toml`: the platform profile the installer authenticates against
+  `release.json`. Candidate assembly preserves candidate status; the VM fixture
+  is separately labeled experimental. Production assembly requires a qualified
+  profile. Installation never grants qualification.
+- `evidence/spdx`, `evidence/notices`, `evidence/rollback`: SBOM documents,
+  license notices, and the twelve exact Fedora rollback RPMs with their index,
+  including the original Level Zero loader.
+- `checksums.sha256` and `assembly-manifest.json`: reproducible output
   digests for every file above.
 
 ## Bootstrap command
@@ -34,8 +36,8 @@ Installation starts from a version-pinned bootstrap that downloads the
 installer completely, verifies its exact SHA256, and only then executes it
 with the caller's arguments untouched. The command is generated per release
 from the actual asset by `install/render-bootstrap.py`; it is published
-beside the release, never invented by hand. For the 0.1.0 test assembly the
-generated command is:
+beside the release, never invented by hand. For the September 19 tools release 3
+test fixture, the generated command is:
 
 ```sh
 (
@@ -51,7 +53,7 @@ generated command is:
         --connect-timeout 15 --max-time 180 --max-filesize 1048576 \
         --output "$bootstrap_file" -- https://downloads.example.invalid/intel-npu-stack/0.1.0/fedora/44/x86_64/install.sh; then exit 20; fi
     [ -f "$bootstrap_file" ] && [ ! -L "$bootstrap_file" ] || exit 20
-    if ! printf '%s  %s\n' '5b6c1cf9d6f3dfa4f06d579a15c03e7395184946f7c01c5b93263caa7e04b963' "$bootstrap_file" | sha256sum --check --status; then exit 20; fi
+    if ! printf '%s  %s\n' '25d1219088d88249a2f95b6165eaf169d42127f7bdbd5307a442d6f577014941' "$bootstrap_file" | sha256sum --check --status; then exit 20; fi
     /bin/sh "$bootstrap_file" "$@"
 )
 ```
@@ -91,7 +93,7 @@ Flags: `--dry-run`, `--yes`, `--channel stable|experimental`
 
 | Exit | Code | Meaning |
 |---|---|---|
-| 0 | — | Success (dry run, no-op, or verified installation). |
+| 0 | none | Success (dry run, no-op, or verified installation). |
 | 2 | usage / confirmation | Invalid flags, non-TTY without `--yes`, empty or wrong confirmation. |
 | 10 | INSTALL_CAPABILITY_UNAVAILABLE | The release has no package for a requested optional capability (for example `--with-python` today: no reviewed Python binding exists yet). |
 | 20 | INSTALL_INTEGRITY_FAILED / INSTALL_METADATA_INVALID / transport failures | Digest, signature or metadata verification failed; a release URL that cannot be fetched also exits 20 (fail-closed). |
@@ -117,12 +119,13 @@ reboot is not a failure, but the component is not active until it happens;
   be removed with
   `sudo rpmkeys --erase <fingerprint>`.
 - Rollback resources ship with every release under `evidence/rollback`:
-  the eleven exact signed Fedora RPMs recorded in `rollback-index.json`
-  (with NEVRs and digests) that restore the pre-stack provider set. The
-  lifecycle gate exercised all eleven downgrades and a subsequent upgrade
-  through the integrated installer. The old Fedora dependency closure and
-  original provider inventory must be available; the eleven RPMs alone are
-  not a complete dependency set for a minimal Cloud installation.
+  the twelve exact signed Fedora RPMs recorded in `rollback-index.json`
+  (with NEVRs and digests), including the Fedora Level Zero loader, that restore
+  the pre-stack provider set. The lifecycle gate exercised all twelve downgrades
+  and a subsequent upgrade through the integrated installer. Its retained
+  baseline closure contains 718 digest-verified Fedora RPMs. The old dependency
+  closure and original inventory must be available; the twelve rollback RPMs
+  alone are not a complete dependency set for a minimal Cloud installation.
 - Before a provider downgrade, remove the project packages that pin the new
   versions while retaining the dependency closure:
   `sudo dnf5 --setopt=clean_requirements_on_remove=False remove intel-npu-stack intel-npu-stack-profile intel-npu-stack-tools intel-npu-stack-firmware`.
