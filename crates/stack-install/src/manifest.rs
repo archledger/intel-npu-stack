@@ -47,6 +47,10 @@ pub struct ReleaseRepository {
 struct ManifestDocument {
     schema_version: u32,
     stack_release: String,
+    /// Optional production-composition marker. Absent means the historical
+    /// schema-one shape; publication gates require an explicit false.
+    #[serde(default)]
+    test_only: bool,
     profile_sha256: String,
     repository: ReleaseRepository,
     packages: Vec<ReleasePackage>,
@@ -63,6 +67,13 @@ pub struct ReleaseManifest {
 }
 
 impl ReleaseManifest {
+    /// Whether this metadata records a test-only composition. Publication
+    /// gates require an explicit false; installations accept both classes
+    /// because disposable VM fixtures are test-only by design.
+    pub fn is_test_only(&self) -> bool {
+        self.document.test_only
+    }
+
     /// Parses bounded JSON and validates exact Fedora 44 artifact identities.
     pub fn parse_json(bytes: &[u8]) -> Result<Self, InstallError> {
         if bytes.len() > MAX_METADATA_BYTES {
