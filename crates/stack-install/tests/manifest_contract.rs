@@ -29,10 +29,10 @@ fn test_only_marker_parses_in_both_classes() {
     for marker in [true, false] {
         let mut value = input();
         value["test_only"] = json!(marker);
-        parse(&value).expect("test_only marker must parse in schema one");
+        assert_eq!(parse(&value).unwrap().is_test_only(), marker);
     }
     assert!(
-        parse(&input()).is_ok(),
+        !parse(&input()).unwrap().is_test_only(),
         "absent marker defaults to production"
     );
 }
