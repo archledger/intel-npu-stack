@@ -2,6 +2,7 @@
 # NPU dynamic-reshape compiler crash
 
 Investigation date: September 19, 2026. Tracks [issue #20](https://github.com/archledger/intel-npu-stack/issues/20).
+Upstream report: [openvinotoolkit/npu_compiler#352](https://github.com/openvinotoolkit/npu_compiler/issues/352).
 
 ## Findings
 
@@ -72,6 +73,11 @@ The bounded case avoids this crash but is not a working workaround for this
 graph. The compiler should diagnose an unsupported shape without terminating
 the calling process. No compiler-library patch has been deployed by this
 investigation.
+
+The earlier intermittent static BlazeFace observation came from the research
+harness with the ABI error described below. It remains unconfirmed independently
+of that harness. The matched-stack compile-only retest passed three attempts,
+which does not establish that every source of intermittent failure is resolved.
 
 ## Validated static-shape workaround
 
