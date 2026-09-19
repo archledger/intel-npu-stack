@@ -50,6 +50,16 @@ not establish that its earlier intermittent failure is fixed.
 The neutral graph passing does not establish support for those other model
 graphs. The helper output fix and the compiler crash are separate issues.
 
+Subsequent [compiler triage](npu-compiler-triage.md) reduced the crash to a
+six-node, 24-byte-constant graph and found a working static-batch compilation
+workaround for all four original crashers. It identified an ABI error in an
+earlier research harness and corrected the input-rank diagnosis: those four
+inputs have known rank 4 with dynamic batch,
+rather than unranked inputs that cannot be reshaped. The original unbounded
+graphs still crash; inference parity and application readiness are separate work.
+The older intermittent static BlazeFace observation remains unconfirmed
+independently of that faulty research harness.
+
 ## Earlier 1.35.0 pilot, September 13
 
 The target class is an Intel Core Ultra 200V-series NPU (`8086:643e`) with the
