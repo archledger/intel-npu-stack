@@ -25,6 +25,26 @@ fn accepted_artifacts_bind_without_promoting_the_candidate() {
 }
 
 #[test]
+fn test_only_marker_parses_in_both_classes() {
+    for marker in [true, false] {
+        let mut value = input();
+        value["test_only"] = json!(marker);
+        parse(&value).expect("test_only marker must parse in schema one");
+    }
+    assert!(
+        parse(&input()).is_ok(),
+        "absent marker defaults to production"
+    );
+}
+
+#[test]
+fn unknown_fields_are_still_rejected() {
+    let mut value = input();
+    value["unexpected_field"] = json!(true);
+    assert!(parse(&value).is_err());
+}
+
+#[test]
 fn altered_profile_is_rejected() {
     let manifest = ReleaseManifest::parse_json(RELEASE).unwrap();
     let mut profile = PROFILE.to_vec();
