@@ -1,29 +1,39 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Fedora VM lifecycle gate (disposable, test-only)
 
-Status (2026-09-12): **Gate 3 VM lifecycle acceptance passed: the ten planned
-scenarios plus an additional corrupted-RPM refusal/recovery scenario.** VM
-execution and removal of stale build outputs to make room were explicitly
-approved. The source recovery workspace and exact run records are linked
-in the shared project handoff.
+Status (2026-09-19): **the matched 1.38.0 stack with tools release 3 passed all
+eleven scenarios.** Its fixture was rebuilt from independently reproduced RPMs
+and refreshed source/SPDX evidence. Every run verified input/code digests and
+cleanup, and the release-tree checksums were verified again after the matrix.
+Earlier tools release 2 records remain separate.
 
-The latest fixture rebuild fixes preparation of Fedora's 36,915,318-byte
-primary metadata (formerly rejected by an 8 MiB limit), and retains the
+The tested source is `bdeecab`, merged as `6741714`. The retained archive
+`tools3-vm-records-20260919.tar.gz` has SHA256
+`f150a8b7225ce427e37d48096b95c5bd71f57aa5e820f4af247f7bcd65f9b01d`;
+the fixture metadata SHA256 is
+`4f9237befd6f71a52ea823ede4e9dc7268400a6f9a18b768909616844c9c823e`.
+These records establish disposable-VM lifecycle behavior, not hardware
+qualification or publication readiness.
+
+The earlier fixture rebuild fixed preparation of Fedora's 36,915,318-byte
+primary metadata (formerly rejected by an 8 MiB limit), and preserved the
 verified Fedora key symlink through replay. Bootstrap refusal, dry-run,
 install, repeat, release-metadata corruption, repository-metadata corruption,
 reboot, removal, exact rollback and upgrade passed against those rebuilt binaries. This is test-only
 installer lifecycle evidence, not NPU qualification or a public release.
 
-The original rollback attempt exposed an incomplete test baseline. The fixed
-rollback and upgrade scenarios use a 20 GiB disposable overlay (the verified
-5 GiB base image remains unchanged), the retained 434 digest-verified Fedora
-dependency RPMs and eleven signed rollback RPMs, and official Fedora DNF
-repositories for additional Cloud-guest dependencies. They establish a real
+The rollback and upgrade scenarios use a 20 GiB disposable overlay (the verified
+5 GiB base image remains unchanged), a retained closure of 718 digest-verified
+Fedora dependency RPMs, and twelve signed rollback RPMs. The baseline transaction
+disables configured repositories and permits the solver to replace conflicting
+installed packages from those retained inputs. Official Fedora repositories are
+used for initial Cloud-guest bootstrap tools. The scenarios establish a real
 old-provider baseline including `openvino-devel`, install through the
 unprivileged harness with `--with-devel` (16 selected release packages), remove
 the four project version-pinning packages without dependency autoremove, and
-downgrade all eleven providers to their exact original NEVRs. The ordinary
-payload identities return to the recorded baseline; the imported release
+downgrade all twelve providers, including the Fedora Level Zero loader, to
+their exact original NEVRs. Ordinary payload identity counts return to the
+recorded baseline, including duplicate-sensitive validation; the imported release
 public-key record remains explicit. Upgrade then reinstalls the exact stack.
 
 The primary command is also exercised end-to-end: it pins and downloads
@@ -93,7 +103,7 @@ or any hardware claim.
 | `package-corruption` | A byte-flipped tools RPM is refused with unchanged inventory; restoring the original served bytes allows verified installation. |
 | `reboot` | Install, then guest reboots; pending-activation semantics recorded pre-reboot. |
 | `removal` | `dnf5 remove` of every runtime/profile package named by the test release leaves none of those package names installed. |
-| `rollback` | Downgrade to the eleven exact signed Fedora rollback RPMs restores the recorded ordinary Fedora provider NEVRs. |
+| `rollback` | Downgrade to the twelve exact signed Fedora rollback RPMs restores the recorded ordinary Fedora provider identity counts. |
 | `upgrade` | Rollback, then re-install of the 0.1.0 stack; final inventory equals the install scenario. |
 
 Mutation scenarios record RPM inventories, exact argv, exits and truncated
@@ -105,6 +115,5 @@ assert unchanged inventories; removal asserts an empty remaining selection.
 
 Booting the VM requires an explicit user approval given AFTER this runner
 existed. The approval request names the exact invocation, the digest of
-every input, the scenario list and the disk budget (fresh overlay per
-scenario, ~3 GiB peak on the archhost evidence volume). No approval is
-inferred from acquisition or preparation grants.
+every input, the scenario list and the disk budget for a fresh overlay per
+scenario. No approval is inferred from acquisition or preparation grants.

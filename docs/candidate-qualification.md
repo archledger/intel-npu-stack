@@ -14,22 +14,33 @@ an exact kernel release and a new output path. It changes only `id`,
 Provider RPM hashes, installed-file hashes, licenses and source evidence
 comments remain intact. Existing output paths are refused.
 
-The Fedora 44 candidate
-`profiles/fedora/44/lunar-lake-x86_64-kernel-7.2.4.toml` covers
-`[7.2.4, 7.2.5)`. It derives from the accepted release candidate whose SHA256
-is `ecfd55e29ab0fafd40f6456579676b95766b7e9db897661d37a3a3e8c72ebd59`.
-Its provider bindings refer to the accepted signed test RPMs. The older
-`lunar-lake-x86_64.toml` is retained as recorded historical input; its earlier
-provider bindings must not be substituted for the final accepted set.
+`profiles/fedora/44/lunar-lake-x86_64.toml` records the current matched provider
+set with accepted build digests. For a signed qualification pilot, first bind
+the signed RPM identities with `generate-release-profile.py`, then retarget the
+result to the exact observed kernel. Both operations preserve candidate status.
+
+The September 19 hardware candidate covers `[7.2.5, 7.2.6)` and has SHA256
+`4cc29b602f6e7af6e6ff053a74c097f56e69609282031d6aaf4621f4b5ac437c`.
+Its signed-input and collector records are retained with the hardware evidence.
+
+The repository's `lunar-lake-x86_64-kernel-7.2.4.toml` describes the earlier
+1.35.0 pilot and remains historical input. Its provider bindings must not be
+mixed with the current 1.38.0 set. See [hardware validation](hardware-validation.md)
+for the observed cases and remaining gaps.
 
 ## Metadata-only preflight
 
-From the repository root:
+From the repository root, supply the candidate file for the installed package
+set and its independently verified SHA256. Set `CANDIDATE_PROFILE` to the
+reviewed local file path and `CANDIDATE_SHA256` to the expected digest recorded
+for that file:
 
 ```sh
+: "${CANDIDATE_PROFILE:?Set the reviewed candidate file path}"
+: "${CANDIDATE_SHA256:?Set its expected SHA256 from the input record}"
 cargo run --locked --offline -p xtask -- collect-candidate \
-  --profile profiles/fedora/44/lunar-lake-x86_64-kernel-7.2.4.toml \
-  --profile-sha256 dbd218879246a9db5cf49429e203d7fd49b18aae333f1ab227b29e1163077b1d \
+  --profile "$CANDIDATE_PROFILE" \
+  --profile-sha256 "$CANDIDATE_SHA256" \
   --mode preflight
 ```
 
@@ -76,12 +87,15 @@ passing/degraded probe diagnostics, not qualification or release readiness.
 ## Release artifacts
 
 A changed profile requires a separately built profile RPM and corresponding
-release metadata. The 7.2.4 preparation includes an unsigned data-only profile
-RPM, built twice identically. It is excluded from the initial 14-signed-runtime
-RPM hardware pilot. The candidate file is supplied directly to the collector
-with its pinned digest.
+release metadata. The current 7.2.5 hardware pilot supplies its candidate file
+directly to the collector with the pinned digest. The profile RPM and optional
+development package are excluded from that 14-runtime-package pilot.
 
-The old isolated test key's private half was destroyed. New profile/repository
-signatures require separately authorized signing. An unsigned preparation
-manifest and an observation cannot replace a signed installer release or the
-independent qualification and promotion gates.
+The earlier 7.2.4 preparation produced an unsigned data-only profile RPM twice
+with identical bytes. That is retained historical evidence for the earlier
+profile, not a release artifact for the current 7.2.5 candidate.
+
+Qualification keys' private halves were destroyed after signing. New profile
+and repository signatures require separately authorized signing. An unsigned
+preparation manifest and an observation cannot replace a signed installer
+release or the independent qualification and promotion gates.

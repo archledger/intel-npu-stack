@@ -1,11 +1,56 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Hardware validation progress
 
-Status as of **2026-09-13**: a controlled Fedora 44 Lunar Lake pilot works on
-kernel **7.2.4-200.fc44.x86_64**. This is recorded candidate evidence, not a
-completed hardware qualification or a supported public release.
+Status as of **2026-09-19**: the matched Fedora 44 Lunar Lake pilot runs on
+kernel **7.2.5-200.fc44.x86_64**. Upgrade, warm reboot, normal-user NPU
+diagnostics, removal, rollback, restoration and repeat installation passed.
+Cold boot and suspend/resume remain incomplete, so this is candidate evidence
+rather than a supported public release.
 
-## Candidate and observed scope
+## Current matched-stack observations
+
+The installed set has 14 signed runtime packages: driver and firmware 1.38.0,
+Level Zero 1.32.0, OpenVINO/compiler 2026.2.0-2, and tools/metapackage 0.1.0-3.
+The optional development and profile RPMs are excluded from this hardware pilot.
+Its separately identified profile covers `[7.2.5, 7.2.6)` and stays a candidate.
+
+| Case | Observed result |
+|---|---|
+| Upgrade from the 1.35.0 pilot | Passed: exactly 14 runtime upgrades; all 421 regular payload files and 34 symlinks verified, with no unrelated package changes. |
+| Firmware activation | Passed: rebuilt and verified the current-kernel initramfs, retained the original image, then verified an actual warm reboot into the new stack. |
+| Native probe output | Hardware testing found SDK compatibility warnings on stdout. [PR #30](https://github.com/archledger/intel-npu-stack/pull/30) isolates the JSON response and preserves SDK diagnostics on stderr. The corrected tools passed independent RPM pair builds and hardware validation. |
+| Normal-user NPU operation | The frozen collector passed all 15 checks, including eight validated NPU-only iterations. Three additional fresh-process enumeration/inference pairs passed strict JSON parsing and completed 24 NPU-only iterations. |
+| Removal | Removed exactly 13 project-owned packages while retaining the loader. Helpers and the firmware override were absent, and metadata-only collection correctly reported missing packages. Unrelated inventory was preserved. |
+| Rollback and old-stack reboot | Restored all 14 old runtime packages, including the Fedora 1.28.6 loader, and the original current-kernel boot image. After reboot, all 15 collector checks and eight NPU-only iterations passed. |
+| Restoration and new-stack reboot | Reinstalled the 14-package matched set with tools release 3 and restored its verified boot image. The final reboot, 15 collector checks and eight NPU-only iterations passed. The complete non-key package identity set returned to its pre-removal state. |
+| Repeat installation | The actual native installation was a no-op; the complete inventory, installation times and boot image stayed unchanged. |
+| Cold boot | Not executed for this set. Firmware advertises AC and DC timer wake from S4 but neither from S5; a verified remote power-on method or physical assistance is required. Warm reboots are not relabeled as cold boots. |
+| Suspend/resume | Deferred while persistent sleep prevention is requested for remote access. |
+
+The collector was frozen from source `006d413`; the corrected native tools were
+built twice from `bdeecab` and merged as `6741714`. Every observation records its
+actual collector, helper, profile and package hashes. Qualification-only signing
+keys were used, and their private halves were destroyed after signing. These
+signatures do not establish production release trust.
+
+The retained hardware archive `hardware-evidence-20260919.tar.gz` has SHA256
+`fcce8df6d2f0b6deb5e675a740f73d92856206c8e7858a44a84674496fc52010`.
+Original boot images and full host inventories remain in private recovery storage.
+
+### Compiler limitation remains open
+
+The matched-stack retest of [issue #20](https://github.com/archledger/intel-npu-stack/issues/20#issuecomment-5743015085)
+used compile-only processes and public model weights. All seven CPU controls
+compiled. YuNet, FLIR and BlazeFace compiled on NPU in three of three attempts
+each. The four previously deterministic crashers, glintr100, liveness_vit,
+face_landmark and the TFLite mesh, each received SIGSEGV in three of three NPU
+compile attempts after model import. The three successful BlazeFace attempts do
+not establish that its earlier intermittent failure is fixed.
+
+The neutral graph passing does not establish support for those other model
+graphs. The helper output fix and the compiler crash are separate issues.
+
+## Earlier 1.35.0 pilot, September 13
 
 The target class is an Intel Core Ultra 200V-series NPU (`8086:643e`) with the
 distribution-owned `intel_vpu` module. The installed pilot contains 14 signed
@@ -22,7 +67,7 @@ execution, and requires metadata/activation readiness before probing.
 All hardware reports keep `qualification_complete = false`. Public channel
 selection has not been relaxed or bypassed to publish this source.
 
-## Results
+### Historical results
 
 | Case | Evidence status |
 |---|---|
@@ -42,7 +87,7 @@ iterations and tolerance0.001 per invocation. Execution devices were exactly
 observation and are not performance benchmarks. Package inventories and boot
 image/backup contents stayed unchanged during each observation.
 
-## Corrections and retained limitations
+### Earlier corrections and retained limitations
 
 - Installer preparation was corrected for realistic Fedora metadata sizes and
   the verified signing-key symlink layout. The primary bootstrap command was
@@ -59,7 +104,7 @@ image/backup contents stayed unchanged during each observation.
 - An independent existing vendor-key timestamp refresh was preserved. No
   unrelated package changes were undone during verification.
 
-## Evidence provenance
+### Earlier evidence provenance
 
 Detailed sanitized receipts and rollback material remain in the maintainer's
 controlled evidence store and are not bundled into public source. Archive
