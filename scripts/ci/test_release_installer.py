@@ -34,8 +34,9 @@ def elf_header(machine=62):
 class FakeCargo:
     """Stands in for cargo/rustc: "builds" a binary from the pinned trust.rs it finds."""
 
-    def __init__(self, embed=True, version='intel-npu-stack-install 0.1.0', machine=62):
+    def __init__(self, embed=True, version='intel-npu-stack-install 0.1.0', machine=62, toolchain_exit=0):
         self.embed, self.version, self.machine, self.calls = embed, version, machine, []
+        self.toolchain_exit = toolchain_exit
 
     def __call__(self, argv, cwd, env):
         self.calls.append((list(argv), str(cwd), dict(env)))
@@ -46,13 +47,17 @@ class FakeCargo:
                 body += '\n'.join([values['metadata_sha256'], values['base_url'],
                                    values['primary_fingerprint']]).encode()
             target = argv[argv.index('--target') + 1] if '--target' in argv else None
-            binary = Path(env['CARGO_TARGET_DIR']) / (target or '') / 'release/intel-npu-stack-install'
+            # Like cargo, a relative CARGO_TARGET_DIR is taken from the build's working directory.
+            binary = Path(cwd) / env['CARGO_TARGET_DIR'] / (target or '') / 'release/intel-npu-stack-install'
             binary.parent.mkdir(parents=True, exist_ok=True)
             binary.write_bytes(body)
             return subprocess.CompletedProcess(argv, 0, '', '')
+        if argv[:2] == ['cargo', 'fetch']:
+            return subprocess.CompletedProcess(argv, 0, '', '')
         if argv[-1] == '--version':
             return subprocess.CompletedProcess(argv, 0, self.version + '\n', '')
-        return subprocess.CompletedProcess(argv, 0, argv[0] + ' 1.85.0 (fake)\n', '')
+        return subprocess.CompletedProcess(argv, self.toolchain_exit,
+                                           '' if self.toolchain_exit else argv[0] + ' 1.85.0 (fake)\n', '')
 
 
 class ToolchainEnvironment(unittest.TestCase):
@@ -110,6 +115,20 @@ class ToolchainEnvironment(unittest.TestCase):
         (self.src / 'rust-toolchain.toml').write_text('[toolchain]\nchannel = "stable"\n')
         with self.assertRaisesRegex(installer.InstallerRefused, 'exact version'):
             installer.toolchain_env(self.root / 't', self.src, self.environ)
+
+    def test_cargo_configuration_outside_the_exported_tree_is_refused(self):
+        for config in [self.root / 'home/.cargo/config.toml', self.root / 'home/.cargo/config',
+                       self.root / '.cargo/config.toml']:
+            with self.subTest(str(config.relative_to(self.root))):
+                config.parent.mkdir(parents=True, exist_ok=True)
+                config.write_text('[build]\nrustflags = ["-C", "target-cpu=native"]\n')
+                with self.assertRaisesRegex(installer.InstallerRefused, 'Cargo configuration'):
+                    installer.toolchain_env(self.root / 't', self.src, self.environ)
+                config.unlink()
+        # The exported tree's own configuration is tracked source and stays allowed.
+        (self.src / '.cargo').mkdir()
+        (self.src / '.cargo/config.toml').write_text('[net]\noffline = true\n')
+        installer.toolchain_env(self.root / 't', self.src, self.environ)
 
     def test_missing_or_unresolvable_toolchain_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'rustc'):
@@ -273,6 +292,22 @@ class InstallerBuild(unittest.TestCase):
     def test_binary_without_the_pinned_literals_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'pinned'):
             self.build(runner=FakeCargo(embed=False))
+
+    def test_failed_toolchain_probe_is_refused(self):
+        with self.assertRaisesRegex(installer.InstallerRefused, 'toolchain probe'):
+            self.build(runner=FakeCargo(toolchain_exit=1))
+
+    def test_relative_paths_are_made_absolute(self):
+        previous = os.getcwd()
+        os.chdir(self.root)
+        try:
+            result = installer.build(self.repo, self.commit, self.release, Path('rel-out'), 'a', Path('rel-src'),
+                                     Path('rel-target'), runner=FakeCargo(), environ={'PATH': '/usr/bin:/bin'})
+        finally:
+            os.chdir(previous)
+        self.assertEqual(result['src_root'], str(self.root / 'rel-src'))
+        self.assertEqual(result['target_dir'], str(self.root / 'rel-target'))
+        self.assertTrue((self.root / 'rel-out/intel-npu-stack-install').is_file())
 
     def test_installer_for_another_architecture_is_refused(self):
         for machine in [183, 3]:  # aarch64, i386

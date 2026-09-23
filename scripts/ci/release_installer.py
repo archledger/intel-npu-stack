@@ -96,6 +96,20 @@ def check_elf(content):
             'the installer is not a 64-bit little-endian x86_64 executable')
 
 
+def check_cargo_config(cargo_home, src_root):
+    """Refuse Cargo configuration that is not part of the exported source.
+
+    Cargo reads $CARGO_HOME/config(.toml) and .cargo/config(.toml) in every parent of its
+    working directory; such settings (rustflags, linkers, source replacement) would change the
+    installer without appearing in the pinned tree. The exported tree's own files are tracked.
+    """
+    source = Path(os.path.abspath(src_root))
+    for directory in [Path(cargo_home), *(parent / '.cargo' for parent in source.parents)]:
+        for name in ['config', 'config.toml']:
+            require(not (directory / name).exists(),
+                    f'Cargo configuration outside the exported source is refused: {directory / name}')
+
+
 def toolchain_env(target_dir, src_root, environ=None):
     """Minimal build environment using the real cargo/rustc of the repository's pinned toolchain.
 
@@ -120,6 +134,7 @@ def toolchain_env(target_dir, src_root, environ=None):
             f'the resolved compiler is not the pinned channel {channel}: {version.stdout.strip()!r}')
     cargo_home = environ.get('CARGO_HOME') or str(Path(environ.get('HOME', '/nonexistent')) / '.cargo')
     require(Path(cargo_home).is_absolute(), 'CARGO_HOME must be absolute')
+    check_cargo_config(cargo_home, src_root)
     return minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_HOME': cargo_home,
                         'CARGO_BUILD_JOBS': build_jobs(environ), 'PATH': str(sysroot / 'bin') + ':/usr/bin:/bin'})
 
@@ -191,7 +206,7 @@ def prepare(repo, commit, release_tree):
 
 def pin_source(repo, commit, release_tree, src_root):
     _, metadata_digest = prepare(repo, commit, release_tree)
-    return export_pinned_source(repo, commit, metadata_digest, src_root)
+    return export_pinned_source(repo, commit, metadata_digest, Path(os.path.abspath(src_root)))
 
 
 def renderer(repo):
@@ -209,7 +224,8 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
     require(leg in {'a', 'b'}, 'leg must be a or b')
     environ = dict(os.environ if environ is None else environ)
     jobs = build_jobs(environ)
-    output, target_dir = Path(output), Path(target_dir)
+    # Cargo resolves a relative CARGO_TARGET_DIR from its working directory, the exported source.
+    output, src_root, target_dir = (Path(os.path.abspath(path)) for path in (output, src_root, target_dir))
     require(not output.exists(), f'{output} already exists; outputs are never overwritten')
     require(not target_dir.exists(), f'{target_dir} already exists')
     values, metadata_digest = prepare(repo, commit, release_tree)
@@ -232,8 +248,11 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
     version = runner([str(binary), '--version'], Path(src_root), env)
     require(version.returncode == 0 and version.stdout.strip() == f'{BINARY} {values["version"]}',
             'unexpected installer version output: ' + (version.stdout or '').strip())
-    toolchain = {name: runner([name, *flag], Path(src_root), env).stdout.strip()
-                 for name, flag in [('rustc', ['-vV']), ('cargo', ['-V'])]}
+    toolchain = {}
+    for name, flag in [('rustc', '-vV'), ('cargo', '-V')]:
+        probe = runner([name, flag], Path(src_root), env)
+        require(probe.returncode == 0 and probe.stdout.strip(), f'the {name} {flag} toolchain probe failed')
+        toolchain[name] = probe.stdout.strip()
 
     render = renderer(repo)
     binary_sha = hashlib.sha256(content).hexdigest()
