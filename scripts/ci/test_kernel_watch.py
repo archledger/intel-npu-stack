@@ -4,6 +4,7 @@ import contextlib
 import hashlib
 import json
 from pathlib import Path
+import re
 import tempfile
 import tomllib
 import unittest
@@ -358,6 +359,43 @@ class Policy(unittest.TestCase):
             self.load([probe('7.2.7-200.fc44', evidence='a' * 64, result='fail'), probe('7.2.7-200.fc44')])
         outcomes, _ = self.load([probe('7.2.7-200.fc44', evidence='a' * 64), probe('7.2.7-200.fc44')])
         self.assertEqual(outcomes, {(PROFILE, '7.2.7-200.fc44'): 'pass'})
+
+
+class IssueBody(unittest.TestCase):
+    FINDING = {'kernel': '7.3.0-200.fc44', 'bodhi_status': 'testing', 'update': 'FEDORA-2026-aaaaaaaaaa',
+               'actions': [{'profile': PROFILE, 'window': '[7.2.5, 7.3.0)', 'action': 'requalification-required'},
+                           {'profile': 'fedora-44-next', 'window': '[7.3.0, 7.4.0)', 'action': 'probe-required'}]}
+
+    def test_issue_body_lists_each_profile_action_with_its_guidance(self):
+        body = watcher.render_issue(self.FINDING)
+        self.assertEqual(body.splitlines()[:9], [
+            '## Fedora kernel observation', '', '- Kernel: 7.3.0-200.fc44', '- Bodhi status: testing',
+            '- Update: FEDORA-2026-aaaaaaaaaa', '', '| Profile | Window | Action |', '|---|---|---|',
+            f'| {PROFILE} | [7.2.5, 7.3.0) | `requalification-required` |'])
+        guidance = [line for line in body.splitlines() if line.startswith('- `')]
+        self.assertEqual([line.split('`')[1] for line in guidance], ['probe-required', 'requalification-required'])
+        self.assertTrue(body.endswith('\n'))
+
+    def test_table_cells_escape_pipes_backticks_and_backslashes(self):
+        finding = dict(self.FINDING, actions=[{'profile': 'fedora|44 `lunar` \\ x', 'window': '[7.2.5-a|b, 7.3.0)',
+                                               'action': 'probe-failed'}])
+        row = [line for line in watcher.render_issue(finding).splitlines() if line.startswith('| fedora')][0]
+        self.assertEqual(row, '| fedora\\|44 \\`lunar\\` \\\\ x | [7.2.5-a\\|b, 7.3.0) | `probe-failed` |')
+        # Unescaped, the row splits into exactly the three cells again, with the original text.
+        cells = [cell.strip() for cell in re.split(r'(?<!\\)\|', row)[1:-1]]
+        self.assertEqual([re.sub(r'\\(.)', r'\1', cell) for cell in cells[:2]],
+                         ['fedora|44 `lunar` \\ x', '[7.2.5-a|b, 7.3.0)'])
+
+    def test_report_findings_carry_their_rendered_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profiles = Path(tmp) / 'profiles/fedora/44'
+            profiles.mkdir(parents=True)
+            (profiles / 'q.toml').write_text(QUALIFIED)
+            registry = Path(tmp) / 'probes.json'
+            registry.write_text(json.dumps({'schema_version': 1, 'probes': []}))
+            report = watcher.build_report(lambda url, timeout: BODHI, Path(tmp) / 'profiles', registry, {})
+        for finding in report['findings']:
+            self.assertEqual(finding['body'], watcher.render_issue(finding))
 
 
 class Report(unittest.TestCase):
