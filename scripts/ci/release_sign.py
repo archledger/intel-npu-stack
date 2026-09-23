@@ -28,7 +28,7 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
@@ -36,6 +36,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 
 EPOCH = 1789084800
 PROFILE_ID = 'fedora-44-lunar-lake-x86_64'
@@ -62,6 +63,12 @@ SAFE_FILENAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+-]*')
 PASSPHRASE_PATH = re.compile(r'/[A-Za-z0-9._/-]+')
 SIGN_TIMEOUT = 300
 CHILD_HOME = None
+FINGERPRINT = re.compile(r'[0-9A-F]{40}')
+QUALIFICATION_FIELDS = ['evidence_id', 'evidence_sha256', 'qualified_at', 'hardware_class', 'test_suite_version']
+# GnuPG records that carry no trust decision; anything else is refused (mirrors
+# crates/stack-install/src/signature.rs verify_signature_status).
+NEUTRAL_STATUS = {'KEY_CONSIDERED', 'SIG_ID', 'TRUST_UNDEFINED', 'TRUST_NEVER', 'TRUST_MARGINAL',
+                  'TRUST_FULLY', 'TRUST_ULTIMATE'}
 
 
 class SigningRefused(Exception):
@@ -176,14 +183,44 @@ def detach_sign(data, output, gnupghome, fingerprint, passphrase_file):
         env=child_env(gnupghome), timeout=SIGN_TIMEOUT)
 
 
+def check_signature_status(status, expected_primary):
+    """Accept exactly one binary detached signature from the pinned primary key.
+
+    Same policy as the installer: one NEWSIG, one GOODSIG whose key id ends the
+    VALIDSIG fingerprint, VALIDSIG naming the expected primary key with a v4
+    binary-document signature and SHA256/384/512; expiry, revocation, errors
+    and unknown records are refused even when VALIDSIG is also present.
+    """
+    invalid = 'signature does not satisfy the pinned release-key policy'
+    require(FINGERPRINT.fullmatch(expected_primary or '') is not None and len(status) <= 65536, invalid)
+    starts, good, valid = 0, None, None
+    for line in status.splitlines():
+        require(line.startswith('[GNUPG:] '), invalid)
+        fields = line[len('[GNUPG:] '):].split()
+        kind = fields[0] if fields else ''
+        if kind == 'NEWSIG':
+            starts += 1
+        elif kind == 'GOODSIG' and len(fields) >= 3 and good is None:
+            require(re.fullmatch(r'[0-9A-F]{16}', fields[1]) is not None, invalid)
+            good = fields[1]
+        elif kind == 'VALIDSIG' and len(fields) == 11 and valid is None:
+            require(FINGERPRINT.fullmatch(fields[1]) is not None and fields[10] == expected_primary
+                    and fields[5] == '4' and fields[6] == '0' and fields[8] in {'8', '9', '10'}
+                    and fields[9] == '00', invalid)
+            valid = fields[1]
+        elif kind not in NEUTRAL_STATUS:
+            raise SigningRefused(invalid)
+    require(starts == 1 and good is not None and valid is not None and valid.endswith(good), invalid)
+
+
 def verify_detached(signature, data, gnupghome, fingerprint):
     try:
         status = run(['gpg', '--batch', '--status-fd', '1', '--verify', str(signature), str(data)],
                      env=child_env(gnupghome)).stdout
+        check_signature_status(status, fingerprint)
     except SigningRefused:
-        status = ''
-    require('[GNUPG:] VALIDSIG ' + fingerprint + ' ' in status,
-            'detached signature did not verify: ' + Path(signature).name)
+        raise SigningRefused('detached signature did not verify under the release-key policy: '
+                             + Path(signature).name) from None
 
 
 def build_profile_rpm(source, work, profile_bytes):
@@ -223,18 +260,58 @@ def build_profile_rpm(source, work, profile_bytes):
     return pair[0], builds
 
 
+def regular_file(path, root):
+    """A regular, non-symlink file whose resolved location stays inside root."""
+    path, root = Path(path), Path(root)
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return False
+    return (stat.S_ISREG(info.st_mode)
+            and path.resolve().is_relative_to(root.resolve()))
+
+
+def safe_relative(value):
+    """Canonical relative POSIX path without empty, '.' or '..' parts."""
+    if not isinstance(value, str) or not value:
+        return False
+    relative = PurePosixPath(value)
+    return (str(relative) == value and not relative.is_absolute()
+            and all(part not in {'', '.', '..'} for part in relative.parts))
+
+
 def check_rollback(inputs):
     rows = json.loads((inputs / 'rollback-index.json').read_text())
-    require(isinstance(rows, list) and len(rows) == len(ROLLBACK_PACKAGES)
-            and {row['name'] for row in rows} == ROLLBACK_PACKAGES,
-            'rollback package set is incomplete or duplicated')
+    require(isinstance(rows, list) and all(isinstance(row, dict) for row in rows)
+            and len(rows) == len(ROLLBACK_PACKAGES)
+            and {row.get('name') for row in rows} == ROLLBACK_PACKAGES
+            and len({row.get('filename') for row in rows}) == len(rows),
+            'rollback package set is incomplete or duplicated (names and filenames must be unique)')
     for row in rows:
-        require(SAFE_FILENAME.fullmatch(row['filename']) is not None,
-                'unsafe rollback filename: ' + row['filename'])
+        require(isinstance(row.get('filename'), str) and SAFE_FILENAME.fullmatch(row['filename']) is not None,
+                'unsafe rollback filename: ' + str(row.get('filename')))
         origin = inputs / 'rollback-rpms' / row['filename']
-        require(origin.is_file() and sha(origin) == row['sha256'],
-                'rollback RPM digest drift: ' + row['filename'])
+        require(regular_file(origin, inputs), 'rollback RPM is not a regular file inside the inputs: '
+                + row['filename'])
+        require(sha(origin) == row.get('sha256'), 'rollback RPM digest drift: ' + row['filename'])
     return rows
+
+
+def check_profile(profile, allow_candidate):
+    """Production signing requires a qualified profile carrying its qualification record."""
+    document = tomllib.loads(Path(profile).read_text())
+    status = document.get('status')
+    if allow_candidate and status == 'candidate':
+        return status
+    require(status == 'qualified', 'the selected profile is not qualified; refusing before any key use')
+    record = document.get('qualification')
+    require(isinstance(record, dict), 'the qualified profile lacks its qualification record')
+    for field in QUALIFICATION_FIELDS:
+        require(isinstance(record.get(field), str) and record[field].strip(),
+                'the qualification record lacks ' + field)
+    require(DIGEST.fullmatch(record['evidence_sha256']) is not None,
+            'the qualification evidence digest is not a lowercase SHA-256')
+    return status
 
 
 def copy_rollback(inputs, output):
@@ -245,13 +322,22 @@ def copy_rollback(inputs, output):
     shutil.copyfile(inputs / 'rollback-index.json', output / 'rollback-index.json')
 
 
-def validate_inputs(inputs, profile):
-    """Keyless check of the release inputs contract against the selected profile."""
+def validate_inputs(inputs, profile, allow_candidate=False):
+    """Keyless check of the release inputs contract against the selected profile.
+
+    Everything the signing and assembly steps later consume is checked here, so
+    malformed inputs are refused before the production key is imported.
+    """
     inputs = Path(inputs)
     for name in ['index.json', 'unsigned-rpms', 'candidate.toml', 'package-index.json',
                  'spdx-index.json', 'source-policy.json', 'notices', 'evidence/spdx',
                  'rollback-index.json', 'rollback-rpms']:
         require((inputs / name).exists(), 'release inputs lack ' + name)
+    profile_status = check_profile(profile, allow_candidate)
+    require(regular_file(inputs / 'candidate.toml', inputs), 'candidate.toml must be a regular file')
+    require((inputs / 'candidate.toml').read_bytes() == Path(profile).read_bytes(),
+            'candidate.toml differs from the selected profile')
+
     rows = json.loads((inputs / 'index.json').read_text())
     require(isinstance(rows, list) and 1 < len(rows) <= 128,
             'unexpected release input package count')
@@ -272,30 +358,54 @@ def validate_inputs(inputs, profile):
         filenames.add(row['filename'])
         roles[row['role']] = roles.get(row['role'], 0) + 1
         origin = inputs / 'unsigned-rpms' / row['filename']
-        require(origin.is_file() and sha(origin) == row['sha256'],
-                'unsigned input digest mismatch: ' + row['filename'])
+        require(regular_file(origin, inputs), 'unsigned input is not a regular file inside the inputs: '
+                + row['filename'])
+        require(sha(origin) == row['sha256'], 'unsigned input digest mismatch: ' + row['filename'])
     runtime = {row['name'] for row in rows if row['role'] == 'runtime'}
     missing = RUNTIME_PACKAGES - runtime
     require(not missing, 'required runtime packages missing or not staged as runtime: '
             + ', '.join(sorted(missing)))
-    require((inputs / 'candidate.toml').read_bytes() == Path(profile).read_bytes(),
-            'candidate.toml differs from the selected profile')
     rollback = check_rollback(inputs)
+
     spdx = json.loads((inputs / 'spdx-index.json').read_text())
     require(isinstance(spdx, dict) and spdx, 'SPDX index is empty or malformed')
     for key, record in sorted(spdx.items()):
-        parts = Path(key).parts
-        require(not Path(key).is_absolute() and '..' not in parts and parts,
-                'unsafe SPDX document path: ' + key)
+        require(safe_relative(key), 'unsafe SPDX document path: ' + str(key))
+        require(isinstance(record, dict) and isinstance(record.get('sha256'), str)
+                and DIGEST.fullmatch(record['sha256']) is not None, 'malformed SPDX record: ' + key)
         origin = inputs / 'evidence/spdx' / key
-        require(origin.is_file() and sha(origin) == record.get('sha256'),
-                'SPDX document digest drift: ' + key)
-    require(isinstance(json.loads((inputs / 'package-index.json').read_text()), dict),
-            'package index is malformed')
-    json.loads((inputs / 'source-policy.json').read_text())
+        require(regular_file(origin, inputs) and sha(origin) == record['sha256'],
+                'SPDX document digest drift or not a regular file: ' + key)
+
+    package_index = json.loads((inputs / 'package-index.json').read_text())
+    require(isinstance(package_index, dict) and package_index, 'package index must be a non-empty object')
+    owned = {}
+    for name, record in sorted(package_index.items()):
+        require(name in runtime, 'package index names a package that is not a runtime input: ' + name)
+        require(isinstance(record, dict) and isinstance(record.get('regular_files'), list),
+                'package index record lacks regular_files: ' + name)
+        for path in record['regular_files']:
+            require(isinstance(path, str) and path.startswith('/') and str(PurePosixPath(path)) == path,
+                    'noncanonical payload path in the package index: ' + str(path))
+            require(path not in owned, 'conflicting payload ownership in the package index: ' + path)
+            owned[path] = name
+
+    policy = json.loads((inputs / 'source-policy.json').read_text())
+    require(isinstance(policy, list) and all(isinstance(source, dict) for source in policy),
+            'source policy must be a list of objects')
+    notices = 0
+    for source in policy:
+        files = source.get('license_files', [])
+        require(isinstance(files, list), 'source policy license_files must be a list')
+        for license_file in files:
+            require(safe_relative(license_file), 'unsafe license notice path: ' + str(license_file))
+            require(regular_file(inputs / 'notices' / license_file, inputs),
+                    'missing license notice: ' + license_file)
+            notices += 1
     return {'passed': True, 'packages': len(rows), 'roles': dict(sorted(roles.items())),
             'runtime_packages': len(runtime), 'rollback_packages': len(rollback),
-            'spdx_documents': len(spdx), 'candidate_sha256': sha(inputs / 'candidate.toml')}
+            'spdx_documents': len(spdx), 'payload_files': len(owned), 'license_notices': notices,
+            'profile_status': profile_status, 'candidate_sha256': sha(inputs / 'candidate.toml')}
 
 
 def main(argv=None):
@@ -306,6 +416,8 @@ def main(argv=None):
                         help='selected profile; candidate.toml must equal it byte for byte')
     parser.add_argument('--check-inputs', action='store_true',
                         help='validate the inputs against --profile without any key and exit')
+    parser.add_argument('--allow-candidate', action='store_true',
+                        help='with --check-inputs only: accept a candidate profile (staging checks)')
     parser.add_argument('--source', type=Path)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--work', type=Path)
@@ -326,9 +438,11 @@ def main(argv=None):
                 'RELEASE_SIGNING_PASSPHRASE is set in the environment; pass --passphrase-file')
         if args.check_inputs:
             require(args.profile is not None, '--check-inputs requires --profile')
-            print(json.dumps(validate_inputs(args.inputs, args.profile), indent=2, sort_keys=True))
+            print(json.dumps(validate_inputs(args.inputs, args.profile, args.allow_candidate),
+                             indent=2, sort_keys=True))
             return 0
-        for name in ['source', 'output', 'work', 'fingerprint', 'gpg_home', 'base_url',
+        require(not args.allow_candidate, '--allow-candidate is only valid with --check-inputs')
+        for name in ['profile', 'source', 'output', 'work', 'fingerprint', 'gpg_home', 'base_url',
                      'release_version']:
             require(getattr(args, name), '--' + name.replace('_', '-') + ' is required for signing')
         passphrase_file = (check_passphrase_file(args.passphrase_file)
@@ -337,8 +451,7 @@ def main(argv=None):
                 '--require-passphrase needs --passphrase-file')
         inputs = args.inputs.resolve(strict=True)
         source = args.source.resolve(strict=True)
-        if args.profile is not None:
-            validate_inputs(inputs, args.profile)
+        validate_inputs(inputs, args.profile)
         require(not args.output.exists() or not any(args.output.iterdir()),
                 'output must be absent or empty')
         args.output.mkdir(parents=True, exist_ok=True)
@@ -361,7 +474,7 @@ def main(argv=None):
         signed = []
         for row in sorted(rows, key=lambda entry: entry['filename']):
             source_rpm = inputs / 'unsigned-rpms' / row['filename']
-            require(source_rpm.is_file() and sha(source_rpm) == row['sha256'],
+            require(regular_file(source_rpm, inputs) and sha(source_rpm) == row['sha256'],
                     'unsigned input digest mismatch: ' + row['filename'])
             require(row.get('role') in INPUT_ROLES, 'input package lacks a valid role: ' + row['filename'])
             target = repository / source_rpm.name
@@ -436,7 +549,7 @@ def main(argv=None):
         spdx_index = json.loads((inputs / 'spdx-index.json').read_text())
         for key, record in sorted(spdx_index.items()):
             origin = inputs / 'evidence/spdx' / key
-            require(origin.is_file() and sha(origin) == record['sha256'],
+            require(regular_file(origin, inputs) and sha(origin) == record['sha256'],
                     'SPDX document digest drift: ' + key)
             destination = assembly / 'evidence/spdx' / key
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -484,7 +597,8 @@ def main(argv=None):
         }
         (args.output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result, indent=2))
-    except (SigningRefused, KeyError, OSError, ValueError) as error:
+    except (SigningRefused, KeyError, OSError, ValueError, TypeError, AttributeError,
+            tomllib.TOMLDecodeError) as error:
         parser.exit(1, 'Release signing refused: ' + str(error) + '\n')
     finally:
         if dbpath is not None:

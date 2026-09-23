@@ -36,6 +36,12 @@ destroy_on_failure() {
   fi
 }
 
+probe() {
+  printf 'intel-npu-stack keyring probe\n' | gpg --homedir "$home" --batch --no-tty --pinentry-mode loopback \
+    --passphrase-file "$1" --local-user "$RELEASE_SIGNING_FINGERPRINT" \
+    --detach-sign --output /dev/null >/dev/null 2>&1
+}
+
 primary_fingerprints() {
   # Fingerprint of each primary key in colon listing order (the fpr record after sec/pub).
   awk -F: '$1 == "sec" || $1 == "pub" { want = 1; next } $1 == "fpr" && want { print $10; want = 0 }'
@@ -65,10 +71,15 @@ import_key() {
   [ "${#pinned[@]}" -eq 1 ] && [ "${pinned[0]}" = "$RELEASE_SIGNING_FINGERPRINT" ] \
     || refuse "secret key does not match the committed release public key"
 
-  # Prove the passphrase unlocks the key before any release artifact is signed.
-  printf 'intel-npu-stack keyring probe\n' | gpg --homedir "$home" --batch --no-tty --pinentry-mode loopback \
-    --passphrase-file "$home/passphrase" --local-user "$RELEASE_SIGNING_FINGERPRINT" \
-    --detach-sign --output /dev/null >/dev/null 2>&1 || refuse "the passphrase does not unlock the signing key"
+  # The key must actually be passphrase-protected: a random wrong passphrase has to fail
+  # (gpg ignores --passphrase-file for an unprotected key, and the agent caches nothing).
+  head -c 32 /dev/urandom | base64 > "$home/wrong-passphrase"
+  if probe "$home/wrong-passphrase"; then
+    refuse "the signing key is not passphrase-protected"
+  fi
+  rm -f -- "$home/wrong-passphrase"
+  # Then the configured passphrase must unlock it before any release artifact is signed.
+  probe "$home/passphrase" || refuse "the passphrase does not unlock the signing key"
   trap - EXIT
   printf 'gnupghome=%s\npassphrase_file=%s\n' "$home" "$home/passphrase"
 }

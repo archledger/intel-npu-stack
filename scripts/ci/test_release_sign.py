@@ -72,6 +72,19 @@ def write(path, data):
     return hashlib.sha256(data).hexdigest()
 
 
+QUALIFIED_PROFILE = '''schema_version = 1
+id = "fedora-44-lunar-lake-x86_64"
+status = "qualified"
+
+[qualification]
+evidence_id = "qualification-test"
+evidence_sha256 = "''' + 'e' * 64 + '''"
+qualified_at = "2026-09-23T00:00:00Z"
+hardware_class = "test"
+test_suite_version = "test"
+'''
+
+
 class InputsContract(unittest.TestCase):
     """The keyless inputs check refuses malformed release inputs before any key use."""
 
@@ -88,11 +101,13 @@ class InputsContract(unittest.TestCase):
         self.rows = rows
         self.save_index(rows)
         self.profile = Path(self.tmp.name) / 'profile.toml'
-        self.profile.write_text('status = "qualified"\n')
+        self.profile.write_text(QUALIFIED_PROFILE)
         shutil.copyfile(self.profile, self.inputs / 'candidate.toml')
-        (self.inputs / 'package-index.json').write_text(json.dumps({'openvino': {'component': 'openvino'}}))
-        (self.inputs / 'source-policy.json').write_text('{}')
-        (self.inputs / 'notices').mkdir()
+        (self.inputs / 'package-index.json').write_text(json.dumps(
+            {'openvino': {'component': 'openvino', 'regular_files': ['/usr/lib64/libopenvino.so.2620']}}))
+        (self.inputs / 'source-policy.json').write_text(json.dumps(
+            [{'name': 'openvino', 'license_files': ['openvino/LICENSE']}]))
+        write(self.inputs / 'notices/openvino/LICENSE', b'Apache-2.0\n')
         spdx = write(self.inputs / 'evidence/spdx/openvino/openvino.spdx.json', b'{"spdx": 1}')
         (self.inputs / 'spdx-index.json').write_text(json.dumps({'openvino/openvino.spdx.json': {'sha256': spdx}}))
         rollback = []
@@ -149,6 +164,64 @@ class InputsContract(unittest.TestCase):
         (self.inputs / 'spdx-index.json').write_text(json.dumps({'../escape.json': {'sha256': '0' * 64}}))
         with self.assertRaisesRegex(signer.SigningRefused, 'SPDX'):
             signer.validate_inputs(self.inputs, self.profile)
+
+    def test_symlinked_input_is_refused(self):
+        outside = Path(self.tmp.name) / 'outside.rpm'
+        outside.write_bytes(b'rpm ' + self.rows[0]['name'].encode())
+        target = self.inputs / 'unsigned-rpms' / self.rows[0]['filename']
+        target.unlink()
+        target.symlink_to(outside)
+        with self.assertRaisesRegex(signer.SigningRefused, 'regular file'):
+            signer.validate_inputs(self.inputs, self.profile)
+
+    def test_duplicate_rollback_filenames_are_refused(self):
+        rows = json.loads((self.inputs / 'rollback-index.json').read_text())
+        rows[1] = {**rows[1], 'filename': rows[0]['filename'], 'sha256': rows[0]['sha256']}
+        (self.inputs / 'rollback-index.json').write_text(json.dumps(rows))
+        with self.assertRaisesRegex(signer.SigningRefused, 'rollback'):
+            signer.validate_inputs(self.inputs, self.profile)
+
+    def test_malformed_spdx_record_is_refused_cleanly(self):
+        (self.inputs / 'spdx-index.json').write_text(json.dumps({'openvino/openvino.spdx.json': None}))
+        with self.assertRaisesRegex(signer.SigningRefused, 'SPDX'):
+            signer.validate_inputs(self.inputs, self.profile)
+
+    def test_package_index_records_are_validated_before_any_key(self):
+        cases = {
+            'regular_files': {'openvino': {'component': 'openvino'}},
+            'noncanonical': {'openvino': {'regular_files': ['usr/lib64/relative.so']}},
+            'runtime': {'openvino-devel': {'regular_files': ['/usr/include/x.h']}},
+            'ownership': {'openvino': {'regular_files': ['/usr/lib64/a.so']},
+                          'openvino-plugins': {'regular_files': ['/usr/lib64/a.so']}},
+            'package index': ['not-an-object'],
+        }
+        for label, index in cases.items():
+            with self.subTest(label):
+                (self.inputs / 'package-index.json').write_text(json.dumps(index))
+                with self.assertRaisesRegex(signer.SigningRefused, label):
+                    signer.validate_inputs(self.inputs, self.profile)
+
+    def test_missing_license_notice_is_refused(self):
+        (self.inputs / 'notices/openvino/LICENSE').unlink()
+        with self.assertRaisesRegex(signer.SigningRefused, 'notice'):
+            signer.validate_inputs(self.inputs, self.profile)
+
+    def test_unqualified_profile_is_refused_before_any_key(self):
+        for text in [QUALIFIED_PROFILE.replace('status = "qualified"', 'status = "candidate"'),
+                     QUALIFIED_PROFILE.split('[qualification]')[0],
+                     QUALIFIED_PROFILE.replace('e' * 64, 'not-a-digest')]:
+            with self.subTest(text[:40]):
+                self.profile.write_text(text)
+                shutil.copyfile(self.profile, self.inputs / 'candidate.toml')
+                with self.assertRaisesRegex(signer.SigningRefused, 'qualif'):
+                    signer.validate_inputs(self.inputs, self.profile)
+
+    def test_staging_check_may_accept_a_candidate_profile(self):
+        self.profile.write_text(QUALIFIED_PROFILE.replace('status = "qualified"', 'status = "candidate"')
+                                .split('[qualification]')[0])
+        shutil.copyfile(self.profile, self.inputs / 'candidate.toml')
+        result = signer.validate_inputs(self.inputs, self.profile, allow_candidate=True)
+        self.assertEqual(result['profile_status'], 'candidate')
 
     def test_check_inputs_mode_needs_no_key(self):
         with mock.patch('builtins.print') as printed:
@@ -217,6 +290,44 @@ class PassphraseContract(unittest.TestCase):
                     [], 0, 'Header SHA256 digest: OK\nPayload SHA256 digest: OK\n' + 'a' * 40, '')):
             with self.assertRaisesRegex(signer.SigningRefused, 'payload'):
                 signer.sign_rpm(self.root / 'x.rpm', self.root / 'gnupg', 'A' * 40, None, self.root / 'db')
+
+
+PRIMARY = 'A' * 24 + '0123456789ABCDEF'
+
+
+def status(*records):
+    return ''.join('[GNUPG:] ' + record + '\n' for record in records)
+
+
+GOOD = ['NEWSIG', 'KEY_CONSIDERED ' + PRIMARY + ' 0', 'SIG_ID abc 2026-09-23 1790000000',
+        'GOODSIG 0123456789ABCDEF release <r@example.invalid>',
+        'VALIDSIG ' + PRIMARY + ' 2026-09-23 1790000000 0 4 0 22 10 00 ' + PRIMARY, 'TRUST_UNDEFINED 0 pgp']
+
+
+class SignatureStatusPolicy(unittest.TestCase):
+    """Detached signatures follow the installer's strict GnuPG status policy."""
+
+    def test_single_good_signature_from_the_primary_key_is_accepted(self):
+        signer.check_signature_status(status(*GOOD), PRIMARY)
+
+    def test_expiry_revocation_or_errors_alongside_validsig_are_refused(self):
+        for extra in ['EXPKEYSIG 0123456789ABCDEF release', 'REVKEYSIG 0123456789ABCDEF release',
+                      'KEYEXPIRED 1790000000', 'ERRSIG 0123456789ABCDEF 22 10 00 1790000000 9',
+                      'BADSIG 0123456789ABCDEF release', 'SOMETHING_NEW x']:
+            with self.subTest(extra), self.assertRaises(signer.SigningRefused):
+                signer.check_signature_status(status(*GOOD, extra), PRIMARY)
+
+    def test_second_signature_other_key_weak_hash_or_text_class_is_refused(self):
+        cases = {
+            'second signature': GOOD + ['NEWSIG'],
+            'other primary': [line.replace(PRIMARY, 'B' * 40) if line.startswith('VALIDSIG') else line
+                              for line in GOOD],
+            'sha1': [line.replace(' 22 10 00 ', ' 22 2 00 ') for line in GOOD],
+            'text class': [line.replace(' 22 10 00 ', ' 22 10 01 ') for line in GOOD],
+        }
+        for label, lines in cases.items():
+            with self.subTest(label), self.assertRaises(signer.SigningRefused):
+                signer.check_signature_status(status(*lines), PRIMARY)
 
 
 @unittest.skipUnless(TOOLS, TOOLS_REASON)

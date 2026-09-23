@@ -107,6 +107,18 @@ class KeyringContract(unittest.TestCase):
         self.assertFalse(self.home.exists())
 
     @unittest.skipUnless(SHM_TMPFS, '/dev/shm is not a tmpfs here')
+    def test_unprotected_key_is_refused_even_with_a_passphrase(self):
+        plain = self.make_key('plain', protected=False)
+        result = subprocess.run(['bash', str(SCRIPT), 'import'], capture_output=True, text=True, timeout=120,
+                                env={**self.env({'RELEASE_SIGNING_KEY': plain['secret'],
+                                                 'RELEASE_SIGNING_PASSPHRASE': 'any-nonempty-value',
+                                                 'RELEASE_SIGNING_FINGERPRINT': plain['fingerprint']}),
+                                     'RELEASE_PUBLIC_KEY': str(plain['public'])})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('not passphrase-protected', result.stderr)
+        self.assertFalse(self.home.exists())
+
+    @unittest.skipUnless(SHM_TMPFS, '/dev/shm is not a tmpfs here')
     def test_existing_home_is_refused(self):
         self.home.mkdir(mode=0o700)
         result = self.import_key()
