@@ -22,6 +22,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -52,6 +53,31 @@ def sha(path):
 def minimal_env(extra=None):
     env = {'PATH': '/usr/bin:/bin', 'LC_ALL': 'C.UTF-8', 'TZ': 'UTC', 'HOME': tempfile.gettempdir()}
     env.update(extra or {})
+    return env
+
+
+def toolchain_env(target_dir, src_root, environ=None):
+    """Minimal build environment using the real cargo/rustc of the repository's pinned toolchain.
+
+    rustup proxies need the caller's HOME and read rust-toolchain.toml from the working
+    directory, so the sysroot is resolved once inside the exported source and its bin
+    directory (the real tools) leads a minimal PATH. CARGO_HOME stays fixed and absolute
+    because registry paths reach the binary; both legs must use the same one.
+    """
+    environ = dict(os.environ if environ is None else environ)
+    rustc = shutil.which('rustc', path=environ.get('PATH', ''))
+    require(rustc is not None, 'rustc is not on PATH')
+    query = subprocess.run([rustc, '--print', 'sysroot'], cwd=src_root, env=environ, capture_output=True,
+                           text=True, check=False, timeout=600)
+    sysroot = Path(query.stdout.strip())
+    require(query.returncode == 0 and sysroot.is_absolute() and (sysroot / 'bin/cargo').is_file()
+            and (sysroot / 'bin/rustc').is_file(), 'cannot resolve the pinned Rust toolchain sysroot')
+    cargo_home = environ.get('CARGO_HOME') or str(Path(environ.get('HOME', '/nonexistent')) / '.cargo')
+    require(Path(cargo_home).is_absolute(), 'CARGO_HOME must be absolute')
+    env = minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_HOME': cargo_home,
+                       'PATH': str(sysroot / 'bin') + ':/usr/bin:/bin'})
+    if environ.get('CARGO_BUILD_JOBS'):
+        env['CARGO_BUILD_JOBS'] = environ['CARGO_BUILD_JOBS']
     return env
 
 
@@ -143,12 +169,10 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
     require(not target_dir.exists(), f'{target_dir} already exists')
     values, metadata_digest = prepare(repo, commit, release_tree)
     trust_file = export_pinned_source(repo, commit, metadata_digest, src_root)
-    env = minimal_env({'CARGO_TARGET_DIR': str(target_dir)})
-    for name in ['CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'CARGO_BUILD_JOBS']:
-        if name in os.environ:
-            env[name] = os.environ[name]
-    if 'CARGO_HOME' in env:
-        env['PATH'] = str(Path(env['CARGO_HOME']) / 'bin') + ':' + env['PATH']
+    if runner is run_cargo:
+        env = toolchain_env(target_dir, src_root)
+    else:  # injected runners (tests) do not execute a real toolchain
+        env = minimal_env({'CARGO_TARGET_DIR': str(target_dir)})
     for argv in (['cargo', 'fetch', '--locked'],
                  ['cargo', 'build', '--release', '--locked', '--offline', '-p', 'stack-install', '--bin', BINARY]):
         result = runner(argv, Path(src_root), env)
@@ -184,7 +208,8 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
         'primary_fingerprint': values['primary_fingerprint'], 'release_json_sha256': metadata_digest,
         'pinned_trust_sha256': sha(trust_file), 'binary_sha256': binary_sha, 'install_sh_sha256': bootstrap_sha,
         'primary_command_sha256': sha(output / 'primary-command.txt'), 'src_root': str(src_root),
-        'target_dir': str(target_dir), 'toolchain': toolchain,
+        'target_dir': str(target_dir), 'toolchain': toolchain, 'cargo_home': env.get('CARGO_HOME'),
+        'path': env['PATH'],
         'environment': {name: os.environ.get(name) for name in ['TZ', 'LANG', 'CARGO_BUILD_JOBS', 'IMAGE_DIGEST']},
         'umask': oct(os.umask(os.umask(0))),
     }

@@ -47,6 +47,47 @@ class FakeCargo:
         return subprocess.CompletedProcess(argv, 0, argv[0] + ' 1.85.0 (fake)\n', '')
 
 
+class ToolchainEnvironment(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp(prefix='rt-', dir='/tmp'))
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.sysroot = self.root / 'toolchains/1.85.0'
+        (self.sysroot / 'bin').mkdir(parents=True)
+        for tool in ['cargo', 'rustc']:
+            (self.sysroot / 'bin' / tool).write_text('#!/bin/sh\n')
+        proxies = self.root / 'proxies'
+        proxies.mkdir()
+        # A rustup-like proxy that reports the pinned toolchain only inside the source tree.
+        (proxies / 'rustc').write_text('#!/bin/sh\n[ -f rust-toolchain.toml ] || exit 3\nprintf "%s\\n" "' + str(self.sysroot) + '"\n')
+        (proxies / 'rustc').chmod(0o755)
+        self.src = self.root / 'src'
+        self.src.mkdir()
+        (self.src / 'rust-toolchain.toml').write_text('[toolchain]\nchannel = "1.85.0"\n')
+        self.environ = {'PATH': str(proxies) + ':/usr/bin:/bin', 'HOME': str(self.root / 'home'),
+                        'CARGO_BUILD_JOBS': '1', 'SECRET_FROM_CALLER': 'x'}
+
+    def test_real_toolchain_bin_leads_a_minimal_path(self):
+        env = installer.toolchain_env(self.root / 'target', self.src, self.environ)
+        self.assertEqual(env['PATH'], str(self.sysroot / 'bin') + ':/usr/bin:/bin')
+        self.assertEqual(env['CARGO_HOME'], str(self.root / 'home/.cargo'))
+        self.assertEqual(env['CARGO_BUILD_JOBS'], '1')
+        self.assertEqual(env['CARGO_TARGET_DIR'], str(self.root / 'target'))
+        self.assertNotIn('SECRET_FROM_CALLER', env)
+
+    def test_explicit_cargo_home_is_kept_and_must_be_absolute(self):
+        env = installer.toolchain_env(self.root / 't', self.src, {**self.environ, 'CARGO_HOME': '/opt/ci-cargo'})
+        self.assertEqual(env['CARGO_HOME'], '/opt/ci-cargo')
+        with self.assertRaisesRegex(installer.InstallerRefused, 'absolute'):
+            installer.toolchain_env(self.root / 't', self.src, {**self.environ, 'CARGO_HOME': 'relative'})
+
+    def test_missing_or_unresolvable_toolchain_is_refused(self):
+        with self.assertRaisesRegex(installer.InstallerRefused, 'rustc'):
+            installer.toolchain_env(self.root / 't', self.src, {**self.environ, 'PATH': str(self.root / 'none')})
+        (self.sysroot / 'bin/cargo').unlink()
+        with self.assertRaisesRegex(installer.InstallerRefused, 'sysroot'):
+            installer.toolchain_env(self.root / 't', self.src, self.environ)
+
+
 class SignaturePolicy(unittest.TestCase):
     PRIMARY = 'A' * 24 + '0123456789ABCDEF'
     GOOD = ('[GNUPG:] NEWSIG\n[GNUPG:] GOODSIG 0123456789ABCDEF release\n'
