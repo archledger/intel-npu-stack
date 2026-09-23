@@ -152,3 +152,42 @@ published primary command only after the command matches the signed
 after verifying it under the committed key. With `--site-root`, both files
 must equal the expected site's. The throwaway CA is removed again even if setup fails. The
 exact DNF5 option syntax is proven in the release rehearsal.
+
+## Publication
+
+`scripts/ci/release_inputs.py` fetches the prepared release inputs tarball and
+checks it before any key exists. The download is HTTPS only, including
+redirects, and the tarball must have the dispatched SHA-256. Extraction accepts
+only regular files and directories with plain relative names, each once, and
+uses the tarfile data filter. `release_sign.py --check-inputs` then validates
+the result. `extract-check` repeats this for the copy passed between jobs, which
+must also match the preflight job's digest.
+
+`scripts/ci/release_publish.py` publishes through the GitHub REST API, using
+only the standard library:
+
+- `check-unpublished --phase preflight` refuses unless Pages is served by
+  GitHub Actions at the committed base URL, no tag, release or draft exists for
+  the version, and the live `release.json` returns 404.
+- `check-unpublished --phase publish` classifies the state as fresh, a draft to
+  resume (its assets a byte-identical subset of this publication) or a
+  published release to resume (immutable, exactly these assets, tag at the
+  release commit). Anything else is refused, and a stale draft is deleted by
+  hand.
+- `publish-release` uploads the archive, `SHA256SUMS`, `SHA256SUMS.asc` and
+  `publication-manifest.json` to a draft. It reads every asset back without
+  sending the token to the storage host, publishes the release as the latest,
+  and requires it to be immutable with its tag at the release commit.
+- `compose-pages` builds the Pages tree from immutable, non-draft,
+  non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the files
+  its signed `SHA256SUMS` lists. Every version listed in
+  `release/published-versions.json` must be present with the recorded
+  `SHA256SUMS`, and removing one needs a reviewed `retired` entry. The live
+  `SHA256SUMS` of the other versions must be unchanged, and the site must stay
+  within 950 MiB.
+- `verify-live` waits until the plain URLs serve the new release. It then
+  compares every file with the archive, repacks the live files into the
+  canonical archive, and verifies `SHA256SUMS.asc` and `install.sh.asc` under
+  the committed key.
+
+The release workflow does not call these tools yet.
