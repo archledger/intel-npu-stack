@@ -6,17 +6,21 @@ A qualified profile admits a kernel series (for example [7.2.5, 7.3.0)); newer
 kernels inside that window are admitted by policy but need a recorded
 per-kernel probe (release/kernel-probes.json, docs/kernel-probes.md); the
 kernels the qualification evidence covers are recorded there too. A kernel at
-or above every qualified window needs a new qualification. Bodhi data is
+or above a profile's window needs a new qualification of that profile. Each
+qualified profile is classified separately, and records apply only to the
+profile's current component set and evidence. Bodhi data is
 untrusted: only regex-validated kernel NVRs reach the findings. This module
 performs no writes; the workflow turns findings into deduplicated issues.
 """
 import argparse
 import datetime
+import hashlib
 import json
 from pathlib import Path
 import re
 import sys
 import tomllib
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -27,12 +31,12 @@ MAX_PAGES = 20
 MAX_BODY = 4 << 20
 TIMEOUT = 30
 KERNEL_NVR = re.compile(r'kernel-(\d{1,3})\.(\d{1,3})\.(\d{1,4})-(\d{1,4}(?:\.[0-9A-Za-z]{1,40}){0,6})\.fc44')
-PROFILE_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}')
+MAX_SCALAR_BYTES = 4096  # the profile schema's scalar limit
 U64_MAX = 2 ** 64 - 1
 ALIAS = re.compile(r'FEDORA-\d{4}-[0-9a-f]{10}')
 DIGEST = re.compile(r'[0-9a-f]{64}')
 DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
-PROBE_FIELDS = {'kernel', 'profile', 'result', 'source', 'evidence_sha256', 'recorded'}
+PROBE_FIELDS = {'kernel', 'profile', 'components_sha256', 'result', 'source', 'evidence_sha256', 'recorded'}
 KEY_PREFIX = 'kernel:fedora-44:'
 # Rank of a build's most published state; obsolete builds count only if they reached updates-testing.
 OBSERVED = {'stable': 3, 'testing': 2, 'obsolete': 1}
@@ -121,6 +125,22 @@ def kernels_from_bodhi(document):
             for item in sorted(found.values(), key=lambda item: item['version'], reverse=True)]
 
 
+def valid_profile_id(value):
+    """The schema's rule for profile text: non-empty, trimmed, no control characters, within the scalar limit."""
+    return (isinstance(value, str) and bool(value) and value.strip() == value
+            and not any(unicodedata.category(character) == 'Cc' for character in value)
+            and len(value.encode()) <= MAX_SCALAR_BYTES)
+
+
+def components_digest(document):
+    """SHA-256 of a profile's component set as canonical JSON; a probe covers only the stack it ran on."""
+    components = document.get('components')
+    if not isinstance(components, dict) or not components:
+        raise ValueError('profile has no component set')
+    canonical = json.dumps(components, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 def qualified_windows(profiles_dir):
     """Kernel windows of qualified Fedora 44 profiles."""
     windows = []
@@ -138,17 +158,13 @@ def qualified_windows(profiles_dir):
         if not isinstance(evidence, str) or not DIGEST.fullmatch(evidence):
             raise ValueError('qualified profile lacks a qualification evidence digest: ' + path.name)
         profile = document.get('id')
-        if not isinstance(profile, str) or not PROFILE_ID.fullmatch(profile):
+        if not valid_profile_id(profile):
             raise ValueError('qualified profile has an invalid id: ' + path.name)
         if profile in {window['id'] for window in windows}:
             raise ValueError('duplicate qualified profile id: ' + profile)
         windows.append({'id': profile, 'min': kernel['min'], 'max_exclusive': kernel['max_exclusive'],
-                        'evidence_sha256': evidence})
+                        'evidence_sha256': evidence, 'components_sha256': components_digest(document)})
     return windows
-
-
-def containing(windows, version):
-    return [w for w in windows if parse_version(w['min']) <= version < parse_version(w['max_exclusive'])]
 
 
 def valid_date(value):
@@ -162,37 +178,48 @@ def valid_date(value):
 
 
 def load_probes(path, windows):
-    """(profile id, kernel version-release) pairs whose recorded probe or qualification evidence passed.
+    """Recorded outcomes that apply to the current qualified profiles, and the records that no longer apply.
 
-    Every record has exactly the documented fields and names the profile it was
-    collected for. A qualification record for a kernel inside that profile's
-    qualified window must carry that profile's evidence digest.
+    Every record has exactly the documented fields. A record applies to a qualified
+    profile with its id only while its component-set digest (and, for a
+    qualification record, its evidence digest) equals the profile's current one;
+    otherwise it is stale and never covers a kernel. Records for profiles that are
+    not qualified are history and are only shape-checked. Returns
+    ({(profile id, kernel): 'pass' | 'fail'}, [stale record summaries]).
     """
     document = json.loads(Path(path).read_text())
     if not isinstance(document, dict) or document.get('schema_version') != 1 \
             or not isinstance(document.get('probes'), list):
         raise ValueError('kernel probe registry must be schema_version 1 with a probes list')
-    passed, seen = set(), set()
+    current = {window['id']: window for window in windows}
+    outcomes, stale, seen = {}, [], set()
     for probe in document['probes']:
         invalid = 'invalid kernel probe record: ' + repr(probe)
         if not isinstance(probe, dict) or set(probe) != PROBE_FIELDS:
             raise ValueError(invalid)
         parsed = parse_kernel_nvr('kernel-' + probe['kernel']) if isinstance(probe['kernel'], str) else None
-        pair = (probe['profile'], probe['kernel'])
-        if (parsed is None or not isinstance(probe['profile'], str) or not PROFILE_ID.fullmatch(probe['profile'])
-                or pair in seen or probe['result'] not in {'pass', 'fail'}
-                or probe['source'] not in {'probe', 'qualification'}
-                or not isinstance(probe['evidence_sha256'], str) or not DIGEST.fullmatch(probe['evidence_sha256'])
-                or not valid_date(probe['recorded'])):
+        identity = (probe['profile'], probe['kernel'], probe['components_sha256'])
+        if (parsed is None or not valid_profile_id(probe['profile']) or identity in seen
+                or probe['result'] not in {'pass', 'fail'} or probe['source'] not in {'probe', 'qualification'}
+                or any(not isinstance(probe[field], str) or not DIGEST.fullmatch(probe[field])
+                       for field in ['components_sha256', 'evidence_sha256'])
+                or not valid_date(probe['recorded'])
+                or (probe['source'] == 'qualification' and probe['result'] != 'pass')):
             raise ValueError(invalid)
-        seen.add(pair)
-        if probe['source'] == 'qualification':
-            own = [w for w in containing(windows, parsed[0]) if w['id'] == probe['profile']]
-            if probe['result'] != 'pass' or any(w['evidence_sha256'] != probe['evidence_sha256'] for w in own):
-                raise ValueError('qualification record does not match the qualified evidence: ' + repr(probe))
-        if probe['result'] == 'pass':
-            passed.add(pair)
-    return passed
+        seen.add(identity)
+        window = current.get(probe['profile'])
+        if window is None:
+            continue
+        reason = None
+        if probe['components_sha256'] != window['components_sha256']:
+            reason = 'component set changed'
+        elif probe['source'] == 'qualification' and probe['evidence_sha256'] != window['evidence_sha256']:
+            reason = 'qualification evidence changed'
+        if reason:
+            stale.append({'kernel': probe['kernel'], 'profile': probe['profile'], 'reason': reason})
+        else:
+            outcomes[(probe['profile'], probe['kernel'])] = probe['result']
+    return outcomes, stale
 
 
 def dedup_key(kernel):
@@ -210,43 +237,48 @@ def existing_keys(open_issues):
     return keys
 
 
-def scan(kernels, windows, probed, open_keys):
-    if not windows:
-        return []
+def scan(kernels, windows, outcomes, open_keys):
+    """One finding per kernel that needs action for at least one qualified profile, classified per profile."""
     findings = []
     for item in kernels:
         version = tuple(int(part) for part in item['version'].split('.'))
         key = dedup_key(item['kernel'])
         if key in open_keys:
             continue
-        inside = containing(windows, version)
-        if inside:
-            inside = [w for w in inside if (w['id'], item['kernel']) not in probed]
-            if not inside:
+        actions = []
+        for window in windows:
+            if version < parse_version(window['min']):
                 continue
-            observation = 'probe-required'
-        elif all(version >= parse_version(w['max_exclusive']) for w in windows):
-            observation = 'requalification-required'
-        else:
-            continue
-        findings.append({'observation': observation, 'dedup_key': key, 'kernel': item['kernel'],
-                         'version': item['version'], 'bodhi_status': item['status'], 'update': item['update'],
-                         'windows': [f"{w['id']} [{w['min']}, {w['max_exclusive']})" for w in (inside or windows)]})
+            if version >= parse_version(window['max_exclusive']):
+                action = 'requalification-required'
+            else:
+                outcome = outcomes.get((window['id'], item['kernel']))
+                if outcome == 'pass':
+                    continue
+                action = 'probe-failed' if outcome == 'fail' else 'probe-required'
+            actions.append({'profile': window['id'], 'window': f"[{window['min']}, {window['max_exclusive']})",
+                            'action': action})
+        if actions:
+            findings.append({'observation': ', '.join(sorted({a['action'] for a in actions})), 'dedup_key': key,
+                             'kernel': item['kernel'], 'version': item['version'], 'bodhi_status': item['status'],
+                             'update': item['update'], 'actions': sorted(actions, key=lambda a: a['profile'])})
     return findings
 
 
 def build_report(fetch, profiles_dir, probes_path, open_keys):
     windows = qualified_windows(profiles_dir)
-    probed = load_probes(probes_path, windows)
-    report = {'schema_version': 1, 'qualified_windows': windows, 'probed_kernels': sorted(probed),
-              'observed_kernels': [], 'findings': []}
+    outcomes, stale = load_probes(probes_path, windows)
+    report = {'schema_version': 1, 'qualified_windows': windows,
+              'recorded_outcomes': [{'profile': profile, 'kernel': kernel, 'result': result}
+                                    for (profile, kernel), result in sorted(outcomes.items())],
+              'stale_records': stale, 'observed_kernels': [], 'findings': []}
     try:
         document = fetch_updates(fetch)
     except (OSError, ValueError, json.JSONDecodeError):
         report['findings'] = [{'observation': 'check-failed', 'note': 'Bodhi query failed; scheduled runs are advisory'}]
         return report
     report['observed_kernels'] = kernels_from_bodhi(document)
-    report['findings'] = scan(report['observed_kernels'], windows, probed, open_keys)
+    report['findings'] = scan(report['observed_kernels'], windows, outcomes, open_keys)
     return report
 
 
@@ -257,7 +289,12 @@ def main(argv=None):
     parser.add_argument('--probes', type=Path, default=root / 'release/kernel-probes.json')
     parser.add_argument('--open-issues', type=Path, help='JSON array of open issue objects used for deduplication')
     parser.add_argument('--report', type=Path, help='write the report JSON to this path')
+    parser.add_argument('--components-digest', type=Path, metavar='PROFILE',
+                        help='print the component-set digest of a profile TOML (for probe records) and exit')
     args = parser.parse_args(argv)
+    if args.components_digest:
+        print(components_digest(tomllib.loads(args.components_digest.read_text())))
+        return 0
     raw = args.open_issues.read_text().strip() if args.open_issues else ''
     open_keys = existing_keys(json.loads(raw) if raw else [])
     report = build_report(fetch_json, args.profiles, args.probes, open_keys)

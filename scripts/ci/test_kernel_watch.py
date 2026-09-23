@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Contract for the issue-only Fedora kernel watcher."""
+import contextlib
+import hashlib
 import json
 from pathlib import Path
 import tempfile
+import tomllib
 import unittest
 import urllib.parse
 
@@ -47,15 +50,34 @@ min = "7.2.5"
 max_exclusive = "7.3.0"
 module = "intel_vpu"
 
+[components.npu_firmware]
+version = "1.38.0"
+
+[components.npu_firmware.provider]
+package = "intel-npu-stack-firmware"
+version = "0:1.38.0-1.intelnpu.fc44"
+activation = "reboot"
+
 [qualification]
 evidence_id = "fixture"
 evidence_sha256 = "{EVIDENCE}"
 '''
+COMPONENTS = hashlib.sha256(json.dumps(tomllib.loads(QUALIFIED)['components'], sort_keys=True,
+                                       separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
 
 
-def probe(kernel, result='pass', source='probe', evidence='b' * 64, recorded='2026-09-24', profile=PROFILE):
-    return {'kernel': kernel, 'profile': profile, 'result': result, 'source': source, 'evidence_sha256': evidence,
-            'recorded': recorded}
+def probe(kernel, result='pass', source='probe', evidence='b' * 64, recorded='2026-09-24', profile=PROFILE,
+          components=COMPONENTS):
+    return {'kernel': kernel, 'profile': profile, 'components_sha256': components, 'result': result,
+            'source': source, 'evidence_sha256': evidence, 'recorded': recorded}
+
+
+def qualification(kernel, profile=PROFILE, evidence=EVIDENCE, components=COMPONENTS):
+    return probe(kernel, source='qualification', evidence=evidence, profile=profile, components=components)
+
+
+def actions(finding):
+    return [(action['profile'], action['window'], action['action']) for action in finding['actions']]
 
 
 def paged(pages):
@@ -160,89 +182,149 @@ class Policy(unittest.TestCase):
         self.registry.write_text(json.dumps({'schema_version': 1, 'probes': probes}))
         return watcher.load_probes(self.registry, self.windows)
 
-    def add_profile(self, name, evidence):
-        (self.profiles / 'fedora/44' / (name + '.toml')).write_text(
-            QUALIFIED.replace(PROFILE, name).replace(EVIDENCE, evidence))
+    def findings(self, probes):
+        outcomes, _ = self.load(probes)
+        return {finding['kernel']: finding for finding in watcher.scan(self.kernels, self.windows, outcomes, set())}
+
+    def add_profile(self, name, evidence, window=('7.2.5', '7.3.0')):
+        text = QUALIFIED.replace(PROFILE, name).replace(EVIDENCE, evidence)
+        text = text.replace('min = "7.2.5"', f'min = "{window[0]}"').replace('max_exclusive = "7.3.0"',
+                                                                         f'max_exclusive = "{window[1]}"')
+        (self.profiles / 'fedora/44' / (str(len(self.windows)) + '.toml')).write_text(text)
         self.windows = watcher.qualified_windows(self.profiles)
 
     def test_only_qualified_fedora_44_profiles_define_the_window(self):
         self.assertEqual(self.windows, [{'id': PROFILE, 'min': '7.2.5', 'max_exclusive': '7.3.0',
-                                         'evidence_sha256': EVIDENCE}])
+                                         'evidence_sha256': EVIDENCE, 'components_sha256': COMPONENTS}])
+
+    def test_components_digest_is_the_canonical_component_set(self):
+        document = tomllib.loads(QUALIFIED)
+        self.assertEqual(watcher.components_digest(document), COMPONENTS)
+        reordered = QUALIFIED.replace('package = "intel-npu-stack-firmware"\n', '').replace(
+            'activation = "reboot"', 'activation = "reboot"\npackage = "intel-npu-stack-firmware"')
+        self.assertEqual(watcher.components_digest(tomllib.loads(reordered)), COMPONENTS)
+        changed = QUALIFIED.replace('0:1.38.0-1.intelnpu.fc44', '0:1.38.0-2.intelnpu.fc44')
+        self.assertNotEqual(watcher.components_digest(tomllib.loads(changed)), COMPONENTS)
+        with self.assertRaisesRegex(ValueError, 'component'):
+            watcher.components_digest({'components': {}})
 
     def test_profile_ids_must_be_unique(self):
         (self.profiles / 'fedora/44/copy.toml').write_text(QUALIFIED)
         with self.assertRaisesRegex(ValueError, 'duplicate'):
             watcher.qualified_windows(self.profiles)
 
+    def test_profile_ids_follow_the_schema_text_rules(self):
+        unusual = 'Fedora 44 Lunar Lake (x86_64) \u00e9 ' + 'x' * 200
+        self.add_profile(unusual, 'f' * 64)
+        self.assertIn(unusual, [window['id'] for window in self.windows])
+        outcomes, _ = self.load([qualification('7.2.5-200.fc44', profile=unusual, evidence='f' * 64)])
+        self.assertEqual(outcomes, {(unusual, '7.2.5-200.fc44'): 'pass'})
+        for bad in ['', ' leading', 'trailing ', 'bell\x07', 'x' * 4097]:
+            with self.subTest(bad):
+                self.assertFalse(watcher.valid_profile_id(bad))
+        (self.profiles / 'fedora/44/bad.toml').write_text(QUALIFIED.replace(PROFILE, 'bad\\u0007id'))
+        with self.assertRaisesRegex(ValueError, 'invalid id'):
+            watcher.qualified_windows(self.profiles)
+
+    def test_probe_and_requalification_findings(self):
+        findings = self.findings([qualification('7.2.5-200.fc44'), qualification('7.2.6-200.fc44')])
+        self.assertEqual(set(findings), {'7.2.5-100.fc44', '7.2.7-200.fc44', '7.3.0-200.fc44'})
+        self.assertEqual(findings['7.2.7-200.fc44']['observation'], 'probe-required')
+        self.assertEqual(actions(findings['7.2.7-200.fc44']), [(PROFILE, '[7.2.5, 7.3.0)', 'probe-required')])
+        self.assertEqual(findings['7.3.0-200.fc44']['observation'], 'requalification-required')
+        self.assertEqual(findings['7.2.7-200.fc44']['dedup_key'], 'kernel:fedora-44:7.2.7-200.fc44')
+
     def test_evidence_is_kept_per_profile(self):
         other = 'fedora-44-other-x86_64'
         self.add_profile(other, 'f' * 64)
-        probed = self.load([probe('7.2.5-200.fc44', source='qualification', evidence=EVIDENCE),
-                            probe('7.2.6-200.fc44', source='qualification', evidence=EVIDENCE),
-                            probe('7.2.5-200.fc44', source='qualification', evidence='f' * 64, profile=other),
-                            probe('7.2.6-200.fc44', source='qualification', evidence='f' * 64, profile=other),
-                            probe('7.2.7-200.fc44')])
-        findings = {f['kernel']: f for f in watcher.scan(self.kernels, self.windows, probed, set())}
-        self.assertEqual(findings['7.2.7-200.fc44']['observation'], 'probe-required')
-        self.assertEqual(findings['7.2.7-200.fc44']['windows'], [other + ' [7.2.5, 7.3.0)'])
-        with self.assertRaisesRegex(ValueError, 'qualification record'):
-            self.load([probe('7.2.5-200.fc44', source='qualification', evidence=EVIDENCE, profile=other)])
+        findings = self.findings([qualification('7.2.5-200.fc44'), qualification('7.2.6-200.fc44'),
+                                  qualification('7.2.5-200.fc44', profile=other, evidence='f' * 64),
+                                  qualification('7.2.6-200.fc44', profile=other, evidence='f' * 64),
+                                  probe('7.2.7-200.fc44')])
+        self.assertEqual(actions(findings['7.2.7-200.fc44']), [(other, '[7.2.5, 7.3.0)', 'probe-required')])
 
-    def test_probe_and_requalification_findings(self):
-        probed = self.load([probe('7.2.5-200.fc44', source='qualification', evidence=EVIDENCE),
-                            probe('7.2.6-200.fc44', source='qualification', evidence=EVIDENCE)])
-        findings = watcher.scan(self.kernels, self.windows, probed, set())
-        by_kernel = {finding['kernel']: finding for finding in findings}
-        self.assertEqual(set(by_kernel), {'7.2.5-100.fc44', '7.2.7-200.fc44', '7.3.0-200.fc44'})
-        self.assertEqual(by_kernel['7.2.7-200.fc44']['observation'], 'probe-required')
-        self.assertEqual(by_kernel['7.3.0-200.fc44']['observation'], 'requalification-required')
-        self.assertEqual(by_kernel['7.2.7-200.fc44']['dedup_key'], 'kernel:fedora-44:7.2.7-200.fc44')
+    def test_requalification_is_tracked_per_profile(self):
+        later = 'fedora-44-next-x86_64'
+        self.add_profile(later, 'f' * 64, ('7.3.0', '7.4.0'))
+        findings = self.findings([qualification('7.2.5-200.fc44'), qualification('7.2.6-200.fc44'),
+                                  probe('7.2.7-200.fc44')])
+        self.assertEqual(findings['7.3.0-200.fc44']['observation'], 'probe-required, requalification-required')
+        self.assertEqual(actions(findings['7.3.0-200.fc44']),
+                         [(PROFILE, '[7.2.5, 7.3.0)', 'requalification-required'),
+                          (later, '[7.3.0, 7.4.0)', 'probe-required')])
+        # A kernel below a profile's window is no action for that profile.
+        self.assertNotIn('7.2.7-200.fc44', findings)
+
+    def test_failed_probes_are_reported_as_failed(self):
+        findings = self.findings([qualification('7.2.5-200.fc44'), qualification('7.2.6-200.fc44'),
+                                  probe('7.2.7-200.fc44', result='fail')])
+        self.assertEqual(findings['7.2.7-200.fc44']['observation'], 'probe-failed')
+
+    def test_records_bind_to_the_current_component_set_and_evidence(self):
+        stale = [probe('7.2.7-200.fc44', components='c' * 64),
+                 qualification('7.2.5-200.fc44', evidence='b' * 64),
+                 qualification('7.2.6-200.fc44', components='c' * 64)]
+        outcomes, stale_records = self.load(stale)
+        self.assertEqual(outcomes, {})
+        self.assertEqual([(r['kernel'], r['reason']) for r in stale_records],
+                         [('7.2.7-200.fc44', 'component set changed'),
+                          ('7.2.5-200.fc44', 'qualification evidence changed'),
+                          ('7.2.6-200.fc44', 'component set changed')])
+        findings = self.findings(stale)
+        self.assertEqual({k for k, f in findings.items() if f['observation'] == 'probe-required'},
+                         {'7.2.5-100.fc44', '7.2.5-200.fc44', '7.2.6-200.fc44', '7.2.7-200.fc44'})
+
+    def test_records_for_profiles_that_are_not_qualified_keep_only_their_shape(self):
+        # A superseded or retired profile's history stays valid and inert.
+        self.assertEqual(self.load([qualification('7.2.5-200.fc44', profile='fedora-44-retired'),
+                                    probe('7.1.13-200.fc44', profile='fedora-44-retired')]), ({}, []))
 
     def test_without_recorded_evidence_kernels_every_window_kernel_needs_a_probe(self):
-        findings = watcher.scan(self.kernels, self.windows, self.load([]), set())
-        self.assertEqual({finding['kernel'] for finding in findings if finding['observation'] == 'probe-required'},
+        findings = self.findings([])
+        self.assertEqual({k for k, f in findings.items() if f['observation'] == 'probe-required'},
                          {'7.2.5-100.fc44', '7.2.5-200.fc44', '7.2.6-200.fc44', '7.2.7-200.fc44'})
 
     def test_open_issues_deduplicate(self):
         keys = watcher.existing_keys([{'title': '[kernel-watch] kernel:fedora-44:7.2.7-200.fc44'},
                                       {'title': 'unrelated kernel:fedora-44:'}, {'title': None}])
         self.assertEqual(keys, {'kernel:fedora-44:7.2.7-200.fc44'})
-        findings = watcher.scan(self.kernels, self.windows, set(), keys)
+        findings = watcher.scan(self.kernels, self.windows, {}, keys)
         self.assertNotIn('7.2.7-200.fc44', {finding['kernel'] for finding in findings})
 
     def test_no_qualified_profile_means_nothing_to_watch(self):
         (self.profiles / 'fedora/44/qualified.toml').unlink()
         self.assertEqual(watcher.qualified_windows(self.profiles), [])
-        self.assertEqual(watcher.scan(self.kernels, [], set(), set()), [])
+        self.assertEqual(watcher.scan(self.kernels, [], {}, set()), [])
 
-    def test_qualified_profile_without_evidence_digest_is_refused(self):
+    def test_qualified_profile_without_evidence_or_components_is_refused(self):
         (self.profiles / 'fedora/44/qualified.toml').write_text(QUALIFIED.replace(EVIDENCE, 'not-a-digest'))
         with self.assertRaisesRegex(ValueError, 'evidence'):
             watcher.qualified_windows(self.profiles)
-
-    def test_only_passing_records_count(self):
-        self.assertEqual(self.load([probe('7.2.6-200.fc44'), probe('7.2.7-200.fc44', result='fail'),
-                                    probe('7.2.6-200.fc44', profile='fedora-44-other-x86_64')]),
-                         {(PROFILE, '7.2.6-200.fc44'), ('fedora-44-other-x86_64', '7.2.6-200.fc44')})
+        text = QUALIFIED.split('[components.npu_firmware]')[0] + '[qualification]' + QUALIFIED.split('[qualification]')[1]
+        (self.profiles / 'fedora/44/qualified.toml').write_text(text)
+        with self.assertRaisesRegex(ValueError, 'component'):
+            watcher.qualified_windows(self.profiles)
 
     def test_malformed_probe_records_are_refused(self):
+        def without(field):
+            return {key: value for key, value in probe('7.2.7-200.fc44').items() if key != field}
         cases = {
             'schema': None,
-            'missing evidence': {key: value for key, value in probe('7.2.7-200.fc44').items()
-                                 if key != 'evidence_sha256'},
+            'missing evidence': without('evidence_sha256'),
             'uppercase evidence': probe('7.2.7-200.fc44', evidence='B' * 64),
             'short evidence': probe('7.2.7-200.fc44', evidence='b' * 63),
-            'missing date': {key: value for key, value in probe('7.2.7-200.fc44').items() if key != 'recorded'},
+            'missing components': without('components_sha256'),
+            'bad components': probe('7.2.7-200.fc44', components='Z' * 64),
+            'missing date': without('recorded'),
             'bad date': probe('7.2.7-200.fc44', recorded='2026-02-30'),
             'unknown result': probe('7.2.7-200.fc44', result='skipped'),
             'unknown source': probe('7.2.7-200.fc44', source='guess'),
             'extra field': {**probe('7.2.7-200.fc44'), 'note': 'x'},
             'bad kernel': probe('7.2.7-200.fc43'),
-            'bad profile': probe('7.2.7-200.fc44', profile='fedora 44'),
-            'missing profile': {key: value for key, value in probe('7.2.7-200.fc44').items() if key != 'profile'},
-            'duplicate kernel': [probe('7.2.7-200.fc44'), probe('7.2.7-200.fc44', result='fail')],
+            'bad profile': probe('7.2.7-200.fc44', profile=' fedora-44'),
+            'missing profile': without('profile'),
+            'duplicate record': [probe('7.2.7-200.fc44'), probe('7.2.7-200.fc44', result='fail')],
             'failed qualification': probe('7.2.6-200.fc44', result='fail', source='qualification', evidence=EVIDENCE),
-            'foreign qualification evidence': probe('7.2.6-200.fc44', source='qualification'),
         }
         for label, record in cases.items():
             with self.subTest(label), self.assertRaises(ValueError):
@@ -251,12 +333,10 @@ class Policy(unittest.TestCase):
                     watcher.load_probes(self.registry, self.windows)
                 else:
                     self.load(record if isinstance(record, list) else [record])
-
-    def test_qualification_records_outside_every_window_keep_only_their_shape(self):
-        # A superseded series stays valid history once its profile is no longer qualified.
-        self.assertEqual(self.load([probe('7.1.13-200.fc44', source='qualification')]), {(PROFILE, '7.1.13-200.fc44')})
-        self.assertEqual(self.load([probe('7.2.5-200.fc44', source='qualification', profile='fedora-44-retired')]),
-                         {('fedora-44-retired', '7.2.5-200.fc44')})
+        # The same kernel and profile may be probed again on a changed component set.
+        outcomes, stale = self.load([probe('7.2.7-200.fc44', components='c' * 64, result='fail'),
+                                     probe('7.2.7-200.fc44')])
+        self.assertEqual((outcomes, len(stale)), ({(PROFILE, '7.2.7-200.fc44'): 'pass'}, 1))
 
 
 class Report(unittest.TestCase):
@@ -269,11 +349,22 @@ class Report(unittest.TestCase):
 
     def test_committed_registry_and_profiles_load(self):
         windows = watcher.qualified_windows(REPO_ROOT / 'profiles')
-        self.assertIsInstance(watcher.load_probes(REPO_ROOT / 'release/kernel-probes.json', windows), set)
+        outcomes, stale = watcher.load_probes(REPO_ROOT / 'release/kernel-probes.json', windows)
+        self.assertEqual((type(outcomes), type(stale)), (dict, list))
         report = watcher.build_report(lambda url, timeout: BODHI, REPO_ROOT / 'profiles',
                                       REPO_ROOT / 'release/kernel-probes.json', set())
         self.assertEqual(report['schema_version'], 1)
         self.assertEqual(report['observed_kernels'][0]['kernel'], '7.3.0-200.fc44')
+        self.assertEqual(report['stale_records'], [])
+
+    def test_components_digest_command(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile = Path(tmp) / 'profile.toml'
+            profile.write_text(QUALIFIED)
+            output = Path(tmp) / 'digest.txt'
+            with open(output, 'w') as stream, contextlib.redirect_stdout(stream):
+                self.assertEqual(watcher.main(['--components-digest', str(profile)]), 0)
+            self.assertEqual(output.read_text(), COMPONENTS + '\n')
 
 
 if __name__ == '__main__':
