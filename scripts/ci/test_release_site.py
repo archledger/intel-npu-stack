@@ -107,21 +107,38 @@ class Fixture:
         self.profile = self.repo / 'profiles/fedora/44/fixture.toml'
         self.notes = self.repo / 'release/0.1.0/support-notes.toml'
         self.legs = {}
-        for leg, environ in (('a', BUILD_ENV),
-                             ('b', {**BUILD_ENV, 'CARGO_BUILD_JOBS': '1', 'TZ': 'Pacific/Chatham',
-                                    'LANG': 'de_DE.UTF-8'})):
+        # Leg b carries the design's perturbations: job count, TZ, LANG and umask.
+        for leg, environ, mask in (('a', BUILD_ENV, 0o022),
+                                   ('b', {**BUILD_ENV, 'CARGO_BUILD_JOBS': '1', 'TZ': 'Pacific/Chatham',
+                                          'LANG': 'de_DE.UTF-8'}, 0o027)):
             self.legs[leg] = base / ('leg-' + leg)
-            installer.build(self.repo, self.commit, self.tree, self.legs[leg], leg, base / 'src', base / 'target',
-                            runner=FakeCargo(), environ=environ)
+            previous = os.umask(mask)
+            try:
+                installer.build(self.repo, self.commit, self.tree, self.legs[leg], leg, base / 'src',
+                                base / 'target', runner=FakeCargo(), environ=environ)
+            finally:
+                os.umask(previous)
             shutil.rmtree(base / 'src')
             shutil.rmtree(base / 'target')
         self.records = base / 'records'
         self.records.mkdir()
-        for name in site_tool.SIGN_RECORDS:
-            (self.records / name).write_text('{}\n')
-        (self.records / 'signed-identity.json').write_text(json.dumps(
-            {'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml'),
-             'primary_fingerprint': self.key.fingerprint}) + '\n')
+        # Signing records shaped like release_sign.py's: the provider identity, the signed identity that
+        # extends it with the repository digest, and the profile generation record that reads the former.
+        rpm = next((self.tree / 'packages').glob('*.rpm'))
+        provider = {'passed': True, 'test_only': False, 'production_ready': True, 'private_key_exported': False,
+                    'primary_fingerprint': self.key.fingerprint,
+                    'packages': [{'name': 'verifier-fixture', 'nevr': '0:1.0.0-1', 'arch': 'noarch',
+                                  'filename': rpm.name, 'role': 'runtime', 'unsigned_sha256': 'c' * 64,
+                                  'signed_sha256': fixtures.sha(rpm)}]}
+        self.write_record('provider-identity.json', provider)
+        self.write_record('signed-identity.json',
+                          {**provider, 'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml')})
+        self.write_record('profile-generation.json', {
+            'passed': True, 'test_only': False, 'profile_status': 'qualified', 'schema_version': 1,
+            'stack_release': '0.1.0', 'profile_id': 'fedora-44-verifier-fixture', 'candidate_sha256': 'd' * 64,
+            'signed_identity_sha256': fixtures.sha(self.records / 'provider-identity.json'),
+            'output_sha256': fixtures.sha(self.tree / 'profile.toml'), 'primary_fingerprint': self.key.fingerprint,
+            'components': {}, 'scope': 'fixture'})
         (self.records / 'profile-rpm-build.json').write_text('{"reproducible": true}\n')
         # The assembler records the digests of the signing records it was built from.
         manifest = json.loads((self.tree / 'assembly-manifest.json').read_text())
@@ -134,6 +151,9 @@ class Fixture:
         self.signed = base / 'signed/0.1.0'
         shutil.copytree(self.site, self.signed)
         self.sign(self.signed)
+
+    def write_record(self, name, document):
+        (self.records / name).write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
 
     def sign(self, site, expected=None):
         return site_tool.sign(site, self.key.home, self.key.fingerprint, self.repo, self.commit, self.profile,
@@ -428,6 +448,50 @@ class Refusals(Case):
         link.symlink_to(site / 'records')
         self.refused('outside the site', self.f.archive, site, link / 'intel-npu-stack-0.1.0.tar')
         self.assertEqual(set(site_tool.site_files(site)), set(site_tool.site_files(self.f.signed)))
+
+    def test_every_signing_record_is_bound_to_the_release(self):
+        provider_path = 'records/provider-identity.json'
+        generation_path = 'records/profile-generation.json'
+
+        def change(path, update):
+            def apply(site):
+                document = json.loads((site / path).read_text())
+                update(document)
+                (site / path).write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
+            return apply
+        cases = {
+            'provider-identity.json is not a passed production identity': change(provider_path, dict.clear),
+            'provider-identity.json is not a passed production identity for the release key':
+                change(provider_path, lambda d: d.update(primary_fingerprint='0' * 40)),
+            'provider-identity.json is not the identity': change(provider_path, lambda d: d['packages'].clear()),
+            'profile-generation.json does not describe': change(generation_path,
+                                                                lambda d: d.update(output_sha256='0' * 64)),
+            'profile-generation.json does not describe this release profile':
+                change(generation_path, lambda d: d.update(signed_identity_sha256='0' * 64)),
+        }
+        for message, apply in cases.items():
+            with self.subTest(message):
+                site = self.copy(self.f.site)
+                apply(site)
+                self.refused(message, self.f.verify, site)
+                shutil.rmtree(site.parent)
+
+    def test_installer_legs_must_be_independent_builds(self):
+        def compose(leg_b):
+            site_tool.compose(self.f.repo, self.f.commit, self.f.tree, self.f.records, self.f.legs['a'], leg_b,
+                              self.f.profile, self.f.notes, self.work / 'out/0.1.0')
+        copied = self.work / 'leg-copied'
+        shutil.copytree(self.f.legs['a'], copied)
+        record = json.loads((copied / 'installer-build.json').read_text())
+        record['leg'] = 'b'
+        (copied / 'installer-build.json').write_text(json.dumps(record))
+        self.refused('not independent builds', compose, copied)
+        record = json.loads((self.f.legs['b'] / 'installer-build.json').read_text())
+        record['umask'] = json.loads((self.f.legs['a'] / 'installer-build.json').read_text())['umask']
+        leg = self.work / 'leg-same-umask'
+        shutil.copytree(self.f.legs['b'], leg)
+        (leg / 'installer-build.json').write_text(json.dumps(record))
+        self.refused("repeats leg a's umask", compose, leg)
 
     def test_signing_records_must_be_the_assembly_inputs(self):
         for name in ['signed-identity.json', 'profile-rpm-build.json']:

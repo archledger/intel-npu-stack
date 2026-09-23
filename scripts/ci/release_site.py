@@ -366,6 +366,53 @@ def check_legs_agree(first, second):
     def unperturbed(record):
         return {key: value for key, value in record['build_environment'].items() if key != 'CARGO_BUILD_JOBS'}
     require(unperturbed(first) == unperturbed(second), 'tool drift between legs: build_environment')
+    # Leg b must carry every prescribed perturbation; a copied leg repeats leg a's values.
+    repeated = [name for name, one, other in (
+        ('CARGO_BUILD_JOBS', first['build_environment']['CARGO_BUILD_JOBS'],
+         second['build_environment']['CARGO_BUILD_JOBS']),
+        ('TZ', first['caller_environment']['TZ'], second['caller_environment']['TZ']),
+        ('LANG', first['caller_environment']['LANG'], second['caller_environment']['LANG']),
+        ('umask', first['umask'], second['umask'])) if one == other]
+    require(not repeated, "the installer legs are not independent builds: leg b repeats leg a's "
+            + ', '.join(repeated))
+
+
+def production_identity(record, fingerprint):
+    return (isinstance(record, dict) and record.get('passed') is True and record.get('test_only') is False
+            and record.get('production_ready') is True and record.get('private_key_exported') is False
+            and record.get('primary_fingerprint') == fingerprint and isinstance(record.get('packages'), list)
+            and all(isinstance(entry, dict) for entry in record['packages']))
+
+
+def check_signing_records(site, release, values, profile):
+    """The signing job's records describe this release: key, packages, repository, profile and each other."""
+    provider = load_json(site / 'records/provider-identity.json')
+    signed = load_json(site / 'records/signed-identity.json')
+    generation = load_json(site / 'records/profile-generation.json')
+    fingerprint = values['primary_fingerprint']
+    for label, record in (('provider-identity', provider), ('signed-identity', signed)):
+        require(production_identity(record, fingerprint),
+                f'records/{label}.json is not a passed production identity for the release key')
+    require(signed.get('repomd_sha256') == release['repository']['repomd_sha256'],
+            'records/signed-identity.json does not bind the signed repository metadata')
+    require(sorted((entry.get('filename'), entry.get('signed_sha256')) for entry in signed['packages'])
+            == sorted((entry['filename'], entry['sha256']) for entry in release['packages']),
+            'records/signed-identity.json does not list the release packages')
+
+    def by_name(entries):
+        return sorted(entries, key=lambda entry: str(entry.get('name')))
+    # The signed identity is the provider identity plus the profile package and the repository digest.
+    require(set(provider) == set(signed) - {'repomd_sha256'}
+            and all(provider[key] == signed[key] for key in provider if key != 'packages')
+            and by_name(provider['packages'])
+            == by_name([entry for entry in signed['packages'] if entry.get('role') != 'profile']),
+            'records/provider-identity.json is not the identity the signed identity extends')
+    expected = {'passed': True, 'test_only': False, 'profile_status': 'qualified', 'stack_release': values['version'],
+                'profile_id': profile.get('id'), 'primary_fingerprint': fingerprint,
+                'signed_identity_sha256': sha(site / 'records/provider-identity.json'),
+                'output_sha256': sha(site / 'profile.toml')}
+    require(all(generation.get(key) == value for key, value in expected.items()),
+            'records/profile-generation.json does not describe this release profile')
 
 
 def check_installer_records(site, values, metadata, commit):
@@ -420,10 +467,7 @@ def verify_site(site, repo, commit, profile, notes_path, stage, expected_files=N
     for name in ASSEMBLY_RECORDS:
         require(assembled.get(name) == sha(site / 'records' / name),
                 f'records/{name} is not the signing record the assembly was built from')
-    identity = load_json(site / 'records/signed-identity.json')
-    require(identity.get('repomd_sha256') == release['repository']['repomd_sha256']
-            and identity.get('primary_fingerprint') == values['primary_fingerprint'],
-            'records/signed-identity.json does not match the signed tree')
+    check_signing_records(site, release, values, load_toml(site / 'profile.toml'))
 
     for name, data in render_installer_set(repo, values, sha(site / BINARY)).items():
         require((site / name).read_bytes() == data, name + ' differs from its rendering')

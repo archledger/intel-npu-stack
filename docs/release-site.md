@@ -80,10 +80,15 @@ trust seam and release key are the only trust anchors.
   field: the builder image digest, both toolchain versions, absolute source and
   target directories, the build environment and the umask. They must also
   still agree with each other apart from the perturbed job count, TZ, LANG and
-  umask.
+  umask. Leg b must differ from leg a in all four, so a copied leg is refused.
 - It requires `records/signed-identity.json` and `records/profile-rpm-build.json`
   to be the records the assembly was built from, as listed in
-  `assembly-manifest.json`.
+  `assembly-manifest.json`. Both identity records must be passed production
+  identities for the release key. The signed identity must list the release
+  packages and the signed repository digest. The provider identity must be the
+  signed identity without the profile package and the repository digest.
+  `records/profile-generation.json` must name the provider identity and the
+  shipped `profile.toml` by digest.
 - It re-renders `install.sh`, `primary-command.txt`, `support-matrix.json` and
   `publication-manifest.json` and requires byte equality, and it requires the
   exact file set.
