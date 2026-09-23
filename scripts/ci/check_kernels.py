@@ -4,12 +4,14 @@
 
 A qualified profile admits a kernel series (for example [7.2.5, 7.3.0)); newer
 kernels inside that window are admitted by policy but need a recorded
-per-kernel probe (release/kernel-probes.json, docs/kernel-probes.md). A kernel
-at or above every qualified window needs a new qualification. Bodhi data is
+per-kernel probe (release/kernel-probes.json, docs/kernel-probes.md); the
+kernels the qualification evidence covers are recorded there too. A kernel at
+or above every qualified window needs a new qualification. Bodhi data is
 untrusted: only regex-validated kernel NVRs reach the findings. This module
 performs no writes; the workflow turns findings into deduplicated issues.
 """
 import argparse
+import datetime
 import json
 from pathlib import Path
 import re
@@ -19,12 +21,17 @@ import urllib.parse
 import urllib.request
 
 BODHI = 'https://bodhi.fedoraproject.org/updates/'
-QUERY = {'packages': 'kernel', 'releases': 'F44', 'rows_per_page': '30'}
+QUERY = [('packages', 'kernel'), ('releases', 'F44'), ('status', 'stable'), ('status', 'testing'),
+         ('rows_per_page', '100')]
+MAX_PAGES = 20
 MAX_BODY = 4 << 20
 TIMEOUT = 30
 KERNEL_NVR = re.compile(r'kernel-(\d{1,3})\.(\d{1,3})\.(\d{1,4})-(\d{1,4})\.fc44')
 KERNEL_VERSION = re.compile(r'(\d{1,3})\.(\d{1,3})\.(\d{1,4})(?:-[A-Za-z0-9._+~]+)?')
 ALIAS = re.compile(r'FEDORA-\d{4}-[0-9a-f]{10}')
+DIGEST = re.compile(r'[0-9a-f]{64}')
+DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
+PROBE_FIELDS = {'kernel', 'result', 'source', 'evidence_sha256', 'recorded'}
 KEY_PREFIX = 'kernel:fedora-44:'
 OBSERVED = {'stable', 'testing'}
 
@@ -37,6 +44,21 @@ def fetch_json(url, timeout=TIMEOUT):
     if len(body) > MAX_BODY:
         raise ValueError('Bodhi response exceeds the size limit')
     return json.loads(body)
+
+
+def fetch_updates(fetch):
+    """Every stable and testing Fedora 44 kernel update, following Bodhi's pagination."""
+    updates, page, pages = [], 1, 1
+    while page <= pages:
+        document = fetch(BODHI + '?' + urllib.parse.urlencode(QUERY + [('page', str(page))]), TIMEOUT)
+        if not isinstance(document, dict) or not isinstance(document.get('updates'), list):
+            raise ValueError('unexpected Bodhi response')
+        pages = document.get('pages')
+        if type(pages) is not int or not 0 <= pages <= MAX_PAGES:
+            raise ValueError('Bodhi page count is missing or above the limit')
+        updates.extend(document['updates'])
+        page += 1
+    return {'updates': updates}
 
 
 def parse_kernel_nvr(nvr):
@@ -98,21 +120,56 @@ def qualified_windows(profiles_dir):
         low, high = parse_version(kernel.get('min')), parse_version(kernel.get('max_exclusive'))
         if not low < high:
             raise ValueError('qualified profile has an empty kernel window: ' + path.name)
-        windows.append({'id': document.get('id'), 'min': kernel['min'], 'max_exclusive': kernel['max_exclusive']})
+        evidence = document.get('qualification', {}).get('evidence_sha256')
+        if not isinstance(evidence, str) or not DIGEST.fullmatch(evidence):
+            raise ValueError('qualified profile lacks a qualification evidence digest: ' + path.name)
+        windows.append({'id': document.get('id'), 'min': kernel['min'], 'max_exclusive': kernel['max_exclusive'],
+                        'evidence_sha256': evidence})
     return windows
 
 
-def load_probes(path):
-    """Kernels (version-release) with a recorded passing probe."""
+def containing(windows, version):
+    return [w for w in windows if parse_version(w['min']) <= version < parse_version(w['max_exclusive'])]
+
+
+def valid_date(value):
+    if not isinstance(value, str) or not DATE.fullmatch(value):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def load_probes(path, windows):
+    """Kernels (version-release) whose recorded probe or qualification evidence passed.
+
+    Every record has exactly the documented fields. A qualification record for a
+    kernel inside a qualified window must carry that profile's evidence digest.
+    """
     document = json.loads(Path(path).read_text())
     if not isinstance(document, dict) or document.get('schema_version') != 1 \
             or not isinstance(document.get('probes'), list):
         raise ValueError('kernel probe registry must be schema_version 1 with a probes list')
-    passed = set()
+    passed, seen = set(), set()
     for probe in document['probes']:
-        if not isinstance(probe, dict) or parse_kernel_nvr('kernel-' + str(probe.get('kernel'))) is None:
-            raise ValueError('invalid kernel probe record: ' + repr(probe))
-        if probe.get('result') == 'pass':
+        invalid = 'invalid kernel probe record: ' + repr(probe)
+        if not isinstance(probe, dict) or set(probe) != PROBE_FIELDS:
+            raise ValueError(invalid)
+        parsed = parse_kernel_nvr('kernel-' + probe['kernel']) if isinstance(probe['kernel'], str) else None
+        if (parsed is None or probe['kernel'] in seen or probe['result'] not in {'pass', 'fail'}
+                or probe['source'] not in {'probe', 'qualification'}
+                or not isinstance(probe['evidence_sha256'], str) or not DIGEST.fullmatch(probe['evidence_sha256'])
+                or not valid_date(probe['recorded'])):
+            raise ValueError(invalid)
+        seen.add(probe['kernel'])
+        if probe['source'] == 'qualification':
+            inside = containing(windows, parsed[0])
+            if probe['result'] != 'pass' or (
+                    inside and probe['evidence_sha256'] not in {w['evidence_sha256'] for w in inside}):
+                raise ValueError('qualification record does not match the qualified evidence: ' + repr(probe))
+        if probe['result'] == 'pass':
             passed.add(probe['kernel'])
     return passed
 
@@ -135,19 +192,18 @@ def existing_keys(open_issues):
 def scan(kernels, windows, probed, open_keys):
     if not windows:
         return []
-    ranges = [(parse_version(w['min']), parse_version(w['max_exclusive']), w) for w in windows]
     findings = []
     for item in kernels:
         version = tuple(int(part) for part in item['version'].split('.'))
         key = dedup_key(item['kernel'])
         if key in open_keys:
             continue
-        inside = [w for low, high, w in ranges if low <= version < high]
+        inside = containing(windows, version)
         if inside:
             if item['kernel'] in probed:
                 continue
             observation = 'probe-required'
-        elif all(version >= high for _, high, _ in ranges):
+        elif all(version >= parse_version(w['max_exclusive']) for w in windows):
             observation = 'requalification-required'
         else:
             continue
@@ -159,11 +215,11 @@ def scan(kernels, windows, probed, open_keys):
 
 def build_report(fetch, profiles_dir, probes_path, open_keys):
     windows = qualified_windows(profiles_dir)
-    probed = load_probes(probes_path)
+    probed = load_probes(probes_path, windows)
     report = {'schema_version': 1, 'qualified_windows': windows, 'probed_kernels': sorted(probed),
               'observed_kernels': [], 'findings': []}
     try:
-        document = fetch(BODHI + '?' + urllib.parse.urlencode(QUERY), TIMEOUT)
+        document = fetch_updates(fetch)
     except (OSError, ValueError, json.JSONDecodeError):
         report['findings'] = [{'observation': 'check-failed', 'note': 'Bodhi query failed; scheduled runs are advisory'}]
         return report

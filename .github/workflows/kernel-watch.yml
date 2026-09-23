@@ -31,8 +31,12 @@ jobs:
           persist-credentials: false
       - name: Ensure the tracking label exists
         run: gh label create kernel-watch --color 1d76db --description "Fedora kernel update observation" || true
-      - name: Collect open tracking issues
-        run: gh issue list --label kernel-watch --state open --limit 200 --json title > open-issues.json
+      - name: Collect every open tracking issue
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/issues?labels=kernel-watch&state=open&per_page=100" \
+            --jq '.[] | {title}' | jq -s . > open-issues.json
+          echo "Open tracking issues: $(jq length open-issues.json)"
       - name: Compare Fedora kernel updates with the qualified window
         run: |
           set -euo pipefail
