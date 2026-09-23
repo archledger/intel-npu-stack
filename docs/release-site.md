@@ -57,9 +57,11 @@ release_site.py compose --source-commit SHA --tree release-tree --records record
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage unsigned --report verification.json
 release_site.py sign --site site/0.1.0 --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage signed --expected-files verification.json
-release_site.py archive --site site/0.1.0 --output intel-npu-stack-0.1.0.tar
+release_site.py archive --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
+    --output intel-npu-stack-0.1.0.tar
 release_site.py notes --site site/0.1.0 --archive intel-npu-stack-0.1.0.tar --output notes.md
 release_serve.py serve-test --site-root site --report serve.json
+release_serve.py serve-test --live --site-root site --report live.json
 ```
 
 The checkout must be at `--source-commit` with unmodified tracked files, and
@@ -84,8 +86,9 @@ The signed stage additionally requires:
 - `SHA256SUMS` to be exact;
 - all three signatures to satisfy the installer's strict release-key policy.
 
-The release notes are linted against tool and product names that public
-release text must not carry.
+`archive` runs every signed-stage check before it writes the archive. The
+release notes are linted against tool and product names that public release
+text must not carry.
 
 `serve-test` runs as root in a disposable container in which the Pages host
 resolves only to 127.0.0.1. It performs these checks:
@@ -102,4 +105,9 @@ resolves only to 127.0.0.1. It performs these checks:
   key, must download every package with the bytes and signatures that
   `release.json` records.
 
-The exact DNF5 option syntax is proven in the release rehearsal.
+The server indexes the site's regular files when it starts and serves only
+those. `--live` runs the positive checks against the real host. It takes the
+package inventory from the published `release.json` after verifying it under
+the committed key, and with `--site-root` it requires that file to equal the
+expected site's. The throwaway CA is removed again even if setup fails. The
+exact DNF5 option syntax is proven in the release rehearsal.

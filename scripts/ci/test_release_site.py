@@ -129,6 +129,9 @@ class Fixture:
         shutil.copytree(self.site, self.signed)
         site_tool.sign(self.signed, self.key.home, self.key.fingerprint)
 
+    def archive(self, site, output):
+        return site_tool.archive(site, output, self.repo, self.commit, self.profile, self.notes, self.report['files'])
+
     def verify(self, site, stage='unsigned', expected=None, notes=None, commit=None):
         return site_tool.verify_site(site, self.repo, commit or self.commit, self.profile, notes or self.notes, stage,
                                      expected if expected is not None or stage == 'unsigned'
@@ -250,10 +253,10 @@ class Lifecycle(Case):
         first, second = self.work / 'one/intel-npu-stack-0.1.0.tar', self.work / 'two/intel-npu-stack-0.1.0.tar'
         first.parent.mkdir()
         second.parent.mkdir()
-        digest = site_tool.archive(self.f.signed, first)
+        digest = self.f.archive(self.f.signed, first)
         os.chmod(self.f.signed / 'profile.toml', 0o600)
         try:
-            self.assertEqual(site_tool.archive(self.f.signed, second), digest)
+            self.assertEqual(self.f.archive(self.f.signed, second), digest)
         finally:
             os.chmod(self.f.signed / 'profile.toml', 0o644)
         self.assertEqual(first.read_bytes(), second.read_bytes())
@@ -271,7 +274,7 @@ class Lifecycle(Case):
 
     def test_notes_carry_the_command_verification_and_digests(self):
         tar = self.work / 'intel-npu-stack-0.1.0.tar'
-        site_tool.archive(self.f.signed, tar)
+        self.f.archive(self.f.signed, tar)
         notes = site_tool.render_notes(self.f.signed, tar).decode()
         self.assertIn((self.f.signed / 'primary-command.txt').read_text().rstrip('\n'), notes)
         self.assertIn(self.f.key.fingerprint, notes)
@@ -456,8 +459,19 @@ class Refusals(Case):
         self.refused('already signed', site_tool.sign, self.f.signed, self.f.key.home, self.f.key.fingerprint)
         tar = self.work / 'intel-npu-stack-0.1.0.tar'
         tar.write_bytes(b'')
-        self.refused('already exists', site_tool.archive, self.f.signed, tar)
-        self.refused('only a signed site', site_tool.archive, self.f.site, self.work / 'x/intel-npu-stack-0.1.0.tar')
+        self.refused('already exists', self.f.archive, self.f.signed, tar)
+        (self.work / 'x').mkdir()
+        self.refused('missing', self.f.archive, self.f.site, self.work / 'x/intel-npu-stack-0.1.0.tar')
+
+    def test_archive_verifies_the_signed_site_first(self):
+        site = self.copy(self.f.signed)
+        (site / 'install.sh.asc').write_text('-----BEGIN PGP SIGNATURE-----\nplaceholder\n')
+        (site / 'SHA256SUMS').write_bytes(site_tool.render_sha256sums(site))
+        self.f.key.sign(site / 'SHA256SUMS', output=str(site / 'SHA256SUMS.asc'))
+        output = self.work / 'out/intel-npu-stack-0.1.0.tar'
+        output.parent.mkdir()
+        self.refused('install.sh.asc', self.f.archive, site, output)
+        self.assertFalse(output.exists())
 
     def test_public_text_lint(self):
         for text in ['Built with Claude', 'see https://chatgpt.com/x', 'Co-Authored-By: someone', 'bell\x07']:

@@ -10,18 +10,26 @@ from pathlib import Path
 import shutil
 import socket
 import ssl
+import subprocess
 import tempfile
 import unittest
 
 import release_serve as serve
+import test_check_release as fixtures
 
 BASE_URL = 'https://archledger.github.io/intel-npu-stack/0.1.0/'
 HOST = 'archledger.github.io'
 
 
+def client_context(cafile=None):
+    context = ssl.create_default_context(cafile=None if cafile is None else str(cafile))
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
 def fetch(port, path, cafile):
     """One HTTPS GET to 127.0.0.1:port presenting the Pages host name; returns (status, body)."""
-    context = ssl.create_default_context(cafile=str(cafile))
+    context = client_context(cafile)
     with socket.create_connection(('127.0.0.1', port), timeout=10) as raw, \
             context.wrap_socket(raw, server_hostname=HOST) as tls:
         tls.sendall(f'GET {path} HTTP/1.1\r\nHost: {HOST}\r\nConnection: close\r\n\r\n'.encode())
@@ -102,9 +110,89 @@ class Classifiers(unittest.TestCase):
             serve.run_primary('/nonexistent', 'root')
 
     @unittest.skipIf(os.geteuid() == 0, 'checks the refusal for unprivileged callers')
-    def test_trust_anchor_needs_root(self):
+    def test_serve_test_needs_root(self):
         with self.assertRaisesRegex(serve.ServeRefused, 'root'):
-            serve.install_anchor('/nonexistent')
+            serve.require_root()
+
+    def test_trust_anchor_is_removed_when_setup_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ca, anchor = Path(tmp) / 'ca.crt', Path(tmp) / 'anchors/serve-test.crt'
+            anchor.parent.mkdir()
+            ca.write_text('certificate\n')
+            refreshed = []
+
+            def failing():
+                refreshed.append('refresh')
+                raise serve.ServeRefused('update-ca-trust failed')
+            with self.assertRaisesRegex(serve.ServeRefused, 'update-ca-trust'):
+                serve.install_anchor(ca, anchor, failing)
+            self.assertFalse(anchor.exists())
+            self.assertEqual(refreshed, ['refresh', 'refresh'])  # the failed install and the cleanup
+            anchor.write_text('left by an earlier run\n')
+            with self.assertRaisesRegex(serve.ServeRefused, 'already exists'):
+                serve.install_anchor(ca, anchor, lambda: None)
+            self.assertEqual(anchor.read_text(), 'left by an earlier run\n')
+            anchor.unlink()
+            serve.install_anchor(ca, anchor, lambda: None)
+            self.assertEqual(anchor.read_text(), 'certificate\n')
+
+    def test_fetches_refuse_non_https_redirects(self):
+        argv = serve.curl_command('https://archledger.github.io/intel-npu-stack/0.1.0/release.json', '/w/out')
+        for option, value in [('--proto', '=https'), ('--proto-redir', '=https')]:
+            self.assertEqual(argv[argv.index(option) + 1], value)
+        self.assertIn('--fail', argv)
+        self.assertIn('--max-filesize', argv)
+        self.assertEqual(argv[-2:], ['--', 'https://archledger.github.io/intel-npu-stack/0.1.0/release.json'])
+
+
+@unittest.skipUnless(shutil.which('gpg') and shutil.which('gpgconf'), 'gpg is required')
+class LiveRelease(unittest.TestCase):
+    """--live checks packages from the published release.json only after verifying it under the committed key."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory(prefix='live-')
+        root = Path(cls.tmp.name)
+        for name in ['key', 'other']:
+            (root / name).mkdir(mode=0o700)
+        cls.key, cls.other = fixtures.ThrowawayKey(root / 'key'), fixtures.ThrowawayKey(root / 'other')
+        cls.published = root / 'published'
+        cls.published.mkdir()
+        (cls.published / 'release.json').write_text(
+            '{"repository": {"base_url": "' + BASE_URL + '"}, "packages": []}\n')
+        cls.key.sign(cls.published / 'release.json')
+
+    @classmethod
+    def tearDownClass(cls):
+        for key in [cls.key, cls.other]:
+            subprocess.run(['gpgconf', '--homedir', str(key.home), '--kill', 'all'], capture_output=True)
+        cls.tmp.cleanup()
+
+    def fetch(self, url, output):
+        shutil.copyfile(self.published / url.removeprefix(BASE_URL), output)
+
+    def live(self, **kwargs):
+        with tempfile.TemporaryDirectory() as work:
+            return serve.live_release(BASE_URL, self.key.public, self.key.fingerprint, work, self.fetch, **kwargs)
+
+    def test_verified_live_metadata_is_used(self):
+        self.assertEqual(self.live()['repository']['base_url'], BASE_URL)
+        self.assertEqual(self.live(local=self.published / 'release.json')['packages'], [])
+
+    def test_unverified_or_different_metadata_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stale = Path(tmp) / 'release.json'
+            stale.write_text('{"repository": {"base_url": "' + BASE_URL + '"}, "packages": [{"name": "x"}]}\n')
+            with self.assertRaisesRegex(serve.ServeRefused, 'differs'):
+                self.live(local=stale)
+        signature = self.published / 'release.json.sig'
+        original = signature.read_bytes()
+        try:
+            self.other.sign(self.published / 'release.json')
+            with self.assertRaisesRegex(serve.ServeRefused, 'release-key policy'):
+                self.live()
+        finally:
+            signature.write_bytes(original)
 
 
 @unittest.skipUnless(shutil.which('openssl'), 'openssl is required')
@@ -146,15 +234,24 @@ class LocalPages(unittest.TestCase):
                 ('/intel-npu-stack/0.1.0/release.json', 200)])
             self.assertEqual(server.take_log(), [])
 
+    def test_only_regular_files_present_at_start_are_served(self):
+        index = serve.site_index(self.site)
+        self.assertEqual(set(index), {'0.1.0/release.json', '0.1.0/repodata/repomd.xml'})
+        with serve.SiteServer(self.site, '/intel-npu-stack/', self.leaf, self.key, ('127.0.0.1', 0)) as server:
+            late = self.site / '0.1.0/late.json'
+            late.write_text('{}\n')
+            self.addCleanup(late.unlink)
+            self.assertEqual(fetch(server.port, '/intel-npu-stack/0.1.0/late.json', self.ca)[0], 404)
+
     def test_certificate_names_only_the_pages_host(self):
         with serve.SiteServer(self.site, '/intel-npu-stack/', self.leaf, self.key, ('127.0.0.1', 0)) as server:
-            context = ssl.create_default_context(cafile=str(self.ca))
+            context = client_context(self.ca)
             with socket.create_connection(('127.0.0.1', server.port), timeout=10) as raw:
                 with self.assertRaises(ssl.SSLCertVerificationError):
                     context.wrap_socket(raw, server_hostname='example.org')
             with socket.create_connection(('127.0.0.1', server.port), timeout=10) as raw:
                 with self.assertRaises(ssl.SSLCertVerificationError):
-                    ssl.create_default_context().wrap_socket(raw, server_hostname=HOST)
+                    client_context().wrap_socket(raw, server_hostname=HOST)
 
 
 if __name__ == '__main__':

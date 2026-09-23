@@ -8,7 +8,8 @@
                           --stage unsigned|signed [--expected-files REPORT] [--report FILE]
   release_site.py sign    --site DIR --gpg-home DIR --fingerprint FPR [--passphrase-file FILE]
                           [--require-passphrase]
-  release_site.py archive --site DIR --output intel-npu-stack-<version>.tar
+  release_site.py archive --source-commit SHA --site DIR --profile FILE [--support-notes FILE]
+                          --expected-files REPORT --output intel-npu-stack-<version>.tar
   release_site.py notes   --site DIR --archive FILE --output FILE
 
 The site is the signed release tree unchanged, the pinned installer set built
@@ -476,15 +477,19 @@ def sign(site, gnupghome, fingerprint, passphrase_file=None):
     return {name: sha(site / name) for name in FINALIZE_FILES}
 
 
-def archive(site, output):
-    """Deterministic uncompressed GNU tar of a signed site; members <version>/<path>, bytewise sorted."""
+def archive(site, output, repo, commit, profile, notes_path, expected_files):
+    """Deterministic uncompressed GNU tar of a signed site; members <version>/<path>, bytewise sorted.
+
+    The site passes every signed-stage check first, so only a verified site becomes the archive.
+    """
     site, output = Path(site), Path(output)
     version = site.name
     require(VERSION.fullmatch(version) is not None, 'the site directory must be named after the release version')
-    require(load_json(site / 'release.json').get('stack_release') == version, 'release.json names another version')
     require(output.name == f'intel-npu-stack-{version}.tar', f'the archive must be named intel-npu-stack-{version}.tar')
+    require(not output.exists(), f'{output} already exists; outputs are never overwritten')
+    verify_site(site, repo, commit, profile, notes_path, 'signed', expected_files)
+    require(load_json(site / 'release.json').get('stack_release') == version, 'release.json names another version')
     files = site_files(site)
-    require(set(FINALIZE_FILES) <= set(files), 'only a signed site is archived')
     try:
         with open(output, 'xb') as stream, tarfile.open(fileobj=stream, mode='w', format=tarfile.GNU_FORMAT) as tar:
             for relative in files:
@@ -500,7 +505,7 @@ def archive(site, output):
                     tar.addfile(info, data)
     except FileExistsError:
         raise SiteRefused(f'{output} already exists; outputs are never overwritten') from None
-    except BaseException:
+    except BaseException:  # never leave a partial archive
         output.unlink(missing_ok=True)
         raise
     return sha(output)
@@ -578,6 +583,14 @@ def render_notes(site, archive_path):
     return lint_public_text('\n'.join(lines)).encode()
 
 
+def unsigned_report(path):
+    """The file digests of an unsigned-stage verification report."""
+    report = load_json(path)
+    require(report.get('stage') == 'unsigned' and isinstance(report.get('files'), dict),
+            '--expected-files must be an unsigned-stage report')
+    return report['files']
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('command', choices=['compose', 'check', 'sign', 'archive', 'notes'])
@@ -603,13 +616,14 @@ def main(argv=None):
     needed = {'compose': ['source_commit', 'tree', 'records', 'leg_a', 'leg_b', 'profile', 'output'],
               'check': ['source_commit', 'site', 'profile', 'stage'],
               'sign': ['site', 'gpg_home', 'fingerprint'],
-              'archive': ['site', 'output'], 'notes': ['site', 'archive', 'output']}[args.command]
+              'archive': ['source_commit', 'site', 'profile', 'expected_files', 'output'],
+              'notes': ['site', 'archive', 'output']}[args.command]
     missing = [name for name in needed if getattr(args, name) is None]
     if missing:
         parser.error(args.command + ' requires ' + ', '.join('--' + name.replace('_', '-') for name in missing))
     try:
         notes_path = args.support_notes
-        if args.command in {'compose', 'check'} and notes_path is None:
+        if args.command in {'compose', 'check', 'archive'} and notes_path is None:
             version = release_trust.check_committed(args.repo)['version']
             notes_path = args.repo / 'release' / version / 'support-notes.toml'
         if args.command == 'compose':
@@ -619,10 +633,7 @@ def main(argv=None):
             expected = None
             if args.stage == 'signed':
                 require(args.expected_files is not None, 'the signed stage needs --expected-files')
-                report = load_json(args.expected_files)
-                require(report.get('stage') == 'unsigned' and isinstance(report.get('files'), dict),
-                        '--expected-files must be an unsigned-stage report')
-                expected = report['files']
+                expected = unsigned_report(args.expected_files)
             result = verify_site(args.site, args.repo, args.source_commit, args.profile, notes_path, args.stage,
                                  expected)
         elif args.command == 'sign':
@@ -631,7 +642,9 @@ def main(argv=None):
             require(passphrase or not args.require_passphrase, '--require-passphrase needs --passphrase-file')
             result = sign(args.site, args.gpg_home, args.fingerprint, passphrase)
         elif args.command == 'archive':
-            result = {'archive': str(args.output), 'sha256': archive(args.site, args.output)}
+            result = {'archive': str(args.output),
+                      'sha256': archive(args.site, args.output, args.repo, args.source_commit, args.profile,
+                                        notes_path, unsigned_report(args.expected_files))}
         else:
             write_new(args.output, render_notes(args.site, args.archive))
             result = {'notes': str(args.output), 'sha256': sha(args.output)}

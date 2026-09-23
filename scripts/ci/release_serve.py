@@ -3,7 +3,7 @@
 """Serve a composed site as the Pages host over local HTTPS and run the published install path against it.
 
   release_serve.py serve-test --site-root DIR [--repo DIR] [--user ci] [--work DIR] [--report FILE]
-  release_serve.py serve-test --live [--repo DIR] [--user ci] [--work DIR] [--report FILE]
+  release_serve.py serve-test --live [--site-root DIR] [--repo DIR] [--user ci] [--work DIR] [--report FILE]
 
 serve-test runs as root in a disposable container in which the Pages host of
 the committed BASE_URL resolves only to 127.0.0.1 (for example
@@ -24,7 +24,10 @@ certificate for that host, adds the CA to the system trust anchors, serves
      match release.json.
 
 --live skips the local server and the corruption controls and runs 1 and 4
-against the real host. Nothing is installed; the trust anchor is removed again.
+against the real host, taking the package inventory from the published
+release.json after verifying it under the committed key (and, with
+--site-root, requiring it to equal the expected site's). Nothing is installed;
+the trust anchor is removed again, also when setup fails.
 """
 import argparse
 import hashlib
@@ -44,6 +47,7 @@ import threading
 import urllib.parse
 
 import check_release
+import release_site
 import release_trust
 
 REPO = Path(__file__).resolve().parents[2]
@@ -82,6 +86,54 @@ def served_path(prefix, raw):
     if not relative or not all(SEGMENT.fullmatch(segment) for segment in relative.split('/')):
         return None
     return relative
+
+
+def site_index(root):
+    """Regular files under root by site-relative path, fixed when the server starts.
+
+    Requests are only looked up here, so no request data ever becomes a filesystem path. Symlinks,
+    anything under a symlinked directory, special files and unusual names are left out.
+    """
+    root, index = Path(root), {}
+    for directory, dirnames, filenames in os.walk(root):
+        dirnames[:] = [name for name in dirnames
+                       if SEGMENT.fullmatch(name) and not (Path(directory) / name).is_symlink()]
+        for name in filenames:
+            path = Path(directory) / name
+            if SEGMENT.fullmatch(name) and not path.is_symlink() and path.is_file():
+                index[path.relative_to(root).as_posix()] = path
+    return index
+
+
+def curl_command(url, output):
+    """HTTPS only, redirects included, bounded in time and size, as the published install command."""
+    return ['curl', '--disable', '--fail', '--location', '--proto', '=https', '--proto-redir', '=https',
+            '--connect-timeout', '15', '--max-time', '180', '--max-filesize', str(64 << 20),
+            '--output', str(output), '--', url]
+
+
+def curl_fetch(url, output):
+    result = subprocess.run(curl_command(url, output), capture_output=True, text=True, check=False,
+                            stdin=subprocess.DEVNULL, timeout=TIMEOUT)
+    require(result.returncode == 0, f'could not fetch {url}: ' + result.stderr.strip()[-300:])
+
+
+def live_release(base_url, key, fingerprint, work, fetch=curl_fetch, local=None):
+    """The published release.json, verified under the committed key; an expected local copy must equal it."""
+    directory = Path(tempfile.mkdtemp(prefix='live-release-', dir=work))
+    data, signature = directory / 'release.json', directory / 'release.json.sig'
+    fetch(base_url + 'release.json', data)
+    fetch(base_url + 'release.json.sig', signature)
+    try:
+        release_site.verify_signature(signature, data, key, fingerprint)
+    except release_site.SiteRefused as error:
+        raise ServeRefused('live release.json: ' + str(error)) from None
+    require(local is None or Path(local).read_bytes() == data.read_bytes(),
+            'the live release.json differs from the expected site')
+    document = json.loads(data.read_text())
+    require(isinstance(document, dict) and document.get('repository', {}).get('base_url') == base_url,
+            'the live release.json names another base URL')
+    return document
 
 
 def corrupted(body):
@@ -137,7 +189,7 @@ class SiteServer:
     """HTTPS server for a site root under a path prefix, with an access log and a corruption switch."""
 
     def __init__(self, root, prefix, certificate, key, address=('127.0.0.1', 443)):
-        self.root, self.prefix = Path(root).resolve(strict=True), prefix
+        self.prefix, self.index = prefix, site_index(Path(root).resolve(strict=True))
         self.log, self.corrupt, self.lock = [], set(), threading.Lock()
         server = self
 
@@ -146,9 +198,8 @@ class SiteServer:
 
             def do_GET(self):
                 relative = served_path(server.prefix, self.path)
-                path = server.root / relative if relative else None
-                if (path is None or path.is_symlink() or not path.is_file()
-                        or not path.resolve().is_relative_to(server.root)):
+                path = server.index.get(relative) if relative else None
+                if path is None:
                     server.record(self.path, 404)
                     self.send_error(404)
                     return
@@ -239,17 +290,32 @@ def dnf_check(release, base_url, key, fingerprint, work):
     return check_release.verify_rpm_signatures(root, key, fingerprint, release)
 
 
-def install_anchor(ca):
+def require_root():
     require(os.geteuid() == 0, 'serve-test must run as root in a disposable container')
-    require(not ANCHOR.exists(), f'{ANCHOR} already exists')
-    shutil.copyfile(ca, ANCHOR)
+
+
+def refresh_trust():
     result = subprocess.run(['update-ca-trust', 'extract'], capture_output=True, text=True, check=False)
     require(result.returncode == 0, 'update-ca-trust failed: ' + result.stderr[-500:])
 
 
-def remove_anchor():
-    ANCHOR.unlink(missing_ok=True)
-    subprocess.run(['update-ca-trust', 'extract'], capture_output=True, check=False)
+def install_anchor(ca, anchor=ANCHOR, refresh=refresh_trust):
+    """Add the throwaway CA; on any failure the anchor is removed again and the store refreshed."""
+    require(not anchor.exists(), f'{anchor} already exists')
+    shutil.copyfile(ca, anchor)
+    try:
+        refresh()
+    except BaseException:
+        remove_anchor(anchor, refresh)
+        raise
+
+
+def remove_anchor(anchor=ANCHOR, refresh=refresh_trust):
+    anchor.unlink(missing_ok=True)
+    try:
+        refresh()
+    except ServeRefused:
+        pass
 
 
 def expect(result, wanted, label):
@@ -268,24 +334,23 @@ def serve_test(site_root, repo, user, work, live=False):
     work = Path(work)
     work.mkdir(parents=True, exist_ok=True)
     if live:
-        release = json.loads(Path(site_root, version, 'release.json').read_text()) if site_root else None
+        local = Path(site_root, version, 'release.json') if site_root else None
+        release = live_release(values['base_url'], key, values['primary_fingerprint'], work, local=local)
         with tempfile.TemporaryDirectory(dir=work) as scratch:
             site_dir = Path(scratch)
-            fetched = subprocess.run(['curl', '--disable', '--fail', '--location', '--proto', '=https', '--max-time',
-                                      '120', '--output', str(site_dir / 'primary-command.txt'), '--',
-                                      values['base_url'] + 'primary-command.txt'], capture_output=True, check=False)
-            require(fetched.returncode == 0, 'the live primary command could not be fetched')
+            curl_fetch(values['base_url'] + 'primary-command.txt', site_dir / 'primary-command.txt')
             report['primary'] = expect(run_primary(site_dir, user), 'verified', 'live primary command')
-        require(release is not None, '--live needs --site-root holding the published version for the DNF check')
         report['dnf_packages_verified'] = dnf_check(release, values['base_url'], key, values['primary_fingerprint'],
                                                     work)
+        report['passed'] = True
         return report
 
+    require_root()
     check_local(host)
     site_dir = Path(site_root) / version
     release = json.loads((site_dir / 'release.json').read_text())
     ca, leaf, leaf_key = make_certificates(work / 'tls', host)
-    install_anchor(ca)
+    install_anchor(ca)  # removes the anchor itself if it cannot finish
     try:
         with SiteServer(site_root, prefix, leaf, leaf_key) as server:
             result = run_primary(site_dir, user)
@@ -325,15 +390,15 @@ def main(argv=None):
     parser.add_argument('--work', type=Path)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args(argv)
-    if args.site_root is None:
-        parser.error('serve-test requires --site-root')
+    if args.site_root is None and not args.live:
+        parser.error('serve-test requires --site-root (optional with --live)')
     try:
         with tempfile.TemporaryDirectory(prefix='serve-test-') as scratch:
             report = serve_test(args.site_root, args.repo, args.user, args.work or Path(scratch), args.live)
         if args.report is not None:
             with open(args.report, 'x') as stream:
                 stream.write(json.dumps(report, indent=2, sort_keys=True) + '\n')
-    except (ServeRefused, check_release.ReleaseRefused, release_trust.TrustRefused) as error:
+    except (ServeRefused, check_release.ReleaseRefused, release_trust.TrustRefused, release_site.SiteRefused) as error:
         parser.exit(1, 'serve test refused: ' + str(error) + '\n')
     except (OSError, KeyError, ValueError, subprocess.TimeoutExpired) as error:
         parser.exit(1, f'serve test refused: {error!r}\n')
