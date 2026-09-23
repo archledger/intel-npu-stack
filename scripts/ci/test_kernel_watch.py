@@ -10,11 +10,14 @@ import check_kernels as watcher
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = 'e' * 64
+PROFILE = 'fedora-44-lunar-lake-x86_64'
 
 
-def update(nvrs, status='stable', alias='FEDORA-2026-0000000000', release='F44', date='2026-09-23 01:08:39'):
+def update(nvrs, status='stable', alias='FEDORA-2026-0000000000', release='F44', date='2026-09-23 01:08:39',
+           reached_testing=True):
     return {'alias': alias, 'status': status, 'date_stable': date if status == 'stable' else None,
-            'date_submitted': date, 'release': {'name': release}, 'builds': [{'nvr': nvr} for nvr in nvrs]}
+            'date_testing': date if reached_testing else None, 'date_submitted': date,
+            'release': {'name': release}, 'builds': [{'nvr': nvr} for nvr in nvrs]}
 
 
 UPDATES = [
@@ -23,7 +26,8 @@ UPDATES = [
     update(['kernel-7.3.0-200.fc44'], status='testing', alias='FEDORA-2026-aaaaaaaaaa'),
     update(['kernel-7.2.5-200.fc44'], alias='FEDORA-2026-9ce2715225'),
     update(['kernel-7.2.4-200.fc44', 'kernel-headers-7.2.4-200.fc44'], alias='FEDORA-2026-d567c45298'),
-    update(['kernel-7.2.8-200.fc44'], status='obsolete'),
+    update(['kernel-7.2.8-200.fc44'], status='obsolete', reached_testing=False),
+    update(['kernel-7.2.5-100.fc44'], status='obsolete', alias='FEDORA-2026-bbbbbbbbbb'),
     update(['kernel-7.2.9-200.fc43'], release='F43'),
     update(['kernel-$(id)-200.fc44']),
     {'status': 'stable', 'builds': 'not-a-list'},
@@ -49,8 +53,9 @@ evidence_sha256 = "{EVIDENCE}"
 '''
 
 
-def probe(kernel, result='pass', source='probe', evidence='b' * 64, recorded='2026-09-24'):
-    return {'kernel': kernel, 'result': result, 'source': source, 'evidence_sha256': evidence, 'recorded': recorded}
+def probe(kernel, result='pass', source='probe', evidence='b' * 64, recorded='2026-09-24', profile=PROFILE):
+    return {'kernel': kernel, 'profile': profile, 'result': result, 'source': source, 'evidence_sha256': evidence,
+            'recorded': recorded}
 
 
 def paged(pages):
@@ -67,17 +72,37 @@ def paged(pages):
 class Parsing(unittest.TestCase):
     def test_only_fedora_44_kernel_packages_parse(self):
         self.assertEqual(watcher.parse_kernel_nvr('kernel-7.2.7-200.fc44'), ((7, 2, 7), '7.2.7-200.fc44'))
+        self.assertEqual(watcher.parse_kernel_nvr('kernel-7.3.0-0.rc1.20.fc44'), ((7, 3, 0), '7.3.0-0.rc1.20.fc44'))
         for nvr in ['kernel-headers-7.2.4-200.fc44', 'kernel-7.2.7-200.fc43', 'kernel-7.2-200.fc44',
+                    'kernel-7.3.0-0.rc1-x.fc44', 'kernel-7.3.0-0..1.fc44',
                     'kernel-$(id)-200.fc44', 'kernel-7.2.7-200.fc44 ', 'x' * 300, None, 42]:
             with self.subTest(nvr):
                 self.assertIsNone(watcher.parse_kernel_nvr(nvr))
 
-    def test_bodhi_observations_keep_stable_and_testing_only(self):
+    def test_bodhi_observations_keep_builds_that_reached_a_repository(self):
         observed = watcher.kernels_from_bodhi(BODHI)
         self.assertEqual([item['kernel'] for item in observed],
-                         ['7.3.0-200.fc44', '7.2.7-200.fc44', '7.2.6-200.fc44', '7.2.5-200.fc44', '7.2.4-200.fc44'])
+                         ['7.3.0-200.fc44', '7.2.7-200.fc44', '7.2.6-200.fc44', '7.2.5-200.fc44', '7.2.5-100.fc44',
+                          '7.2.4-200.fc44'])
         self.assertEqual(observed[0]['status'], 'testing')
         self.assertEqual(observed[1]['update'], 'FEDORA-2026-ca91e91bf0')
+        # Superseded while in updates-testing: still installable, still observed; never pushed: ignored.
+        self.assertEqual(observed[4]['status'], 'obsolete')
+
+    def test_the_most_published_status_of_a_build_wins(self):
+        document = {'updates': [update(['kernel-7.2.7-200.fc44'], status='obsolete'),
+                                update(['kernel-7.2.7-200.fc44'], status='stable', alias='FEDORA-2026-ca91e91bf0'),
+                                update(['kernel-7.2.7-200.fc44'], status='testing')]}
+        self.assertEqual(watcher.kernels_from_bodhi(document)[0]['status'], 'stable')
+
+    def test_profile_kernel_releases_follow_the_schema_parser(self):
+        for value, version in [('7.2.5', (7, 2, 5)), ('7.3.0-foo-bar', (7, 3, 0)), ('7.2.5-200.fc44', (7, 2, 5)),
+                               ('07.02.05', (7, 2, 5))]:
+            self.assertEqual(watcher.parse_version(value), version)
+        for value in ['', ' 7.2.5', '7.2.5 ', '7.2.5-', '7.2.5-a b', '7.2', '7.2.5.1', '7.x.5', '7.2.+5',
+                      str(2 ** 64) + '.0.0', None, 7]:
+            with self.subTest(value), self.assertRaises(ValueError):
+                watcher.parse_version(value)
 
     def test_malformed_bodhi_document_yields_no_kernels(self):
         for document in [{}, {'updates': 'x'}, [], {'updates': [None, 1, 'x']}]:
@@ -92,7 +117,7 @@ class Pagination(unittest.TestCase):
                                   {'updates': UPDATES[4:], 'page': 3, 'pages': 3}])
         document = watcher.fetch_updates(fetch)
         self.assertEqual([query['page'] for query in requested], [['1'], ['2'], ['3']])
-        self.assertEqual(requested[0]['status'], ['stable', 'testing'])
+        self.assertEqual(requested[0]['status'], ['stable', 'testing', 'obsolete'])
         self.assertEqual(requested[0]['releases'], ['F44'])
         self.assertEqual(watcher.kernels_from_bodhi(document), watcher.kernels_from_bodhi(BODHI))
 
@@ -135,16 +160,40 @@ class Policy(unittest.TestCase):
         self.registry.write_text(json.dumps({'schema_version': 1, 'probes': probes}))
         return watcher.load_probes(self.registry, self.windows)
 
+    def add_profile(self, name, evidence):
+        (self.profiles / 'fedora/44' / (name + '.toml')).write_text(
+            QUALIFIED.replace(PROFILE, name).replace(EVIDENCE, evidence))
+        self.windows = watcher.qualified_windows(self.profiles)
+
     def test_only_qualified_fedora_44_profiles_define_the_window(self):
-        self.assertEqual(self.windows, [{'id': 'fedora-44-lunar-lake-x86_64', 'min': '7.2.5', 'max_exclusive': '7.3.0',
+        self.assertEqual(self.windows, [{'id': PROFILE, 'min': '7.2.5', 'max_exclusive': '7.3.0',
                                          'evidence_sha256': EVIDENCE}])
+
+    def test_profile_ids_must_be_unique(self):
+        (self.profiles / 'fedora/44/copy.toml').write_text(QUALIFIED)
+        with self.assertRaisesRegex(ValueError, 'duplicate'):
+            watcher.qualified_windows(self.profiles)
+
+    def test_evidence_is_kept_per_profile(self):
+        other = 'fedora-44-other-x86_64'
+        self.add_profile(other, 'f' * 64)
+        probed = self.load([probe('7.2.5-200.fc44', source='qualification', evidence=EVIDENCE),
+                            probe('7.2.6-200.fc44', source='qualification', evidence=EVIDENCE),
+                            probe('7.2.5-200.fc44', source='qualification', evidence='f' * 64, profile=other),
+                            probe('7.2.6-200.fc44', source='qualification', evidence='f' * 64, profile=other),
+                            probe('7.2.7-200.fc44')])
+        findings = {f['kernel']: f for f in watcher.scan(self.kernels, self.windows, probed, set())}
+        self.assertEqual(findings['7.2.7-200.fc44']['observation'], 'probe-required')
+        self.assertEqual(findings['7.2.7-200.fc44']['windows'], [other + ' [7.2.5, 7.3.0)'])
+        with self.assertRaisesRegex(ValueError, 'qualification record'):
+            self.load([probe('7.2.5-200.fc44', source='qualification', evidence=EVIDENCE, profile=other)])
 
     def test_probe_and_requalification_findings(self):
         probed = self.load([probe('7.2.5-200.fc44', source='qualification', evidence=EVIDENCE),
                             probe('7.2.6-200.fc44', source='qualification', evidence=EVIDENCE)])
         findings = watcher.scan(self.kernels, self.windows, probed, set())
         by_kernel = {finding['kernel']: finding for finding in findings}
-        self.assertEqual(set(by_kernel), {'7.2.7-200.fc44', '7.3.0-200.fc44'})
+        self.assertEqual(set(by_kernel), {'7.2.5-100.fc44', '7.2.7-200.fc44', '7.3.0-200.fc44'})
         self.assertEqual(by_kernel['7.2.7-200.fc44']['observation'], 'probe-required')
         self.assertEqual(by_kernel['7.3.0-200.fc44']['observation'], 'requalification-required')
         self.assertEqual(by_kernel['7.2.7-200.fc44']['dedup_key'], 'kernel:fedora-44:7.2.7-200.fc44')
@@ -152,7 +201,7 @@ class Policy(unittest.TestCase):
     def test_without_recorded_evidence_kernels_every_window_kernel_needs_a_probe(self):
         findings = watcher.scan(self.kernels, self.windows, self.load([]), set())
         self.assertEqual({finding['kernel'] for finding in findings if finding['observation'] == 'probe-required'},
-                         {'7.2.5-200.fc44', '7.2.6-200.fc44', '7.2.7-200.fc44'})
+                         {'7.2.5-100.fc44', '7.2.5-200.fc44', '7.2.6-200.fc44', '7.2.7-200.fc44'})
 
     def test_open_issues_deduplicate(self):
         keys = watcher.existing_keys([{'title': '[kernel-watch] kernel:fedora-44:7.2.7-200.fc44'},
@@ -172,8 +221,9 @@ class Policy(unittest.TestCase):
             watcher.qualified_windows(self.profiles)
 
     def test_only_passing_records_count(self):
-        self.assertEqual(self.load([probe('7.2.6-200.fc44'), probe('7.2.7-200.fc44', result='fail')]),
-                         {'7.2.6-200.fc44'})
+        self.assertEqual(self.load([probe('7.2.6-200.fc44'), probe('7.2.7-200.fc44', result='fail'),
+                                    probe('7.2.6-200.fc44', profile='fedora-44-other-x86_64')]),
+                         {(PROFILE, '7.2.6-200.fc44'), ('fedora-44-other-x86_64', '7.2.6-200.fc44')})
 
     def test_malformed_probe_records_are_refused(self):
         cases = {
@@ -188,6 +238,8 @@ class Policy(unittest.TestCase):
             'unknown source': probe('7.2.7-200.fc44', source='guess'),
             'extra field': {**probe('7.2.7-200.fc44'), 'note': 'x'},
             'bad kernel': probe('7.2.7-200.fc43'),
+            'bad profile': probe('7.2.7-200.fc44', profile='fedora 44'),
+            'missing profile': {key: value for key, value in probe('7.2.7-200.fc44').items() if key != 'profile'},
             'duplicate kernel': [probe('7.2.7-200.fc44'), probe('7.2.7-200.fc44', result='fail')],
             'failed qualification': probe('7.2.6-200.fc44', result='fail', source='qualification', evidence=EVIDENCE),
             'foreign qualification evidence': probe('7.2.6-200.fc44', source='qualification'),
@@ -202,7 +254,9 @@ class Policy(unittest.TestCase):
 
     def test_qualification_records_outside_every_window_keep_only_their_shape(self):
         # A superseded series stays valid history once its profile is no longer qualified.
-        self.assertEqual(self.load([probe('7.1.13-200.fc44', source='qualification')]), {'7.1.13-200.fc44'})
+        self.assertEqual(self.load([probe('7.1.13-200.fc44', source='qualification')]), {(PROFILE, '7.1.13-200.fc44')})
+        self.assertEqual(self.load([probe('7.2.5-200.fc44', source='qualification', profile='fedora-44-retired')]),
+                         {('fedora-44-retired', '7.2.5-200.fc44')})
 
 
 class Report(unittest.TestCase):

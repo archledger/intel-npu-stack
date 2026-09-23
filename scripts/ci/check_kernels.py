@@ -22,18 +22,20 @@ import urllib.request
 
 BODHI = 'https://bodhi.fedoraproject.org/updates/'
 QUERY = [('packages', 'kernel'), ('releases', 'F44'), ('status', 'stable'), ('status', 'testing'),
-         ('rows_per_page', '100')]
+         ('status', 'obsolete'), ('rows_per_page', '100')]
 MAX_PAGES = 20
 MAX_BODY = 4 << 20
 TIMEOUT = 30
-KERNEL_NVR = re.compile(r'kernel-(\d{1,3})\.(\d{1,3})\.(\d{1,4})-(\d{1,4})\.fc44')
-KERNEL_VERSION = re.compile(r'(\d{1,3})\.(\d{1,3})\.(\d{1,4})(?:-[A-Za-z0-9._+~]+)?')
+KERNEL_NVR = re.compile(r'kernel-(\d{1,3})\.(\d{1,3})\.(\d{1,4})-(\d{1,4}(?:\.[0-9A-Za-z]{1,40}){0,6})\.fc44')
+PROFILE_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}')
+U64_MAX = 2 ** 64 - 1
 ALIAS = re.compile(r'FEDORA-\d{4}-[0-9a-f]{10}')
 DIGEST = re.compile(r'[0-9a-f]{64}')
 DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
-PROBE_FIELDS = {'kernel', 'result', 'source', 'evidence_sha256', 'recorded'}
+PROBE_FIELDS = {'kernel', 'profile', 'result', 'source', 'evidence_sha256', 'recorded'}
 KEY_PREFIX = 'kernel:fedora-44:'
-OBSERVED = {'stable', 'testing'}
+# Rank of a build's most published state; obsolete builds count only if they reached updates-testing.
+OBSERVED = {'stable': 3, 'testing': 2, 'obsolete': 1}
 
 
 def fetch_json(url, timeout=TIMEOUT):
@@ -47,7 +49,7 @@ def fetch_json(url, timeout=TIMEOUT):
 
 
 def fetch_updates(fetch):
-    """Every stable and testing Fedora 44 kernel update, following Bodhi's pagination."""
+    """Every stable, testing and obsolete Fedora 44 kernel update, following Bodhi's pagination."""
     updates, page, pages = [], 1, 1
     while page <= pages:
         document = fetch(BODHI + '?' + urllib.parse.urlencode(QUERY + [('page', str(page))]), TIMEOUT)
@@ -73,20 +75,32 @@ def parse_kernel_nvr(nvr):
 
 
 def parse_version(value):
-    match = KERNEL_VERSION.fullmatch(value) if isinstance(value, str) else None
-    if not match:
-        raise ValueError('invalid kernel version in profile: ' + repr(value))
-    return tuple(int(part) for part in match.groups())
+    """Numeric triple of a profile kernel release, by the schema's rules (crates/stack-schema/src/kernel.rs)."""
+    invalid = ValueError('invalid kernel version in profile: ' + repr(value))
+    if not isinstance(value, str) or not value or value.strip() != value:
+        raise invalid
+    numeric, dash, suffix = value.partition('-')
+    if dash and (not suffix or any(character.isspace() for character in suffix)):
+        raise invalid
+    parts = numeric.split('.')
+    if len(parts) != 3 or not all(part and part.isascii() and part.isdigit() for part in parts):
+        raise invalid
+    version = tuple(int(part) for part in parts)
+    if max(version) > U64_MAX:
+        raise invalid
+    return version
 
 
 def kernels_from_bodhi(document):
-    """Stable and testing kernel builds, newest first, one entry per build."""
+    """Kernel builds that reached a repository, newest first, one entry per build at its most published state."""
     updates = document.get('updates') if isinstance(document, dict) else None
     if not isinstance(updates, list):
         return []
     found = {}
     for entry in updates:
         if not isinstance(entry, dict) or entry.get('status') not in OBSERVED:
+            continue
+        if entry['status'] == 'obsolete' and not (isinstance(entry.get('date_testing'), str) and entry['date_testing']):
             continue
         release = entry.get('release')
         if not isinstance(release, dict) or release.get('name') != 'F44':
@@ -101,7 +115,7 @@ def kernels_from_bodhi(document):
                 continue
             version, kernel = parsed
             current = found.get(kernel)
-            if current is None or (current['status'] == 'testing' and entry['status'] == 'stable'):
+            if current is None or OBSERVED[entry['status']] > OBSERVED[current['status']]:
                 found[kernel] = {'kernel': kernel, 'version': version, 'status': entry['status'], 'update': alias}
     return [dict(item, version='.'.join(map(str, item['version'])))
             for item in sorted(found.values(), key=lambda item: item['version'], reverse=True)]
@@ -123,7 +137,12 @@ def qualified_windows(profiles_dir):
         evidence = document.get('qualification', {}).get('evidence_sha256')
         if not isinstance(evidence, str) or not DIGEST.fullmatch(evidence):
             raise ValueError('qualified profile lacks a qualification evidence digest: ' + path.name)
-        windows.append({'id': document.get('id'), 'min': kernel['min'], 'max_exclusive': kernel['max_exclusive'],
+        profile = document.get('id')
+        if not isinstance(profile, str) or not PROFILE_ID.fullmatch(profile):
+            raise ValueError('qualified profile has an invalid id: ' + path.name)
+        if profile in {window['id'] for window in windows}:
+            raise ValueError('duplicate qualified profile id: ' + profile)
+        windows.append({'id': profile, 'min': kernel['min'], 'max_exclusive': kernel['max_exclusive'],
                         'evidence_sha256': evidence})
     return windows
 
@@ -143,10 +162,11 @@ def valid_date(value):
 
 
 def load_probes(path, windows):
-    """Kernels (version-release) whose recorded probe or qualification evidence passed.
+    """(profile id, kernel version-release) pairs whose recorded probe or qualification evidence passed.
 
-    Every record has exactly the documented fields. A qualification record for a
-    kernel inside a qualified window must carry that profile's evidence digest.
+    Every record has exactly the documented fields and names the profile it was
+    collected for. A qualification record for a kernel inside that profile's
+    qualified window must carry that profile's evidence digest.
     """
     document = json.loads(Path(path).read_text())
     if not isinstance(document, dict) or document.get('schema_version') != 1 \
@@ -158,19 +178,20 @@ def load_probes(path, windows):
         if not isinstance(probe, dict) or set(probe) != PROBE_FIELDS:
             raise ValueError(invalid)
         parsed = parse_kernel_nvr('kernel-' + probe['kernel']) if isinstance(probe['kernel'], str) else None
-        if (parsed is None or probe['kernel'] in seen or probe['result'] not in {'pass', 'fail'}
+        pair = (probe['profile'], probe['kernel'])
+        if (parsed is None or not isinstance(probe['profile'], str) or not PROFILE_ID.fullmatch(probe['profile'])
+                or pair in seen or probe['result'] not in {'pass', 'fail'}
                 or probe['source'] not in {'probe', 'qualification'}
                 or not isinstance(probe['evidence_sha256'], str) or not DIGEST.fullmatch(probe['evidence_sha256'])
                 or not valid_date(probe['recorded'])):
             raise ValueError(invalid)
-        seen.add(probe['kernel'])
+        seen.add(pair)
         if probe['source'] == 'qualification':
-            inside = containing(windows, parsed[0])
-            if probe['result'] != 'pass' or (
-                    inside and probe['evidence_sha256'] not in {w['evidence_sha256'] for w in inside}):
+            own = [w for w in containing(windows, parsed[0]) if w['id'] == probe['profile']]
+            if probe['result'] != 'pass' or any(w['evidence_sha256'] != probe['evidence_sha256'] for w in own):
                 raise ValueError('qualification record does not match the qualified evidence: ' + repr(probe))
         if probe['result'] == 'pass':
-            passed.add(probe['kernel'])
+            passed.add(pair)
     return passed
 
 
@@ -200,7 +221,8 @@ def scan(kernels, windows, probed, open_keys):
             continue
         inside = containing(windows, version)
         if inside:
-            if item['kernel'] in probed:
+            inside = [w for w in inside if (w['id'], item['kernel']) not in probed]
+            if not inside:
                 continue
             observation = 'probe-required'
         elif all(version >= parse_version(w['max_exclusive']) for w in windows):

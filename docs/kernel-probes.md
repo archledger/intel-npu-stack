@@ -4,8 +4,8 @@ A qualified profile admits one kernel series through its half-open
 `[kernel] min`/`max_exclusive` window, for example `[7.2.5, 7.3.0)`. The window
 is chosen when the profile is promoted and must contain every kernel on which
 the qualification evidence was collected. The promotion change records each of
-those kernels in `release/kernel-probes.json` with `"source": "qualification"`
-and the profile's qualification `evidence_sha256`. Kernels inside the window
+those kernels in `release/kernel-probes.json` with `"source": "qualification"`,
+the profile id and the profile's qualification `evidence_sha256`. Kernels inside the window
 that were not part of that evidence are admitted by policy; each one needs a
 recorded per-kernel probe. A kernel at or above `max_exclusive` is refused
 until a profile is qualified for its series.
@@ -16,13 +16,16 @@ this policy applies only to qualified profiles.
 ## Watching
 
 `.github/workflows/kernel-watch.yml` runs daily. `scripts/ci/check_kernels.py`
-reads every page of Fedora 44 kernel updates from Bodhi (stable and testing),
-compares them with the windows of every qualified Fedora 44 profile and with
+reads every page of Fedora 44 kernel updates from Bodhi: stable and testing
+builds, and obsolete builds that reached updates-testing, since systems can
+still run them. It compares them with the windows of every qualified Fedora 44
+profile and with
 `release/kernel-probes.json`, and opens one issue per kernel, deduplicated
 against every open `kernel-watch` issue:
 
-- `probe-required`: inside a qualified window without a passing probe or
-  qualification record.
+- `probe-required`: inside the window of at least one qualified profile that
+  has no passing probe or qualification record for that kernel. Evidence is
+  kept per profile, so a probe on one profile never covers another.
 - `requalification-required`: above every qualified window.
 
 The workflow can only read the repository and write issues. Until a profile is
@@ -42,14 +45,15 @@ On the qualification hardware, after booting the new kernel:
 4. Add an entry to `release/kernel-probes.json` in a reviewed change:
 
 ```json
-{"kernel": "7.2.7-200.fc44", "result": "pass", "source": "probe", "evidence_sha256": "<sha256>", "recorded": "2026-09-24"}
+{"kernel": "7.2.7-200.fc44", "profile": "fedora-44-lunar-lake-x86_64", "result": "pass", "source": "probe", "evidence_sha256": "<sha256>", "recorded": "2026-09-24"}
 ```
 
-Every record has exactly these five fields: the Fedora 44 kernel
-version-release, `result` `pass` or `fail`, `source` `probe` or
-`qualification`, a lowercase SHA-256 and a `YYYY-MM-DD` date. Each kernel
-appears at most once. A `qualification` record must pass, and while its kernel
-lies inside a qualified window it must carry that profile's evidence digest. The
+Every record has exactly these six fields: the Fedora 44 kernel
+version-release, the id of the profile the evidence was collected for, `result`
+`pass` or `fail`, `source` `probe` or `qualification`, a lowercase SHA-256 and a
+`YYYY-MM-DD` date. Each kernel appears at most once per profile. A
+`qualification` record must pass, and while its kernel lies inside that
+profile's qualified window it must carry the profile's evidence digest. The
 watcher refuses a registry that breaks these rules.
 
 A failing probe is recorded with `"result": "fail"`; the kernel then needs a
