@@ -274,6 +274,31 @@ def scan(kernels, windows, outcomes, issues):
     return findings
 
 
+GUIDANCE = {
+    'probe-required': 'the kernel is inside the profile window and admitted by policy. Record a per-kernel probe '
+                      'as described in docs/kernel-probes.md.',
+    'probe-failed': 'a recorded probe of the current component set failed. Fix the failure or narrow the window '
+                    'before closing this issue.',
+    'requalification-required': 'the kernel is at or above the profile window. Installation refuses it on that '
+                                'profile until a profile is qualified for its series.',
+}
+
+
+def markdown_cell(text):
+    """Table-cell text with backslashes, pipes and backticks escaped rather than dropped."""
+    return re.sub(r'([\\|`])', r'\\\1', text)
+
+
+def render_issue(finding):
+    """The issue body for one finding: kernel facts, a per-profile action table and the guidance."""
+    rows = [f"| {markdown_cell(a['profile'])} | {markdown_cell(a['window'])} | `{a['action']}` |"
+            for a in finding['actions']]
+    guidance = [f'- `{action}`: {GUIDANCE[action]}' for action in sorted({a['action'] for a in finding['actions']})]
+    return '\n'.join(['## Fedora kernel observation', '', f"- Kernel: {finding['kernel']}",
+                      f"- Bodhi status: {finding['bodhi_status']}", f"- Update: {finding['update']}", '',
+                      '| Profile | Window | Action |', '|---|---|---|', *rows, '', *guidance]) + '\n'
+
+
 def build_report(fetch, profiles_dir, probes_path, issues):
     windows = qualified_windows(profiles_dir)
     outcomes, stale = load_probes(probes_path, windows)
@@ -288,7 +313,8 @@ def build_report(fetch, profiles_dir, probes_path, issues):
                                'note': 'Bodhi query failed; scheduled runs are advisory'}]
         return report
     report['observed_kernels'] = kernels_from_bodhi(document)
-    report['findings'] = scan(report['observed_kernels'], windows, outcomes, issues)
+    report['findings'] = [dict(finding, body=render_issue(finding))
+                          for finding in scan(report['observed_kernels'], windows, outcomes, issues)]
     return report
 
 

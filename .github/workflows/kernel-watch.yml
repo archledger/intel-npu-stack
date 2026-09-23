@@ -55,17 +55,8 @@ jobs:
           for index in $(seq 0 $((count - 1))); do
             finding=$(jq ".findings | map(select(.observation != \"check-failed\")) | .[$index]" kernels.json)
             key=$(printf '%s' "$finding" | jq -r '.dedup_key')
-            printf '%s' "$finding" | jq -r '
-              {"probe-required": "- `probe-required`: the kernel is inside the profile window and admitted by policy. Record a per-kernel probe as described in docs/kernel-probes.md.",
-               "probe-failed": "- `probe-failed`: a recorded probe of the current component set failed. Fix the failure or narrow the window before closing this issue.",
-               "requalification-required": "- `requalification-required`: the kernel is at or above the profile window. Installation refuses it on that profile until a profile is qualified for its series."} as $guidance |
-              "## Fedora kernel observation\n\n" +
-              "- Kernel: \(.kernel)\n" +
-              "- Bodhi status: \(.bodhi_status)\n" +
-              "- Update: \(.update)\n\n" +
-              "| Profile | Window | Action |\n|---|---|---|\n" +
-              ([.actions[] | "| \(.profile | gsub("[|`]"; "")) | \(.window) | `\(.action)` |"] | join("\n")) + "\n\n" +
-              ([.actions[].action] | unique | map($guidance[.]) | join("\n")) + "\n"' > issue-body.md
+            # check_kernels.py renders (and its tests cover) the issue body, including Markdown escaping.
+            printf '%s' "$finding" | jq -j '.body' > issue-body.md
             issue=$(printf '%s' "$finding" | jq -r '.issue // empty')
             if [ -z "$issue" ]; then
               gh issue create \
