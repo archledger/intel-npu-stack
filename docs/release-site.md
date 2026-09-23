@@ -20,7 +20,9 @@ release workflow does not call either tool yet.
 | `intel-npu-stack-install.asc`, `install.sh.asc`, `SHA256SUMS`, `SHA256SUMS.asc` | Added by `sign` |
 
 Names must be plain segments of `[A-Za-z0-9][A-Za-z0-9._+-]*`, so dotfiles,
-symlinks and special files are refused. `SHA256SUMS` lists every other file,
+symlinks and special files are refused, and a directory that cannot be read
+fails the inventory. `checksums.sha256` may not list itself, its signature or
+`assembly-manifest.json`. `SHA256SUMS` lists every other file,
 sorted bytewise, as `<sha256>  <path>`. The archive
 `intel-npu-stack-<version>.tar` is an uncompressed GNU tar of the signed site.
 Its members are named `<version>/<path>` and sorted bytewise, with uid and gid
@@ -55,15 +57,19 @@ requalification`.
 release_site.py compose --source-commit SHA --tree release-tree --records records \
     --leg-a installer-a --leg-b installer-b --profile PROFILE --output site/0.1.0
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage unsigned --report verification.json
+release_serve.py serve-test --site-root site --expected-files verification.json --report serve.json
 release_site.py sign --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage signed --expected-files verification.json
 release_site.py archive --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --output intel-npu-stack-0.1.0.tar
 release_site.py notes --site site/0.1.0 --archive intel-npu-stack-0.1.0.tar --output notes.md
-release_serve.py serve-test --site-root site --expected-files verification.json --report serve.json
-release_serve.py serve-test --live --site-root site --report live.json
+release_serve.py serve-test --live --site-root site --report live.json   # after publication
 ```
+
+The local serve test runs on the unsigned site with its unsigned-stage report,
+before the key is used. To serve a signed site, pass the report of `check
+--stage signed`, because the report must describe the site's current files.
 
 The checkout must be at `--source-commit` with unmodified tracked files, and
 `--profile` and the support notes must be tracked files of it. Its committed
@@ -85,7 +91,10 @@ trust seam and release key are the only trust anchors.
   to be the records the assembly was built from, as listed in
   `assembly-manifest.json`. Both identity records must be passed production
   identities for the release key. The signed identity must list the release
-  packages and the signed repository digest. The provider identity must be the
+  packages and the signed repository digest. Each entry must have exactly the
+  identity fields: name, version, architecture and role from `release.json`,
+  header and payload digests read from the RPM itself, and for component
+  providers the selected profile's unsigned digest. The provider identity must be the
   signed identity without the profile package and the repository digest.
   `records/profile-generation.json` must be exactly the generator's record for
   this release: the candidate (the selected profile), the provider identity, the
@@ -109,8 +118,7 @@ It runs the unsigned stage again and requires exactly the bytes of the
 verification report before it uses the key. Reports and release notes must be
 written outside the site, and so must the `serve-test` report. `archive` runs every signed-stage
 check before writing, and it refuses an output path inside the site. `notes`
-requires the archive to hold exactly the site's files, byte for byte, with the
-normalized member metadata. Report and notes paths must not exist yet and are
+requires the archive to be byte for byte the canonical archive of the site. Report and notes paths must not exist yet and are
 checked before anything runs. The
 release notes are linted against tool and product names that public release
 text must not carry.

@@ -150,6 +150,13 @@ class Classifiers(unittest.TestCase):
             serve.main(['serve-test', '--site-root', tmp, '--report', str(Path(tmp) / '0.1.0/serve.json')])
         self.assertIn('outside the site', errors.getvalue())
 
+    def test_serve_work_directory_is_never_inside_the_site(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stderr(io.StringIO()) as errors, \
+                self.assertRaises(SystemExit):
+            (Path(tmp) / '0.1.0').mkdir()
+            serve.main(['serve-test', '--site-root', tmp, '--work', str(Path(tmp) / '0.1.0/work')])
+        self.assertIn('outside the site', errors.getvalue())
+
     def test_primary_command_never_runs_as_root(self):
         with self.assertRaisesRegex(serve.ServeRefused, 'unprivileged'):
             serve.run_primary('/nonexistent', 'root')

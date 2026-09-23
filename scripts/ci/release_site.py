@@ -63,6 +63,8 @@ LEG_RECORD_FIELDS = {'leg', 'source_commit', 'version', 'base_url', 'primary_fin
                      'src_root', 'target_dir', 'toolchain', 'image', 'build_environment', 'caller_environment',
                      'umask'}
 ASSEMBLY_RECORDS = ['signed-identity.json', 'profile-rpm-build.json']
+IDENTITY_ENTRY_FIELDS = {'name', 'nevr', 'arch', 'filename', 'role', 'unsigned_sha256', 'signed_sha256',
+                         'header_sha256', 'payload_sha256', 'unchanged_cpio_sha256'}
 GENERATION_FIELDS = {'passed', 'test_only', 'profile_status', 'scope', 'schema_version', 'stack_release', 'profile_id',
                      'candidate_sha256', 'signed_identity_sha256', 'output_sha256', 'primary_fingerprint', 'components'}
 LEG_AGREE = ['source_commit', 'version', 'base_url', 'primary_fingerprint', 'release_json_sha256',
@@ -123,7 +125,9 @@ def site_files(root):
     root = Path(root)
     require(root.is_dir() and not root.is_symlink(), f'{root} is not a directory')
     files = []
-    for directory, dirnames, filenames in os.walk(root):
+    def unreadable(error):
+        raise SiteRefused(f'site directory cannot be read: {error.filename}')
+    for directory, dirnames, filenames in os.walk(root, onerror=unreadable):
         for name in sorted(dirnames + filenames):
             path = Path(directory) / name
             relative = path.relative_to(root).as_posix()
@@ -167,6 +171,8 @@ def tree_subset(root):
         match = re.fullmatch(r'[0-9a-f]{64}  (.+)', line)
         require(match is not None, 'malformed checksums line')
         listed.add(check_release.safe_relative(match.group(1)))
+    require(not listed & set(TREE_EXTRA), 'checksums.sha256 lists a file it cannot cover: '
+            + ', '.join(sorted(listed & set(TREE_EXTRA))))
     return listed | set(TREE_EXTRA)
 
 
@@ -386,6 +392,28 @@ def production_identity(record, fingerprint):
             and all(isinstance(entry, dict) for entry in record['packages']))
 
 
+def check_identity_entries(site, release, signed, candidate):
+    """Each signed-identity entry: release.json fields, the RPM's own digests and the candidate's unsigned digest."""
+    published = {entry['filename']: entry for entry in release['packages']}
+    # generate-release-profile.py requires a component's candidate digest to be its provider's unsigned digest.
+    unsigned = {component.get('provider', {}).get('package'): component.get('sha256')
+                for component in candidate.get('components', {}).values()}
+    for entry in signed['packages']:
+        invalid = f"records/signed-identity.json does not describe {entry.get('filename')!r}"
+        require(set(entry) == IDENTITY_ENTRY_FIELDS, invalid + ': it must have exactly the identity entry fields')
+        release_entry = published[entry['filename']]
+        require(all(entry[field] == release_entry[field] for field in ['name', 'nevr', 'arch', 'role']),
+                invalid + ': name, nevr, arch or role differs from release.json')
+        require(all(isinstance(entry[field], str) and DIGEST.fullmatch(entry[field])
+                    for field in ['unsigned_sha256', 'header_sha256', 'payload_sha256', 'unchanged_cpio_sha256']),
+                invalid + ': malformed digest')
+        digests = release_sign.payload_digests(site / 'packages' / entry['filename'])
+        require(digests == {field: entry[field] for field in digests},
+                invalid + ': header or payload digests differ from the RPM')
+        require(entry['name'] not in unsigned or entry['unsigned_sha256'] == unsigned[entry['name']],
+                invalid + ': unsigned digest differs from the selected profile')
+
+
 def check_signing_records(site, release, values, profile, candidate):
     """The signing job's records describe this release: key, packages, repository, profile and each other."""
     provider = load_json(site / 'records/provider-identity.json')
@@ -400,6 +428,7 @@ def check_signing_records(site, release, values, profile, candidate):
     require(sorted((entry.get('filename'), entry.get('signed_sha256')) for entry in signed['packages'])
             == sorted((entry['filename'], entry['sha256']) for entry in release['packages']),
             'records/signed-identity.json does not list the release packages')
+    check_identity_entries(site, release, signed, load_toml(candidate))
 
     def by_name(entries):
         return sorted(entries, key=lambda entry: str(entry.get('name')))
@@ -618,26 +647,32 @@ def archive(site, output, repo, commit, profile, notes_path, expected_files):
             'the archive must be written outside the site')
     verify_site(site, repo, commit, profile, notes_path, 'signed', expected_files)
     require(load_json(site / 'release.json').get('stack_release') == version, 'release.json names another version')
-    files = site_files(site)
     try:
-        with open(output, 'xb') as stream, tarfile.open(fileobj=stream, mode='w', format=tarfile.GNU_FORMAT) as tar:
-            for relative in files:
-                path = site / relative
-                info = tarfile.TarInfo(version + '/' + relative)
-                info.size = path.stat().st_size
-                info.mode = 0o755 if relative in EXECUTABLES else 0o644
-                info.uid = info.gid = 0
-                info.uname = info.gname = ''
-                info.mtime = EPOCH
-                info.type = tarfile.REGTYPE
-                with path.open('rb') as data:
-                    tar.addfile(info, data)
+        with open(output, 'xb') as stream:
+            write_archive(site, stream)
     except FileExistsError:
         raise SiteRefused(f'{output} already exists; outputs are never overwritten') from None
     except BaseException:  # never leave a partial archive
         output.unlink(missing_ok=True)
         raise
     return sha(output)
+
+
+def write_archive(site, stream):
+    """The canonical archive of a site: GNU tar, members <version>/<path> bytewise sorted, normalized metadata."""
+    site = Path(site)
+    with tarfile.open(fileobj=stream, mode='w', format=tarfile.GNU_FORMAT) as tar:
+        for relative in site_files(site):
+            path = site / relative
+            info = tarfile.TarInfo(site.name + '/' + relative)
+            info.size = path.stat().st_size
+            info.mode = 0o755 if relative in EXECUTABLES else 0o644
+            info.uid = info.gid = 0
+            info.uname = info.gname = ''
+            info.mtime = EPOCH
+            info.type = tarfile.REGTYPE
+            with path.open('rb') as data:
+                tar.addfile(info, data)
 
 
 def repository_slug(base_url, version):
@@ -656,19 +691,12 @@ def lint_public_text(text):
 
 
 def check_archive_holds(archive_path, site):
-    """The archive holds exactly the site's files, byte for byte, in archive order."""
-    files = site_files(site)
-    with tarfile.open(archive_path, 'r:') as tar:
-        members = tar.getmembers()
-        require([member.name for member in members] == [site.name + '/' + f for f in files]
-                and all(member.isreg() for member in members), 'the archive does not hold exactly this site')
-        for member, relative in zip(members, files):
-            require((member.mode, member.uid, member.gid, member.uname, member.gname, member.mtime)
-                    == (0o755 if relative in EXECUTABLES else 0o644, 0, 0, '', '', EPOCH),
-                    'the archive does not have the normalized metadata: ' + relative)
-            with tar.extractfile(member) as data:
-                require(hashlib.file_digest(data, 'sha256').hexdigest() == sha(site / relative),
-                        'the archive does not hold this site: ' + relative + ' differs')
+    """The archive is byte for byte the canonical archive of this site, trailing bytes included."""
+    with tempfile.TemporaryFile() as rendered:
+        write_archive(site, rendered)
+        rendered.seek(0)
+        canonical_sha = hashlib.file_digest(rendered, 'sha256').hexdigest()
+    require(sha(archive_path) == canonical_sha, 'the archive is not the canonical archive of this site')
 
 
 def render_notes(site, archive_path):

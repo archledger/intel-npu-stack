@@ -491,6 +491,10 @@ def main(argv=None):
         if args.report is not None:
             release_site.require_outside(args.report, [args.site_root], 'report')
             release_site.require_new_file(args.report, 'report')
+        if args.work is not None and args.site_root is not None:
+            # Certificates, downloads and caches land in the work directory; the served site must not change.
+            require(not Path(os.path.abspath(args.work)).resolve().is_relative_to(Path(args.site_root).resolve()),
+                    'the work directory must be outside the site')
         expected = None
         if args.expected_files is not None:
             verified = release_site.load_json(args.expected_files)

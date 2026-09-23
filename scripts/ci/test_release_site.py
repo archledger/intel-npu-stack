@@ -15,6 +15,7 @@ import tomllib
 import unittest
 
 import release_installer as installer
+import release_sign
 import release_site as site_tool
 import release_trust as trust
 import test_check_release as fixtures
@@ -24,6 +25,7 @@ REPO = Path(__file__).resolve().parents[2]
 BASE_URL = 'https://archledger.github.io/intel-npu-stack/0.1.0/'
 TOOLS = all(shutil.which(tool) for tool in ['gpg', 'gpgconf', 'git', 'rpmbuild', 'rpmsign', 'rpmkeys'])
 BINARY = 'intel-npu-stack-install'
+UNSIGNED = '0' * 64  # the candidate profile's component digest, which is its provider's unsigned RPM digest
 PLATFORM = '''
 [platform]
 id = "fedora"
@@ -129,7 +131,8 @@ class Fixture:
         provider = {'passed': True, 'test_only': False, 'production_ready': True, 'private_key_exported': False,
                     'primary_fingerprint': self.key.fingerprint, 'packages': []}
         profile_entry = {'name': 'verifier-fixture', 'nevr': '0:1.0.0-1', 'arch': 'noarch', 'filename': rpm.name,
-                         'role': 'profile', 'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm)}
+                         'role': 'profile', 'unsigned_sha256': UNSIGNED, 'signed_sha256': fixtures.sha(rpm),
+                         **release_sign.payload_digests(rpm)}
         self.write_record('provider-identity.json', provider)
         self.write_record('signed-identity.json', {**provider, 'packages': [profile_entry],
                                                    'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml')})
@@ -140,13 +143,13 @@ class Fixture:
             'signed_identity_sha256': fixtures.sha(self.records / 'provider-identity.json'),
             'output_sha256': fixtures.sha(self.tree / 'profile.toml'), 'primary_fingerprint': self.key.fingerprint,
             'components': {'fixture': {'package': 'verifier-fixture', 'nevr': '0:1.0.0-1',
-                                       'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm)}},
+                                       'unsigned_sha256': UNSIGNED, 'signed_sha256': fixtures.sha(rpm)}},
             'scope': 'candidate-to-release profile digest rewrite'})
         self.write_record('profile-rpm-build.json', {
             'profile_filename': rpm.name, 'source_profile_sha256': fixtures.sha(self.tree / 'profile.toml'),
-            'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm),
+            'unsigned_sha256': UNSIGNED, 'signed_sha256': fixtures.sha(rpm),
             'installed_profile_path': '/usr/share/intel-npu-stack/profiles/fedora-44-verifier-fixture.toml',
-            'builds': ['c' * 64, 'c' * 64], 'reproducible': True})
+            'builds': [UNSIGNED, UNSIGNED], 'reproducible': True})
         # The assembler records the digests of the signing records it was built from.
         manifest = json.loads((self.tree / 'assembly-manifest.json').read_text())
         manifest['input_digests'] = {name: fixtures.sha(self.records / name)
@@ -558,7 +561,7 @@ class Refusals(Case):
         for label, update in {'emptied': dict.clear,
                               'another source profile': lambda d: d.update(source_profile_sha256='0' * 64),
                               'another signed package': lambda d: d.update(signed_sha256='0' * 64),
-                              'not reproducible': lambda d: d.update(builds=['c' * 64, 'd' * 64]),
+                              'not reproducible': lambda d: d.update(builds=[UNSIGNED, 'd' * 64]),
                               'another install path': lambda d: d.update(installed_profile_path='/tmp/x.toml')}.items():
             with self.subTest(label):
                 site = self.copy(self.f.site)
@@ -571,6 +574,47 @@ class Refusals(Case):
                 (site / 'assembly-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
                 self.refused('profile-rpm-build.json does not describe', self.f.verify, site)
                 shutil.rmtree(site.parent)
+
+    def test_signed_identity_entries_are_bound_to_the_release_and_the_rpms(self):
+        for label, update in {'another version': lambda e: e.update(nevr='0:9.9.9-1'),
+                              'another role': lambda e: e.update(role='runtime'),
+                              'another header digest': lambda e: e.update(header_sha256='0' * 64),
+                              'another unsigned digest': lambda e: e.update(unsigned_sha256='e' * 64),
+                              'extra field': lambda e: e.update(note='x')}.items():
+            with self.subTest(label):
+                site = self.copy(self.f.site)
+                path = site / 'records/signed-identity.json'
+                document = json.loads(path.read_text())
+                update(document['packages'][0])
+                path.write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
+                manifest = json.loads((site / 'assembly-manifest.json').read_text())
+                manifest['input_digests']['signed-identity.json'] = fixtures.sha(path)
+                (site / 'assembly-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+                self.refused('signed-identity.json does not', self.f.verify, site)
+                shutil.rmtree(site.parent)
+
+    def test_checksums_may_not_list_the_three_unlisted_tree_files(self):
+        site = self.copy(self.f.site)
+        with (site / 'checksums.sha256').open('a') as stream:
+            stream.write('0' * 64 + '  assembly-manifest.json\n')
+        self.refused('checksums.sha256 lists', self.f.verify, site)
+
+    @unittest.skipIf(os.geteuid() == 0, 'root reads every directory')
+    def test_an_unreadable_directory_fails_the_inventory(self):
+        site = self.copy(self.f.site)
+        hidden = site / 'records/hidden'
+        hidden.mkdir()
+        (hidden / 'extra.txt').write_text('unlisted\n')
+        hidden.chmod(0)
+        self.addCleanup(hidden.chmod, 0o755)
+        self.refused('cannot be read', site_tool.site_files, site)
+
+    def test_notes_refuse_bytes_after_the_archive_end(self):
+        tar = self.work / 'intel-npu-stack-0.1.0.tar'
+        self.f.archive(self.f.signed, tar)
+        with tar.open('ab') as stream:
+            stream.write(b'appended after the end-of-archive blocks')
+        self.refused('archive', site_tool.render_notes, self.f.signed, tar)
 
     def test_installer_legs_must_be_independent_builds(self):
         def compose(leg_b):
