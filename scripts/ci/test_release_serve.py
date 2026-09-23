@@ -114,6 +114,22 @@ class Classifiers(unittest.TestCase):
             with self.subTest(addresses), self.assertRaisesRegex(serve.ServeRefused, '127.0.0.1'):
                 serve.check_local(HOST, resolver(addresses))
 
+    def test_dnf_runs_without_proxies_and_must_reach_the_local_fixture(self):
+        environment = serve.dnf_environment('/w/home')
+        self.assertFalse({name for name in environment if 'proxy' in name.lower()} - {'no_proxy', 'NO_PROXY'})
+        self.assertEqual((environment['no_proxy'], environment['NO_PROXY']), ('*', '*'))
+        release = {'packages': [{'filename': 'a-1.rpm'}, {'filename': 'b-1.rpm'}]}
+        base = '/intel-npu-stack/0.1.0/'
+        served = [(base + 'repodata/repomd.xml', 200), (base + 'repodata/repomd.xml.asc', 200),
+                  (base + 'repodata/primary.xml.zst', 200), (base + 'packages/a-1.rpm', 200),
+                  (base + 'packages/b-1.rpm', 200)]
+        serve.check_dnf_requests(served, '/intel-npu-stack/', '0.1.0', release)
+        for label, log in [('nothing reached the fixture', []),
+                           ('a package came from elsewhere', served[:-1]),
+                           ('unsigned metadata', [entry for entry in served if not entry[0].endswith('.asc')])]:
+            with self.subTest(label), self.assertRaisesRegex(serve.ServeRefused, 'local fixture'):
+                serve.check_dnf_requests(log, '/intel-npu-stack/', '0.1.0', release)
+
     def test_dnf_commands_check_package_and_repository_signatures(self):
         makecache, download = serve.dnf_commands(BASE_URL, '/src/key.asc', '/w/cache', '/w/out', ['a', 'b'])
         common = ['dnf5', '--assumeyes', '--setopt=reposdir=/nonexistent', '--setopt=cachedir=/w/cache',

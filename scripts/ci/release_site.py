@@ -543,6 +543,8 @@ def sign(site, gnupghome, fingerprint, repo, commit, profile, notes_path, expect
     """Sign a site only after it passes the unsigned stage with exactly the verified unsigned bytes."""
     site = Path(site)
     require(not any((site / name).exists() for name in FINALIZE_FILES), 'the site is already signed')
+    require(fingerprint == release_trust.check_committed(repo)['primary_fingerprint'],
+            'the signing fingerprint is not the committed PRIMARY_FINGERPRINT')
     report = verify_site(site, repo, commit, profile, notes_path, 'unsigned')
     require(report['files'] == expected_files, 'the site is not the verified unsigned site')
     written = []
@@ -689,6 +691,14 @@ def render_notes(site, archive_path):
     return lint_public_text('\n'.join(lines)).encode()
 
 
+def require_outside(path, roots, label):
+    """Auxiliary outputs (reports, notes) never land inside a site, which must keep its exact file set."""
+    parent = Path(os.path.abspath(path)).parent.resolve()
+    for root in roots:
+        require(root is None or not parent.is_relative_to(Path(root).resolve()),
+                f'the {label} must be written outside the site')
+
+
 def unsigned_report(path):
     """The file digests of an unsigned-stage verification report."""
     report = load_json(path)
@@ -728,6 +738,11 @@ def main(argv=None):
     if missing:
         parser.error(args.command + ' requires ' + ', '.join('--' + name.replace('_', '-') for name in missing))
     try:
+        sites = [args.site, args.output if args.command == 'compose' else None]
+        if args.report is not None:
+            require_outside(args.report, sites, 'report')
+        if args.command == 'notes':
+            require_outside(args.output, [args.site], 'release notes')
         notes_path = args.support_notes
         if args.command in {'compose', 'check', 'sign', 'archive'} and notes_path is None:
             version = release_trust.check_committed(args.repo)['version']

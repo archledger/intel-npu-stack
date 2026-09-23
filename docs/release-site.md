@@ -99,8 +99,10 @@ The signed stage additionally requires:
 - `SHA256SUMS` to be exact;
 - all three signatures to satisfy the installer's strict release-key policy.
 
-`sign` runs the unsigned stage again and requires exactly the bytes of the
-verification report before it uses the key. `archive` runs every signed-stage
+`sign` refuses any fingerprint other than the committed `PRIMARY_FINGERPRINT`.
+It runs the unsigned stage again and requires exactly the bytes of the
+verification report before it uses the key. Reports and release notes must be
+written outside the site. `archive` runs every signed-stage
 check before writing, and it refuses an output path inside the site. `notes`
 requires the archive to hold exactly the site's files, byte for byte. The
 release notes are linted against tool and product names that public release
@@ -119,9 +121,10 @@ resolves only to 127.0.0.1. It performs these checks:
   refuse it with `INSTALL_INTEGRITY_FAILED` before fetching its signature. A
   one-byte change to `install.sh` must make the command exit 20 before
   anything else is fetched.
-- DNF, with package and repository signature checks against the committed
-  key, must download every package with the bytes and signatures that
-  `release.json` records.
+- DNF runs without any proxy and with package and repository signature checks
+  against the committed key. It must download every package with the bytes and
+  signatures that `release.json` records, and the server log must show the
+  signed metadata and every package served by the local fixture.
 
 The server indexes the site's regular files when it starts and serves only
 those. `--live` runs the positive checks against the real host. It runs the

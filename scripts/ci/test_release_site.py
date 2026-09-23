@@ -416,6 +416,31 @@ class Refusals(Case):
                 self.refused('tool drift between legs: ' + label, self.f.verify, site)
                 shutil.rmtree(site.parent)
 
+    def test_signing_uses_only_the_committed_release_key(self):
+        site = self.copy(self.f.site)
+        with self.assertRaises(site_tool.REFUSALS) as caught:
+            site_tool.sign(site, self.f.other.home, self.f.other.fingerprint, self.f.repo, self.f.commit,
+                           self.f.profile, self.f.notes, self.f.report['files'])
+        self.assertIn('PRIMARY_FINGERPRINT', str(caught.exception))
+        self.assertFalse(any((site / name).exists() for name in site_tool.FINALIZE_FILES))
+
+    def test_reports_and_notes_are_never_written_into_the_site(self):
+        report = self.work / 'unsigned-report.json'
+        report.write_text(json.dumps(self.f.report))
+        site = self.copy(self.f.signed)
+        common = ['--repo', str(self.f.repo), '--source-commit', self.f.commit, '--profile', str(self.f.profile)]
+        tar = self.work / 'tar/intel-npu-stack-0.1.0.tar'
+        tar.parent.mkdir()
+        self.f.archive(site, tar)
+        for argv in (['check', *common, '--site', str(site), '--stage', 'signed', '--expected-files', str(report),
+                      '--report', str(site / 'records/signed-report.json')],
+                     ['notes', '--site', str(site), '--archive', str(tar), '--output', str(site / 'notes.md')]):
+            with self.subTest(argv[0]), contextlib.redirect_stderr(io.StringIO()) as errors, \
+                    self.assertRaises(SystemExit):
+                site_tool.main(argv)
+            self.assertIn('outside the site', errors.getvalue())
+        self.assertEqual(set(site_tool.site_files(site)), set(site_tool.site_files(self.f.signed)))
+
     def test_signing_needs_the_verified_unsigned_site(self):
         site = self.copy(self.f.site)
         document = json.loads((site / 'support-matrix.json').read_text())

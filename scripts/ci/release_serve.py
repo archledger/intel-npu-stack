@@ -321,6 +321,21 @@ def dnf_commands(base_url, key, cache, destination, names):
     return [common + ['makecache'], common + ['download', f'--destdir={destination}', *names]]
 
 
+def dnf_environment(home):
+    """A minimal environment without any proxy, so DNF can only reach what the Pages host resolves to."""
+    return {'PATH': '/usr/bin:/bin', 'LC_ALL': 'C.UTF-8', 'HOME': str(home), 'no_proxy': '*', 'NO_PROXY': '*'}
+
+
+def check_dnf_requests(log, prefix, version, release):
+    """The signed repository metadata and every package were served by the local fixture."""
+    base = prefix + version + '/'
+    served = {path for path, status in log if status == 200}
+    wanted = {base + 'repodata/repomd.xml', base + 'repodata/repomd.xml.asc'}
+    wanted |= {base + 'packages/' + entry['filename'] for entry in release['packages']}
+    missing = sorted(wanted - served)
+    require(not missing, 'DNF did not fetch these from the local fixture: ' + ', '.join(missing))
+
+
 def dnf_check(release, base_url, key, fingerprint, work):
     """Load the repository with signature checks and download every package; bytes and RPM signatures must match."""
     work = Path(work)
@@ -329,7 +344,7 @@ def dnf_check(release, base_url, key, fingerprint, work):
     names = sorted(entry['name'] for entry in release['packages'])
     for argv in dnf_commands(base_url, key, work / 'dnf-cache', root / 'packages', names):
         result = subprocess.run(argv, capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL,
-                                timeout=TIMEOUT)
+                                timeout=TIMEOUT, env=dnf_environment(work))
         require(result.returncode == 0, f'{argv[-1] if argv[-1] == "makecache" else "download"} failed: '
                 + result.stderr[-1500:])
     for entry in release['packages']:
@@ -425,6 +440,7 @@ def serve_test(site_root, repo, user, work, live=False):
             server.corrupt = set()
             report['dnf_packages_verified'] = dnf_check(release, values['base_url'], key,
                                                         values['primary_fingerprint'], work)
+            check_dnf_requests(server.take_log(), prefix, version, release)
     finally:
         remove_anchor()
     report['passed'] = True
