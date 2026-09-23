@@ -460,6 +460,8 @@ def main(argv=None):
     if args.site_root is None and not args.live:
         parser.error('serve-test requires --site-root (optional with --live)')
     try:
+        if args.report is not None:
+            release_site.require_outside(args.report, [args.site_root], 'report')
         with tempfile.TemporaryDirectory(prefix='serve-test-') as scratch:
             report = serve_test(args.site_root, args.repo, args.user, args.work or Path(scratch), args.live)
         if args.report is not None:

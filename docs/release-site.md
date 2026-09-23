@@ -88,7 +88,11 @@ trust seam and release key are the only trust anchors.
   packages and the signed repository digest. The provider identity must be the
   signed identity without the profile package and the repository digest.
   `records/profile-generation.json` must name the provider identity and the
-  shipped `profile.toml` by digest.
+  shipped `profile.toml` by digest. `records/profile-rpm-build.json` must
+  describe the one `profile` package of the signed `release.json`, the shipped
+  profile, the signed identity's unsigned digest and a reproducible build pair.
+  `assembly-manifest.json` is not signed, so its input digests are only a
+  consistency check. Every record is validated against signed data.
 - It re-renders `install.sh`, `primary-command.txt`, `support-matrix.json` and
   `publication-manifest.json` and requires byte equality, and it requires the
   exact file set.
@@ -102,7 +106,7 @@ The signed stage additionally requires:
 `sign` refuses any fingerprint other than the committed `PRIMARY_FINGERPRINT`.
 It runs the unsigned stage again and requires exactly the bytes of the
 verification report before it uses the key. Reports and release notes must be
-written outside the site. `archive` runs every signed-stage
+written outside the site, and so must the `serve-test` report. `archive` runs every signed-stage
 check before writing, and it refuses an output path inside the site. `notes`
 requires the archive to hold exactly the site's files, byte for byte. The
 release notes are linted against tool and product names that public release

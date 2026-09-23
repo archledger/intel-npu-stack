@@ -66,6 +66,7 @@ def build_site_tree(root, key):
     release = json.loads((tree / 'release.json').read_text())
     release['profile_sha256'] = fixtures.sha(tree / 'profile.toml')
     release['repository']['base_url'] = BASE_URL
+    release['packages'][0]['role'] = 'profile'  # the fixture's one package plays the profile RPM
     (tree / 'release.json').write_text(json.dumps(release, indent=2, sort_keys=True) + '\n')
     key.sign(tree / 'release.json')
     fixtures.reseal(tree, key=key)
@@ -126,20 +127,23 @@ class Fixture:
         # extends it with the repository digest, and the profile generation record that reads the former.
         rpm = next((self.tree / 'packages').glob('*.rpm'))
         provider = {'passed': True, 'test_only': False, 'production_ready': True, 'private_key_exported': False,
-                    'primary_fingerprint': self.key.fingerprint,
-                    'packages': [{'name': 'verifier-fixture', 'nevr': '0:1.0.0-1', 'arch': 'noarch',
-                                  'filename': rpm.name, 'role': 'runtime', 'unsigned_sha256': 'c' * 64,
-                                  'signed_sha256': fixtures.sha(rpm)}]}
+                    'primary_fingerprint': self.key.fingerprint, 'packages': []}
+        profile_entry = {'name': 'verifier-fixture', 'nevr': '0:1.0.0-1', 'arch': 'noarch', 'filename': rpm.name,
+                         'role': 'profile', 'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm)}
         self.write_record('provider-identity.json', provider)
-        self.write_record('signed-identity.json',
-                          {**provider, 'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml')})
+        self.write_record('signed-identity.json', {**provider, 'packages': [profile_entry],
+                                                   'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml')})
         self.write_record('profile-generation.json', {
             'passed': True, 'test_only': False, 'profile_status': 'qualified', 'schema_version': 1,
             'stack_release': '0.1.0', 'profile_id': 'fedora-44-verifier-fixture', 'candidate_sha256': 'd' * 64,
             'signed_identity_sha256': fixtures.sha(self.records / 'provider-identity.json'),
             'output_sha256': fixtures.sha(self.tree / 'profile.toml'), 'primary_fingerprint': self.key.fingerprint,
             'components': {}, 'scope': 'fixture'})
-        (self.records / 'profile-rpm-build.json').write_text('{"reproducible": true}\n')
+        self.write_record('profile-rpm-build.json', {
+            'profile_filename': rpm.name, 'source_profile_sha256': fixtures.sha(self.tree / 'profile.toml'),
+            'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm),
+            'installed_profile_path': '/usr/share/intel-npu-stack/profiles/fedora-44-verifier-fixture.toml',
+            'builds': ['c' * 64, 'c' * 64], 'reproducible': True})
         # The assembler records the digests of the signing records it was built from.
         manifest = json.loads((self.tree / 'assembly-manifest.json').read_text())
         manifest['input_digests'] = {name: fixtures.sha(self.records / name)
@@ -488,7 +492,8 @@ class Refusals(Case):
             'provider-identity.json is not a passed production identity': change(provider_path, dict.clear),
             'provider-identity.json is not a passed production identity for the release key':
                 change(provider_path, lambda d: d.update(primary_fingerprint='0' * 40)),
-            'provider-identity.json is not the identity': change(provider_path, lambda d: d['packages'].clear()),
+            'provider-identity.json is not the identity': change(provider_path, lambda d: d['packages'].append(
+                {'name': 'extra', 'role': 'runtime'})),
             'profile-generation.json does not describe': change(generation_path,
                                                                 lambda d: d.update(output_sha256='0' * 64)),
             'profile-generation.json does not describe this release profile':
@@ -499,6 +504,25 @@ class Refusals(Case):
                 site = self.copy(self.f.site)
                 apply(site)
                 self.refused(message, self.f.verify, site)
+                shutil.rmtree(site.parent)
+
+    def test_profile_rpm_record_is_checked_against_the_signed_release(self):
+        path = 'records/profile-rpm-build.json'
+        for label, update in {'emptied': dict.clear,
+                              'another source profile': lambda d: d.update(source_profile_sha256='0' * 64),
+                              'another signed package': lambda d: d.update(signed_sha256='0' * 64),
+                              'not reproducible': lambda d: d.update(builds=['c' * 64, 'd' * 64]),
+                              'another install path': lambda d: d.update(installed_profile_path='/tmp/x.toml')}.items():
+            with self.subTest(label):
+                site = self.copy(self.f.site)
+                document = json.loads((site / path).read_text())
+                update(document)
+                (site / path).write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
+                # Rewriting the unsigned assembly manifest to match does not make the record acceptable.
+                manifest = json.loads((site / 'assembly-manifest.json').read_text())
+                manifest['input_digests']['profile-rpm-build.json'] = fixtures.sha(site / path)
+                (site / 'assembly-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+                self.refused('profile-rpm-build.json does not describe', self.f.verify, site)
                 shutil.rmtree(site.parent)
 
     def test_installer_legs_must_be_independent_builds(self):

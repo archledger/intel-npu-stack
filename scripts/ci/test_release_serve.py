@@ -5,6 +5,8 @@
 The real curl, installer and DNF run needs root in a disposable container; the
 release workflow's verify job and the rehearsal cover it.
 """
+import contextlib
+import io
 import os
 from pathlib import Path
 import shutil
@@ -137,6 +139,13 @@ class Classifiers(unittest.TestCase):
                   '--setopt=npu.gpgkey=file:///src/key.asc', '--repo=npu']
         self.assertEqual(makecache, common + ['makecache'])
         self.assertEqual(download, common + ['download', '--destdir=/w/out', 'a', 'b'])
+
+    def test_serve_report_is_never_written_into_the_site(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stderr(io.StringIO()) as errors, \
+                self.assertRaises(SystemExit):
+            (Path(tmp) / '0.1.0').mkdir()
+            serve.main(['serve-test', '--site-root', tmp, '--report', str(Path(tmp) / '0.1.0/serve.json')])
+        self.assertIn('outside the site', errors.getvalue())
 
     def test_primary_command_never_runs_as_root(self):
         with self.assertRaisesRegex(serve.ServeRefused, 'unprivileged'):

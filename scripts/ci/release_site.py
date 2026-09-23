@@ -407,12 +407,31 @@ def check_signing_records(site, release, values, profile):
             and by_name(provider['packages'])
             == by_name([entry for entry in signed['packages'] if entry.get('role') != 'profile']),
             'records/provider-identity.json is not the identity the signed identity extends')
+    check_profile_build(site, release, signed, profile)
     expected = {'passed': True, 'test_only': False, 'profile_status': 'qualified', 'stack_release': values['version'],
                 'profile_id': profile.get('id'), 'primary_fingerprint': fingerprint,
                 'signed_identity_sha256': sha(site / 'records/provider-identity.json'),
                 'output_sha256': sha(site / 'profile.toml')}
     require(all(generation.get(key) == value for key, value in expected.items()),
             'records/profile-generation.json does not describe this release profile')
+
+
+def check_profile_build(site, release, signed, profile):
+    """records/profile-rpm-build.json, checked against the signed release rather than the unsigned manifest."""
+    record = load_json(site / 'records/profile-rpm-build.json')
+    invalid = 'records/profile-rpm-build.json does not describe the release profile package'
+    profiles = [entry for entry in release['packages'] if entry['role'] == 'profile']
+    require(set(record) == {'profile_filename', 'source_profile_sha256', 'unsigned_sha256', 'signed_sha256',
+                            'installed_profile_path', 'builds', 'reproducible'} and len(profiles) == 1, invalid)
+    identity = [entry for entry in signed['packages'] if entry.get('filename') == profiles[0]['filename']]
+    require(record['profile_filename'] == profiles[0]['filename'] and record['signed_sha256'] == profiles[0]['sha256']
+            and record['source_profile_sha256'] == sha(site / 'profile.toml')
+            and isinstance(record['unsigned_sha256'], str) and DIGEST.fullmatch(record['unsigned_sha256'])
+            and record['builds'] == [record['unsigned_sha256']] * 2 and record['reproducible'] is True
+            and len(identity) == 1 and identity[0].get('role') == 'profile'
+            and identity[0].get('unsigned_sha256') == record['unsigned_sha256']
+            and record['installed_profile_path'] == f"/usr/share/intel-npu-stack/profiles/{profile.get('id')}.toml",
+            invalid)
 
 
 def check_installer_records(site, values, metadata, commit):
