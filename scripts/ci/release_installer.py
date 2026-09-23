@@ -10,7 +10,8 @@ The repository must be clean at --source-commit. release.json.sig must verify
 under the committed release key, and release.json must name this version and
 base URL in production mode. The source is exported with `git archive` into a
 fixed path, trust.rs is pinned with the SHA-256 of release.json (and nothing
-else changes), and the installer is built with the locked, offline toolchain.
+else changes), and the installer is built for x86_64 with the locked, offline
+toolchain pinned by rust-toolchain.toml.
 Two legs built on separate runners must produce identical bytes; the caller
 compares them. pin-source only writes the pinned tree (used by the rehearsal
 to build test harnesses against identical trust). Outputs are never
@@ -22,11 +23,13 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 
 import release_sign
 import release_trust
@@ -35,6 +38,9 @@ BINARY = 'intel-npu-stack-install'
 DEFAULT_SRC = Path('/opt/intel-npu-stack-src')
 DEFAULT_TARGET = Path('/opt/intel-npu-stack-target')
 MAX_BUILD_JOBS = 4  # the project's local build budget (AGENTS.md)
+# The release profile is Fedora x86_64; the installer is built for it whatever the runner's architecture.
+TARGET = 'x86_64-unknown-linux-gnu'
+ELF_X86_64 = 62
 
 
 class InstallerRefused(Exception):
@@ -71,6 +77,25 @@ def current_umask():
     return mask
 
 
+def pinned_channel(src_root):
+    """The exact Rust version pinned by rust-toolchain.toml in the exported source."""
+    try:
+        channel = tomllib.loads((Path(src_root) / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+    except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError):
+        raise InstallerRefused('rust-toolchain.toml does not pin a toolchain channel') from None
+    require(isinstance(channel, str) and re.fullmatch(r'\d+\.\d+\.\d+', channel) is not None,
+            'the pinned toolchain channel must be an exact version')
+    return channel
+
+
+def check_elf(content):
+    """A 64-bit little-endian x86_64 ELF executable, the only architecture the release profile admits."""
+    require(content[:4] == b'\x7fELF', 'the installer is not an ELF executable')
+    require(len(content) >= 20 and content[4] == 2 and content[5] == 1
+            and int.from_bytes(content[18:20], 'little') == ELF_X86_64,
+            'the installer is not a 64-bit little-endian x86_64 executable')
+
+
 def toolchain_env(target_dir, src_root, environ=None):
     """Minimal build environment using the real cargo/rustc of the repository's pinned toolchain.
 
@@ -87,6 +112,12 @@ def toolchain_env(target_dir, src_root, environ=None):
     sysroot = Path(query.stdout.strip())
     require(query.returncode == 0 and sysroot.is_absolute() and (sysroot / 'bin/cargo').is_file()
             and (sysroot / 'bin/rustc').is_file(), 'cannot resolve the pinned Rust toolchain sysroot')
+    # A host rustc or a RUSTUP_TOOLCHAIN override would resolve another compiler than the pinned one.
+    channel = pinned_channel(src_root)
+    version = subprocess.run([str(sysroot / 'bin/rustc'), '-V'], cwd=src_root, env=minimal_env(),
+                             capture_output=True, text=True, check=False, timeout=600)
+    require(version.returncode == 0 and version.stdout.startswith(f'rustc {channel} '),
+            f'the resolved compiler is not the pinned channel {channel}: {version.stdout.strip()!r}')
     cargo_home = environ.get('CARGO_HOME') or str(Path(environ.get('HOME', '/nonexistent')) / '.cargo')
     require(Path(cargo_home).is_absolute(), 'CARGO_HOME must be absolute')
     return minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_HOME': cargo_home,
@@ -188,13 +219,14 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
     else:  # injected runners (tests) do not execute a real toolchain
         env = minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_BUILD_JOBS': jobs})
     for argv in (['cargo', 'fetch', '--locked'],
-                 ['cargo', 'build', '--release', '--locked', '--offline', '-p', 'stack-install', '--bin', BINARY]):
+                 ['cargo', 'build', '--release', '--locked', '--offline', '--target', TARGET, '-p', 'stack-install',
+                  '--bin', BINARY]):
         result = runner(argv, Path(src_root), env)
         require(result.returncode == 0, ' '.join(argv) + ' failed:\n' + (result.stderr or '')[-2000:])
-    binary = target_dir / 'release' / BINARY
+    binary = target_dir / TARGET / 'release' / BINARY
     require(binary.is_file(), 'the build produced no installer binary')
     content = binary.read_bytes()
-    require(content[:4] == b'\x7fELF', 'the installer is not an ELF executable')
+    check_elf(content)
     for literal in (metadata_digest, values['base_url'], values['primary_fingerprint']):
         require(literal.encode() in content, 'the installer lacks a pinned trust value: ' + literal)
     version = runner([str(binary), '--version'], Path(src_root), env)

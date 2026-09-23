@@ -25,21 +25,28 @@ def git(repo, *args):
                                'GIT_COMMITTER_EMAIL': 't@example.invalid'}).stdout.strip()
 
 
+def elf_header(machine=62):
+    """A 64-bit little-endian ELF executable header for the given e_machine (62 is x86_64)."""
+    return (b'\x7fELF\x02\x01\x01' + b'\0' * 9 + (2).to_bytes(2, 'little') + machine.to_bytes(2, 'little')
+            + b'\0' * 44)
+
+
 class FakeCargo:
     """Stands in for cargo/rustc: "builds" a binary from the pinned trust.rs it finds."""
 
-    def __init__(self, embed=True, version='intel-npu-stack-install 0.1.0'):
-        self.embed, self.version, self.calls = embed, version, []
+    def __init__(self, embed=True, version='intel-npu-stack-install 0.1.0', machine=62):
+        self.embed, self.version, self.machine, self.calls = embed, version, machine, []
 
     def __call__(self, argv, cwd, env):
         self.calls.append((list(argv), str(cwd), dict(env)))
         if argv[0] == 'cargo' and argv[1] == 'build':
             values = trust.parse_trust((Path(cwd) / 'crates/stack-install/src/trust.rs').read_text())
-            body = b'\x7fELF' + b'\0' * 12
+            body = elf_header(self.machine)
             if self.embed:
                 body += '\n'.join([values['metadata_sha256'], values['base_url'],
                                    values['primary_fingerprint']]).encode()
-            binary = Path(env['CARGO_TARGET_DIR']) / 'release/intel-npu-stack-install'
+            target = argv[argv.index('--target') + 1] if '--target' in argv else None
+            binary = Path(env['CARGO_TARGET_DIR']) / (target or '') / 'release/intel-npu-stack-install'
             binary.parent.mkdir(parents=True, exist_ok=True)
             binary.write_bytes(body)
             return subprocess.CompletedProcess(argv, 0, '', '')
@@ -54,8 +61,8 @@ class ToolchainEnvironment(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.root, True)
         self.sysroot = self.root / 'toolchains/1.85.0'
         (self.sysroot / 'bin').mkdir(parents=True)
-        for tool in ['cargo', 'rustc']:
-            (self.sysroot / 'bin' / tool).write_text('#!/bin/sh\n')
+        (self.sysroot / 'bin/cargo').write_text('#!/bin/sh\n')
+        self.fake_rustc(self.sysroot, '1.85.0')
         proxies = self.root / 'proxies'
         proxies.mkdir()
         # A rustup-like proxy that reports the pinned toolchain only inside the source tree.
@@ -66,6 +73,12 @@ class ToolchainEnvironment(unittest.TestCase):
         (self.src / 'rust-toolchain.toml').write_text('[toolchain]\nchannel = "1.85.0"\n')
         self.environ = {'PATH': str(proxies) + ':/usr/bin:/bin', 'HOME': str(self.root / 'home'),
                         'CARGO_BUILD_JOBS': '1', 'SECRET_FROM_CALLER': 'x'}
+
+    @staticmethod
+    def fake_rustc(sysroot, version):
+        rustc = sysroot / 'bin/rustc'
+        rustc.write_text('#!/bin/sh\n[ "$1" = -V ] && printf "rustc ' + version + ' (0000000 2025-02-17)\\n"\n')
+        rustc.chmod(0o755)
 
     def test_real_toolchain_bin_leads_a_minimal_path(self):
         env = installer.toolchain_env(self.root / 'target', self.src, self.environ)
@@ -87,6 +100,16 @@ class ToolchainEnvironment(unittest.TestCase):
         for bad in ['5', '64', '0', '-1', '04', 'x', '']:
             with self.subTest(bad), self.assertRaisesRegex(installer.InstallerRefused, 'CARGO_BUILD_JOBS'):
                 installer.toolchain_env(self.root / 't', self.src, {**environ, 'CARGO_BUILD_JOBS': bad})
+
+    def test_resolved_compiler_must_be_the_pinned_channel(self):
+        # A host rustc or a RUSTUP_TOOLCHAIN override resolves another toolchain.
+        self.fake_rustc(self.sysroot, '1.90.0')
+        with self.assertRaisesRegex(installer.InstallerRefused, 'channel 1.85.0'):
+            installer.toolchain_env(self.root / 't', self.src, self.environ)
+        self.fake_rustc(self.sysroot, '1.85.0')
+        (self.src / 'rust-toolchain.toml').write_text('[toolchain]\nchannel = "stable"\n')
+        with self.assertRaisesRegex(installer.InstallerRefused, 'exact version'):
+            installer.toolchain_env(self.root / 't', self.src, self.environ)
 
     def test_missing_or_unresolvable_toolchain_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'rustc'):
@@ -195,8 +218,9 @@ class InstallerBuild(unittest.TestCase):
         self.assertEqual(record['release_json_sha256'], release_sha)
         self.assertEqual(record['binary_sha256'], hashlib.sha256(binary.read_bytes()).hexdigest())
         build = [call for call in runner.calls if call[0][:2] == ['cargo', 'build']][0]
-        self.assertEqual(build[0], ['cargo', 'build', '--release', '--locked', '--offline', '-p', 'stack-install',
-                                    '--bin', 'intel-npu-stack-install'])
+        self.assertEqual(build[0], ['cargo', 'build', '--release', '--locked', '--offline', '--target',
+                                    'x86_64-unknown-linux-gnu', '-p', 'stack-install', '--bin',
+                                    'intel-npu-stack-install'])
         self.assertEqual(result['binary_sha256'], record['binary_sha256'])
 
     def test_record_holds_the_environment_and_umask_the_build_used(self):
@@ -249,6 +273,11 @@ class InstallerBuild(unittest.TestCase):
     def test_binary_without_the_pinned_literals_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'pinned'):
             self.build(runner=FakeCargo(embed=False))
+
+    def test_installer_for_another_architecture_is_refused(self):
+        for machine in [183, 3]:  # aarch64, i386
+            with self.subTest(machine), self.assertRaisesRegex(installer.InstallerRefused, 'x86_64'):
+                self.build(runner=FakeCargo(machine=machine), name=f'out-{machine}')
 
     def test_unexpected_version_output_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'version'):
