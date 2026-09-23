@@ -1,0 +1,85 @@
+name: Kernel watch
+
+# Issue-only observation of Fedora 44 kernel updates against the qualified
+# kernel window. A kernel inside the window needs a recorded per-kernel probe;
+# a kernel above it needs a new qualification. This workflow has no
+# contents-write or pull-request permission and never qualifies anything.
+# Scheduled runs are advisory: GitHub may delay, drop, or disable them.
+on:
+  schedule:
+    - cron: "37 5 * * *" # daily at a non-round UTC minute
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: kernel-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Observe Fedora kernel updates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Ensure the tracking label exists
+        run: gh label create kernel-watch --color 1d76db --description "Fedora kernel update observation" || true
+      - name: Collect every open tracking issue
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/issues?labels=kernel-watch&state=open&per_page=100" \
+            --jq '.[] | select(.pull_request == null) | {number, title}' | jq -s . > open-issues.json
+          echo "Open tracking issues: $(jq length open-issues.json)"
+      - name: Compare Fedora kernel updates with the qualified window
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check_kernels.py --open-issues open-issues.json --report kernels.json
+          jq -r '"Qualified windows: \(.qualified_windows | length); observed kernels: \(.observed_kernels | length); stale records: \(.stale_records | length); findings: \(.findings | length)"' kernels.json
+      - name: Open or refresh one issue per kernel
+        if: always()
+        run: |
+          set -euo pipefail
+          count=$(jq '[.findings[] | select(.observation != "check-failed")] | length' kernels.json)
+          echo "Kernels needing action: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "No issue needed."
+            exit 0
+          fi
+          for index in $(seq 0 $((count - 1))); do
+            finding=$(jq ".findings | map(select(.observation != \"check-failed\")) | .[$index]" kernels.json)
+            key=$(printf '%s' "$finding" | jq -r '.dedup_key')
+            printf '%s' "$finding" | jq -r '
+              {"probe-required": "- `probe-required`: the kernel is inside the profile window and admitted by policy. Record a per-kernel probe as described in docs/kernel-probes.md.",
+               "probe-failed": "- `probe-failed`: a recorded probe of the current component set failed. Fix the failure or narrow the window before closing this issue.",
+               "requalification-required": "- `requalification-required`: the kernel is at or above the profile window. Installation refuses it on that profile until a profile is qualified for its series."} as $guidance |
+              "## Fedora kernel observation\n\n" +
+              "- Kernel: \(.kernel)\n" +
+              "- Bodhi status: \(.bodhi_status)\n" +
+              "- Update: \(.update)\n\n" +
+              "| Profile | Window | Action |\n|---|---|---|\n" +
+              ([.actions[] | "| \(.profile | gsub("[|`]"; "")) | \(.window) | `\(.action)` |"] | join("\n")) + "\n\n" +
+              ([.actions[].action] | unique | map($guidance[.]) | join("\n")) + "\n"' > issue-body.md
+            issue=$(printf '%s' "$finding" | jq -r '.issue // empty')
+            if [ -z "$issue" ]; then
+              gh issue create \
+                --title "[kernel-watch] $key" \
+                --body-file issue-body.md \
+                --label kernel-watch
+            elif [ "$(gh issue view "$issue" --json body --jq .body)" != "$(cat issue-body.md)" ]; then
+              # The kernel's actions changed (for example a probe was recorded as failed): refresh the open issue.
+              gh issue edit "$issue" --body-file issue-body.md
+              echo "Refreshed issue #$issue for $key"
+            else
+              echo "Issue #$issue for $key is current"
+            fi
+          done
+      - name: Surface a failed query
+        if: always()
+        run: jq '[.findings[] | select(.observation == "check-failed")] | if length == 0 then "The Bodhi query succeeded." else . end' kernels.json || echo "No kernel report available."

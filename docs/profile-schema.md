@@ -91,6 +91,13 @@ identifies the source matrix; the profile identifier matches the tools'
 installed manifest. Candidate kernel bounds identify a narrow test target, not
 a qualified support range.
 
+A qualified profile may admit a kernel series, for example `[7.2.5, 7.3.0)`,
+chosen in its promotion change. Its qualification evidence names the kernels
+it was collected on, and each of them lies inside the window. Newer kernels in
+the window are admitted by policy, observed by the kernel watcher and need a
+recorded per-kernel probe; a new series needs a new qualification. See
+[Kernel window and per-kernel probes](kernel-probes.md).
+
 ## Status and channel policy
 
 | Status | Stable channel | Experimental channel |
