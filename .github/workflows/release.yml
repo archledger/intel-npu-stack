@@ -43,9 +43,8 @@ jobs:
       image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
       options: --cpus 4
     env:
-      RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
-      RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
       RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
+      RELEASE_GNUPGHOME: /dev/shm/intel-npu-release-gnupg
       GH_TOKEN: ${{ github.token }}
       INPUTS_URL: ${{ inputs.inputs_url }}
       INPUTS_SHA256: ${{ inputs.inputs_sha256 }}
@@ -88,26 +87,32 @@ jobs:
           printf '%s  %s\n' "$INPUTS_SHA256" release-inputs.tar.gz | sha256sum --check --status
           mkdir release-inputs
           tar -xzf release-inputs.tar.gz -C release-inputs
+      - name: Check the release inputs against the profile without any key
+        run: python3 scripts/ci/release_sign.py --check-inputs --inputs release-inputs --profile "$PROFILE"
+      # The only step that sees the secrets: a tmpfs keyring plus an owner-only passphrase file.
       - name: Import the production signing key
-        run: |
-          set -euo pipefail
-          export GNUPGHOME="$PWD/release-keyring"
-          mkdir -m 700 "$GNUPGHOME"
-          printf '%s' "$RELEASE_SIGNING_KEY" | gpg --batch --import
-          gpg --batch --with-colons --list-secret-keys | grep -q "fpr:::::::::$RELEASE_SIGNING_FINGERPRINT:"
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
+        run: bash scripts/ci/release-keyring.sh import
       - name: Sign and compose the production release tree
         run: |
           set -euo pipefail
-          export GNUPGHOME="$PWD/release-keyring"
           python3 scripts/ci/release_sign.py \
             --inputs release-inputs \
+            --profile "$PROFILE" \
             --source "$PWD" \
             --output release-out \
             --work release-work \
             --fingerprint "$RELEASE_SIGNING_FINGERPRINT" \
-            --gpg-home "$GNUPGHOME" \
+            --gpg-home "$RELEASE_GNUPGHOME" \
+            --passphrase-file "$RELEASE_GNUPGHOME/passphrase" \
+            --require-passphrase \
             --base-url "$BASE_URL" \
             --release-version "$RELEASE_VERSION"
+      - name: Destroy the signing keyring
+        if: always()
+        run: bash scripts/ci/release-keyring.sh destroy
       - name: Verify every publication gate
         run: |
           set -euo pipefail
