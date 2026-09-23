@@ -14,8 +14,9 @@ else changes), and the installer is built for x86_64 with the locked, offline
 toolchain pinned by rust-toolchain.toml.
 Two legs built on separate runners must produce identical bytes; the caller
 compares them. pin-source only writes the pinned tree (used by the rehearsal
-to build test harnesses against identical trust). Outputs are never
-overwritten.
+to build test harnesses against identical trust). build requires IMAGE_DIGEST,
+the builder image as <repository>@sha256:<digest>, and records it. Outputs
+are never overwritten.
 """
 import argparse
 import hashlib
@@ -41,6 +42,9 @@ MAX_BUILD_JOBS = 4  # the project's local build budget (AGENTS.md)
 # The release profile is Fedora x86_64; the installer is built for it whatever the runner's architecture.
 TARGET = 'x86_64-unknown-linux-gnu'
 ELF_X86_64 = 62
+# The builder image, by digest; the legs and later rebuilds must name the image they ran in.
+IMAGE_DIGEST = re.compile(r'[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\.[a-z0-9]+)*(?::[0-9]+)?(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*'
+                          r'@sha256:[0-9a-f]{64}')
 
 
 class InstallerRefused(Exception):
@@ -224,6 +228,9 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
     require(leg in {'a', 'b'}, 'leg must be a or b')
     environ = dict(os.environ if environ is None else environ)
     jobs = build_jobs(environ)
+    image = environ.get('IMAGE_DIGEST')
+    require(isinstance(image, str) and IMAGE_DIGEST.fullmatch(image) is not None,
+            'IMAGE_DIGEST must name the builder image by digest (<repository>@sha256:<64 hex>)')
     # Cargo resolves a relative CARGO_TARGET_DIR from its working directory, the exported source.
     output, src_root, target_dir = (Path(os.path.abspath(path)) for path in (output, src_root, target_dir))
     require(not output.exists(), f'{output} already exists; outputs are never overwritten')
@@ -273,7 +280,7 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
         'primary_fingerprint': values['primary_fingerprint'], 'release_json_sha256': metadata_digest,
         'pinned_trust_sha256': sha(trust_file), 'binary_sha256': binary_sha, 'install_sh_sha256': bootstrap_sha,
         'primary_command_sha256': sha(output / 'primary-command.txt'), 'src_root': str(src_root),
-        'target_dir': str(target_dir), 'toolchain': toolchain,
+        'target_dir': str(target_dir), 'toolchain': toolchain, 'image': image,
         # Every variable the toolchain saw; the caller's TZ and LANG never reach it.
         'build_environment': dict(sorted(env.items())),
         'caller_environment': {name: environ.get(name) for name in ['TZ', 'LANG', 'IMAGE_DIGEST']},

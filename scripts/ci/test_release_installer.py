@@ -16,6 +16,8 @@ import release_trust as trust
 REPO = Path(__file__).resolve().parents[2]
 BASE_URL = 'https://archledger.github.io/intel-npu-stack/0.1.0/'
 TOOLS = shutil.which('gpg') and shutil.which('gpgconf') and shutil.which('git')
+IMAGE = 'registry.fedoraproject.org/fedora@sha256:' + '2f' * 32
+BUILD_ENV = {'PATH': '/usr/bin:/bin', 'IMAGE_DIGEST': IMAGE}
 
 
 def git(repo, *args):
@@ -209,7 +211,7 @@ class InstallerBuild(unittest.TestCase):
         output = self.root / name
         result = installer.build(self.repo, self.commit, self.release, output, leg,
                                  self.root / (name + '-src'), self.root / (name + '-target'), runner=runner,
-                                 environ=environ or {'PATH': '/usr/bin:/bin'})
+                                 environ=environ or BUILD_ENV)
         return result, output, runner
 
     def test_build_pins_only_the_metadata_digest_and_renders_the_pair(self):
@@ -245,7 +247,7 @@ class InstallerBuild(unittest.TestCase):
     def test_record_holds_the_environment_and_umask_the_build_used(self):
         previous = os.umask(0o027)
         try:
-            _, output, runner = self.build(environ={'PATH': '/usr/bin:/bin', 'TZ': 'Pacific/Chatham',
+            _, output, runner = self.build(environ={**BUILD_ENV, 'TZ': 'Pacific/Chatham',
                                                     'LANG': 'de_DE.UTF-8', 'CARGO_BUILD_JOBS': '1'})
         finally:
             os.umask(previous)
@@ -255,12 +257,22 @@ class InstallerBuild(unittest.TestCase):
         self.assertEqual(build_env['CARGO_BUILD_JOBS'], '1')
         self.assertEqual(build_env['TZ'], 'UTC')
         self.assertEqual(record['caller_environment'], {'TZ': 'Pacific/Chatham', 'LANG': 'de_DE.UTF-8',
-                                                        'IMAGE_DIGEST': None})
+                                                        'IMAGE_DIGEST': IMAGE})
+        self.assertEqual(record['image'], IMAGE)
         self.assertEqual(record['umask'], '0o27')
+
+    def test_builder_image_digest_is_required_before_any_output(self):
+        for image in [None, '', 'fedora:44', 'registry.fedoraproject.org/fedora@sha256:' + 'AB' * 32,
+                      'registry.fedoraproject.org/fedora@sha256:' + 'ab' * 31, 'sha256:' + 'ab' * 32 + ' ']:
+            environ = {'PATH': '/usr/bin:/bin'} if image is None else {**BUILD_ENV, 'IMAGE_DIGEST': image}
+            with self.subTest(image), self.assertRaisesRegex(installer.InstallerRefused, 'IMAGE_DIGEST'):
+                self.build(environ=environ)
+            self.assertFalse((self.root / 'out-src').exists())
+            self.assertFalse((self.root / 'out').exists())
 
     def test_oversized_job_count_is_refused_before_any_output(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'CARGO_BUILD_JOBS'):
-            self.build(environ={'PATH': '/usr/bin:/bin', 'CARGO_BUILD_JOBS': '16'})
+            self.build(environ={**BUILD_ENV, 'CARGO_BUILD_JOBS': '16'})
         self.assertFalse((self.root / 'out-src').exists())
         self.assertFalse((self.root / 'out').exists())
 
@@ -284,7 +296,7 @@ class InstallerBuild(unittest.TestCase):
     def test_dirty_tree_or_wrong_commit_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'commit'):
             installer.build(self.repo, 'f' * 40, self.release, self.root / 'o1', 'a', self.root / 's1',
-                            self.root / 't1', runner=FakeCargo(), environ={'PATH': '/usr/bin:/bin'})
+                            self.root / 't1', runner=FakeCargo(), environ=BUILD_ENV)
         (self.repo / 'Cargo.toml').write_text((self.repo / 'Cargo.toml').read_text() + '\n')
         with self.assertRaisesRegex(installer.InstallerRefused, 'clean'):
             self.build()
@@ -302,7 +314,7 @@ class InstallerBuild(unittest.TestCase):
         os.chdir(self.root)
         try:
             result = installer.build(self.repo, self.commit, self.release, Path('rel-out'), 'a', Path('rel-src'),
-                                     Path('rel-target'), runner=FakeCargo(), environ={'PATH': '/usr/bin:/bin'})
+                                     Path('rel-target'), runner=FakeCargo(), environ=BUILD_ENV)
         finally:
             os.chdir(previous)
         self.assertEqual(result['src_root'], str(self.root / 'rel-src'))
