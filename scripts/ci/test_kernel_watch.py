@@ -160,7 +160,7 @@ class Pagination(unittest.TestCase):
                 raise OSError('network down')
             return {'updates': UPDATES, 'page': 1, 'pages': 2}
         with tempfile.TemporaryDirectory() as tmp:
-            report = watcher.build_report(fetch, Path(tmp), REPO_ROOT / 'release/kernel-probes.json', set())
+            report = watcher.build_report(fetch, Path(tmp), REPO_ROOT / 'release/kernel-probes.json', {})
         self.assertEqual(report['findings'][0]['observation'], 'check-failed')
         self.assertEqual(report['observed_kernels'], [])
 
@@ -184,7 +184,7 @@ class Policy(unittest.TestCase):
 
     def findings(self, probes):
         outcomes, _ = self.load(probes)
-        return {finding['kernel']: finding for finding in watcher.scan(self.kernels, self.windows, outcomes, set())}
+        return {finding['kernel']: finding for finding in watcher.scan(self.kernels, self.windows, outcomes, {})}
 
     def add_profile(self, name, evidence, window=('7.2.5', '7.3.0')):
         text = QUALIFIED.replace(PROFILE, name).replace(EVIDENCE, evidence)
@@ -284,17 +284,25 @@ class Policy(unittest.TestCase):
         self.assertEqual({k for k, f in findings.items() if f['observation'] == 'probe-required'},
                          {'7.2.5-100.fc44', '7.2.5-200.fc44', '7.2.6-200.fc44', '7.2.7-200.fc44'})
 
-    def test_open_issues_deduplicate(self):
-        keys = watcher.existing_keys([{'title': '[kernel-watch] kernel:fedora-44:7.2.7-200.fc44'},
-                                      {'title': 'unrelated kernel:fedora-44:'}, {'title': None}])
-        self.assertEqual(keys, {'kernel:fedora-44:7.2.7-200.fc44'})
-        findings = watcher.scan(self.kernels, self.windows, {}, keys)
-        self.assertNotIn('7.2.7-200.fc44', {finding['kernel'] for finding in findings})
+    def test_open_issues_are_kept_and_refreshed_not_duplicated(self):
+        issues = watcher.open_issues([{'number': 41, 'title': '[kernel-watch] kernel:fedora-44:7.2.7-200.fc44'},
+                                      {'number': 12, 'title': '[kernel-watch] kernel:fedora-44:7.2.7-200.fc44'},
+                                      {'number': 13, 'title': 'unrelated kernel:fedora-44:'},
+                                      {'number': 'x', 'title': '[kernel-watch] kernel:fedora-44:7.2.6-200.fc44'},
+                                      {'title': None}])
+        self.assertEqual(issues, {'kernel:fedora-44:7.2.7-200.fc44': 12})
+        outcomes, _ = self.load([qualification('7.2.5-200.fc44'), qualification('7.2.6-200.fc44'),
+                                 probe('7.2.7-200.fc44', result='fail')])
+        findings = {f['kernel']: f for f in watcher.scan(self.kernels, self.windows, outcomes, issues)}
+        # The issue opened as probe-required is refreshed with the failed probe, not left stale or duplicated.
+        self.assertEqual((findings['7.2.7-200.fc44']['issue'], findings['7.2.7-200.fc44']['observation']),
+                         (12, 'probe-failed'))
+        self.assertIsNone(findings['7.3.0-200.fc44']['issue'])
 
     def test_no_qualified_profile_means_nothing_to_watch(self):
         (self.profiles / 'fedora/44/qualified.toml').unlink()
         self.assertEqual(watcher.qualified_windows(self.profiles), [])
-        self.assertEqual(watcher.scan(self.kernels, [], {}, set()), [])
+        self.assertEqual(watcher.scan(self.kernels, [], {}, {}), [])
 
     def test_qualified_profile_without_evidence_or_components_is_refused(self):
         (self.profiles / 'fedora/44/qualified.toml').write_text(QUALIFIED.replace(EVIDENCE, 'not-a-digest'))
@@ -338,12 +346,25 @@ class Policy(unittest.TestCase):
                                      probe('7.2.7-200.fc44')])
         self.assertEqual((outcomes, len(stale)), ({(PROFILE, '7.2.7-200.fc44'): 'pass'}, 1))
 
+    def test_requalification_keeps_the_previous_evidence_record(self):
+        outcomes, stale = self.load([qualification('7.2.5-200.fc44', evidence='a' * 64),
+                                     qualification('7.2.5-200.fc44')])
+        self.assertEqual(outcomes, {(PROFILE, '7.2.5-200.fc44'): 'pass'})
+        self.assertEqual([(r['kernel'], r['reason']) for r in stale],
+                         [('7.2.5-200.fc44', 'qualification evidence changed')])
+
+    def test_conflicting_records_for_the_current_stack_are_refused(self):
+        with self.assertRaisesRegex(ValueError, 'conflicting'):
+            self.load([probe('7.2.7-200.fc44', evidence='a' * 64, result='fail'), probe('7.2.7-200.fc44')])
+        outcomes, _ = self.load([probe('7.2.7-200.fc44', evidence='a' * 64), probe('7.2.7-200.fc44')])
+        self.assertEqual(outcomes, {(PROFILE, '7.2.7-200.fc44'): 'pass'})
+
 
 class Report(unittest.TestCase):
     def test_failed_query_is_reported_not_swallowed(self):
         def failing(url, timeout):
             raise OSError('network down')
-        report = watcher.build_report(failing, REPO_ROOT / 'profiles', REPO_ROOT / 'release/kernel-probes.json', set())
+        report = watcher.build_report(failing, REPO_ROOT / 'profiles', REPO_ROOT / 'release/kernel-probes.json', {})
         self.assertEqual(report['findings'], [{'observation': 'check-failed',
                                                'note': 'Bodhi query failed; scheduled runs are advisory'}])
 
@@ -352,7 +373,7 @@ class Report(unittest.TestCase):
         outcomes, stale = watcher.load_probes(REPO_ROOT / 'release/kernel-probes.json', windows)
         self.assertEqual((type(outcomes), type(stale)), (dict, list))
         report = watcher.build_report(lambda url, timeout: BODHI, REPO_ROOT / 'profiles',
-                                      REPO_ROOT / 'release/kernel-probes.json', set())
+                                      REPO_ROOT / 'release/kernel-probes.json', {})
         self.assertEqual(report['schema_version'], 1)
         self.assertEqual(report['observed_kernels'][0]['kernel'], '7.3.0-200.fc44')
         self.assertEqual(report['stale_records'], [])

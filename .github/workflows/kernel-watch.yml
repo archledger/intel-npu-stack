@@ -35,21 +35,21 @@ jobs:
         run: |
           set -euo pipefail
           gh api --paginate "repos/${GITHUB_REPOSITORY}/issues?labels=kernel-watch&state=open&per_page=100" \
-            --jq '.[] | {title}' | jq -s . > open-issues.json
+            --jq '.[] | select(.pull_request == null) | {number, title}' | jq -s . > open-issues.json
           echo "Open tracking issues: $(jq length open-issues.json)"
       - name: Compare Fedora kernel updates with the qualified window
         run: |
           set -euo pipefail
           python3 scripts/ci/check_kernels.py --open-issues open-issues.json --report kernels.json
           jq -r '"Qualified windows: \(.qualified_windows | length); observed kernels: \(.observed_kernels | length); stale records: \(.stale_records | length); findings: \(.findings | length)"' kernels.json
-      - name: Open one deduplicated issue per kernel
+      - name: Open or refresh one issue per kernel
         if: always()
         run: |
           set -euo pipefail
           count=$(jq '[.findings[] | select(.observation != "check-failed")] | length' kernels.json)
           echo "Kernels needing action: $count"
           if [ "$count" -eq 0 ]; then
-            echo "No issue creation needed."
+            echo "No issue needed."
             exit 0
           fi
           for index in $(seq 0 $((count - 1))); do
@@ -66,10 +66,19 @@ jobs:
               "| Profile | Window | Action |\n|---|---|---|\n" +
               ([.actions[] | "| \(.profile | gsub("[|`]"; "")) | \(.window) | `\(.action)` |"] | join("\n")) + "\n\n" +
               ([.actions[].action] | unique | map($guidance[.]) | join("\n")) + "\n"' > issue-body.md
-            gh issue create \
-              --title "[kernel-watch] $key" \
-              --body-file issue-body.md \
-              --label kernel-watch
+            issue=$(printf '%s' "$finding" | jq -r '.issue // empty')
+            if [ -z "$issue" ]; then
+              gh issue create \
+                --title "[kernel-watch] $key" \
+                --body-file issue-body.md \
+                --label kernel-watch
+            elif [ "$(gh issue view "$issue" --json body --jq .body)" != "$(cat issue-body.md)" ]; then
+              # The kernel's actions changed (for example a probe was recorded as failed): refresh the open issue.
+              gh issue edit "$issue" --body-file issue-body.md
+              echo "Refreshed issue #$issue for $key"
+            else
+              echo "Issue #$issue for $key is current"
+            fi
           done
       - name: Surface a failed query
         if: always()

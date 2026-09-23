@@ -180,10 +180,12 @@ def valid_date(value):
 def load_probes(path, windows):
     """Recorded outcomes that apply to the current qualified profiles, and the records that no longer apply.
 
-    Every record has exactly the documented fields. A record applies to a qualified
+    Every record has exactly the documented fields, and a profile, kernel, component
+    set and evidence digest appear at most once. A record applies to a qualified
     profile with its id only while its component-set digest (and, for a
     qualification record, its evidence digest) equals the profile's current one;
-    otherwise it is stale and never covers a kernel. Records for profiles that are
+    otherwise it is stale and never covers a kernel. Records that apply to the same
+    profile and kernel must agree. Records for profiles that are
     not qualified are history and are only shape-checked. Returns
     ({(profile id, kernel): 'pass' | 'fail'}, [stale record summaries]).
     """
@@ -198,7 +200,7 @@ def load_probes(path, windows):
         if not isinstance(probe, dict) or set(probe) != PROBE_FIELDS:
             raise ValueError(invalid)
         parsed = parse_kernel_nvr('kernel-' + probe['kernel']) if isinstance(probe['kernel'], str) else None
-        identity = (probe['profile'], probe['kernel'], probe['components_sha256'])
+        identity = (probe['profile'], probe['kernel'], probe['components_sha256'], probe['evidence_sha256'])
         if (parsed is None or not valid_profile_id(probe['profile']) or identity in seen
                 or probe['result'] not in {'pass', 'fail'} or probe['source'] not in {'probe', 'qualification'}
                 or any(not isinstance(probe[field], str) or not DIGEST.fullmatch(probe[field])
@@ -217,8 +219,10 @@ def load_probes(path, windows):
             reason = 'qualification evidence changed'
         if reason:
             stale.append({'kernel': probe['kernel'], 'profile': probe['profile'], 'reason': reason})
-        else:
-            outcomes[(probe['profile'], probe['kernel'])] = probe['result']
+            continue
+        pair = (probe['profile'], probe['kernel'])
+        if outcomes.setdefault(pair, probe['result']) != probe['result']:
+            raise ValueError('conflicting records for the current component set: ' + repr(pair))
     return outcomes, stale
 
 
@@ -226,25 +230,29 @@ def dedup_key(kernel):
     return KEY_PREFIX + kernel
 
 
-def existing_keys(open_issues):
-    """Dedup keys from open issue titles; titles are data, not commands."""
-    keys = set()
-    for issue in open_issues:
-        title = issue.get('title') if isinstance(issue, dict) else None
-        for token in (title or '').replace(']', ' ').split():
+def open_issues(issues):
+    """Dedup key to the oldest open issue number carrying it; titles are data, not commands."""
+    found = {}
+    for issue in issues:
+        if (not isinstance(issue, dict) or type(issue.get('number')) is not int
+                or not isinstance(issue.get('title'), str)):
+            continue
+        for token in issue['title'].replace(']', ' ').split():
             if token.startswith(KEY_PREFIX) and parse_kernel_nvr('kernel-' + token[len(KEY_PREFIX):]):
-                keys.add(token)
-    return keys
+                found[token] = min(found.get(token, issue['number']), issue['number'])
+    return found
 
 
-def scan(kernels, windows, outcomes, open_keys):
-    """One finding per kernel that needs action for at least one qualified profile, classified per profile."""
+def scan(kernels, windows, outcomes, issues):
+    """One finding per kernel that needs action for at least one qualified profile, classified per profile.
+
+    A finding whose kernel already has an open issue carries that issue's number so the
+    workflow refreshes it instead of opening another.
+    """
     findings = []
     for item in kernels:
         version = tuple(int(part) for part in item['version'].split('.'))
         key = dedup_key(item['kernel'])
-        if key in open_keys:
-            continue
         actions = []
         for window in windows:
             if version < parse_version(window['min']):
@@ -261,11 +269,12 @@ def scan(kernels, windows, outcomes, open_keys):
         if actions:
             findings.append({'observation': ', '.join(sorted({a['action'] for a in actions})), 'dedup_key': key,
                              'kernel': item['kernel'], 'version': item['version'], 'bodhi_status': item['status'],
-                             'update': item['update'], 'actions': sorted(actions, key=lambda a: a['profile'])})
+                             'update': item['update'], 'actions': sorted(actions, key=lambda a: a['profile']),
+                             'issue': issues.get(key)})
     return findings
 
 
-def build_report(fetch, profiles_dir, probes_path, open_keys):
+def build_report(fetch, profiles_dir, probes_path, issues):
     windows = qualified_windows(profiles_dir)
     outcomes, stale = load_probes(probes_path, windows)
     report = {'schema_version': 1, 'qualified_windows': windows,
@@ -275,10 +284,11 @@ def build_report(fetch, profiles_dir, probes_path, open_keys):
     try:
         document = fetch_updates(fetch)
     except (OSError, ValueError, json.JSONDecodeError):
-        report['findings'] = [{'observation': 'check-failed', 'note': 'Bodhi query failed; scheduled runs are advisory'}]
+        report['findings'] = [{'observation': 'check-failed',
+                               'note': 'Bodhi query failed; scheduled runs are advisory'}]
         return report
     report['observed_kernels'] = kernels_from_bodhi(document)
-    report['findings'] = scan(report['observed_kernels'], windows, outcomes, open_keys)
+    report['findings'] = scan(report['observed_kernels'], windows, outcomes, issues)
     return report
 
 
@@ -287,7 +297,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profiles', type=Path, default=root / 'profiles')
     parser.add_argument('--probes', type=Path, default=root / 'release/kernel-probes.json')
-    parser.add_argument('--open-issues', type=Path, help='JSON array of open issue objects used for deduplication')
+    parser.add_argument('--open-issues', type=Path,
+                        help='JSON array of open kernel-watch issues ({number, title}) to refresh instead of duplicate')
     parser.add_argument('--report', type=Path, help='write the report JSON to this path')
     parser.add_argument('--components-digest', type=Path, metavar='PROFILE',
                         help='print the component-set digest of a profile TOML (for probe records) and exit')
@@ -296,8 +307,7 @@ def main(argv=None):
         print(components_digest(tomllib.loads(args.components_digest.read_text())))
         return 0
     raw = args.open_issues.read_text().strip() if args.open_issues else ''
-    open_keys = existing_keys(json.loads(raw) if raw else [])
-    report = build_report(fetch_json, args.profiles, args.probes, open_keys)
+    report = build_report(fetch_json, args.profiles, args.probes, open_issues(json.loads(raw) if raw else []))
     text = json.dumps(report, indent=2) + '\n'
     if args.report:
         args.report.write_text(text)

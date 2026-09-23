@@ -21,8 +21,10 @@ reads every page of Fedora 44 kernel updates from Bodhi: stable and testing
 builds, and obsolete builds that reached updates-testing, since systems can
 still run them. It compares them with the windows of every qualified Fedora 44
 profile and with
-`release/kernel-probes.json`, and opens one issue per kernel, deduplicated
-against every open `kernel-watch` issue:
+`release/kernel-probes.json`, and keeps one issue per kernel. It opens an issue
+for a kernel without an open `kernel-watch` issue and refreshes the body of the
+open one when the kernel's actions change, for example after a failed probe is
+recorded:
 
 - `probe-required`: inside a qualified profile's window without a passing
   probe or qualification record for that profile.
@@ -73,9 +75,12 @@ Every record has exactly these seven fields:
 - `evidence_sha256`, a lowercase SHA-256;
 - `recorded`, a `YYYY-MM-DD` date.
 
-A kernel, profile and component set appear at most once, and a
-`qualification` record must pass. The watcher refuses a registry that breaks
-these rules. A probe repeated after a component change is a new record.
+A kernel, profile, component set and evidence digest appear at most once, and
+a `qualification` record must pass. Records that apply to the current component
+set of the same profile and kernel must agree. The watcher refuses a registry
+that breaks these rules. A probe repeated after a component change, or a
+qualification record after a requalification, is a new record. The previous
+record stays as stale history.
 
 A failing probe is recorded with `"result": "fail"`; the kernel then needs a
 fix or a narrower window before the issue is closed.
