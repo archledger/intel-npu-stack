@@ -170,19 +170,22 @@ only the standard library:
   GitHub Actions at the committed base URL, no tag, release or draft exists for
   the version, and the live `release.json` returns 404.
 - `check-unpublished --phase publish` classifies the state as fresh, a draft to
-  resume (its assets a byte-identical subset of this publication) or a
-  published release to resume (immutable, exactly these assets, tag at the
-  release commit). Anything else is refused, and a stale draft is deleted by
-  hand.
+  resume (its assets a byte-identical subset of this publication, targeting
+  the release commit) or a published release to resume (immutable, exactly
+  these assets, tag at the release commit). Prereleases and anything else are
+  refused, and a stale draft is deleted by hand.
 - `publish-release` uploads the archive, `SHA256SUMS`, `SHA256SUMS.asc` and
-  `publication-manifest.json` to a draft. It reads every asset back without
-  sending the token to the storage host, publishes the release as the latest,
+  `publication-manifest.json` to a draft. The three separate files must be the
+  archive's own copies. It streams every asset back to disk without sending
+  the token to the storage host, publishes the release as the latest,
   and requires it to be immutable with its tag at the release commit.
 - `compose-pages` builds the Pages tree from immutable, non-draft,
   non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the files
-  its signed `SHA256SUMS` lists. Every version listed in
+  its signed `SHA256SUMS` lists, each at a plain relative path, and the
+  separate asset files must be its own copies. Every version listed in
   `release/published-versions.json` must be present with the recorded
-  `SHA256SUMS`, and removing one needs a reviewed `retired` entry. The live
+  `SHA256SUMS`. Removing one needs a reviewed `retired` entry whose digest is
+  that of the release's `SHA256SUMS`. The live
   `SHA256SUMS` of the other versions must be unchanged, and the site must stay
   within 950 MiB.
 - `verify-live` waits until the plain URLs serve the new release. It then

@@ -67,7 +67,7 @@ class FakeGitHub:
     def reply(self, status, body=None, headers=None):
         return status, headers or {}, b'' if body is None else json.dumps(body).encode()
 
-    def __call__(self, method, url, headers=None, data=None, timeout=None):
+    def __call__(self, method, url, headers=None, data=None, timeout=None, sink=None):
         parts = urllib.parse.urlsplit(url)
         query = urllib.parse.parse_qs(parts.query)
         if url.startswith(STORAGE):
@@ -75,7 +75,11 @@ class FakeGitHub:
             asset_id = int(parts.path.strip('/'))
             data = self.blobs[asset_id]
             name = next(a['name'] for r in self.releases for a in r['assets'] if a['id'] == asset_id)
-            return 200, {}, (data + b'!' if name in self.corrupt else data)
+            body = data + b'!' if name in self.corrupt else data
+            if sink is not None:
+                sink.write(body)
+                return 200, {}, b''
+            return 200, {}, body
         path = parts.path
         for (fail_method, prefix), status in self.fail.items():
             if method == fail_method and path.startswith(prefix):
@@ -128,7 +132,8 @@ def make_release(root, key, version):
     files = {'release.json': f'{{"stack_release": "{version}"}}\n'.encode(), 'release.json.sig': b'signature\n',
              'profile.toml': b'id = "fixture"\n', 'install.sh': b'#!/bin/sh\nexit 0\n',
              'intel-npu-stack-install': b'\x7fELF installer ' + version.encode(),
-             'primary-command.txt': b'(true)\n', 'repodata/repomd.xml': b'<repomd/>\n'}
+             'primary-command.txt': b'(true)\n', 'repodata/repomd.xml': b'<repomd/>\n',
+             'publication-manifest.json': f'{{"release_version": "{version}"}}\n'.encode()}
     for name, data in files.items():
         (site / name).parent.mkdir(parents=True, exist_ok=True)
         (site / name).write_bytes(data)
@@ -139,7 +144,8 @@ def make_release(root, key, version):
     with archive.open('xb') as stream:
         release_site.write_archive(site, stream)
     assets = {archive.name: archive.read_bytes(), 'SHA256SUMS': (site / 'SHA256SUMS').read_bytes(),
-              'SHA256SUMS.asc': (site / 'SHA256SUMS.asc').read_bytes(), 'publication-manifest.json': b'{}\n'}
+              'SHA256SUMS.asc': (site / 'SHA256SUMS.asc').read_bytes(),
+              'publication-manifest.json': (site / 'publication-manifest.json').read_bytes()}
     return site, archive, assets
 
 
@@ -227,6 +233,15 @@ class Publication(unittest.TestCase):
         self.refused('not this immutable publication', state)
         self.fake.releases.clear()
         self.refused('exists without a release', state)
+        del self.fake.tags['v0.1.0']
+        self.fake.add_release('v0.1.0', draft=True, immutable=False, commit='d' * 40)
+        self.refused('targets another commit', state)
+        self.fake.releases.clear()
+        self.fake.add_release('v0.1.0', draft=True, prerelease=True, immutable=False)
+        self.refused('prerelease', state)
+        self.fake.releases.clear()
+        self.fake.add_release('v0.1.0', prerelease=True, assets=self.assets)
+        self.refused('prerelease', state)
 
     # publish-release ---------------------------------------------------------------------------------
 
@@ -243,6 +258,15 @@ class Publication(unittest.TestCase):
         again = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT)
         self.assertEqual(again['state'], 'published-resume')
         self.assertEqual(len(self.fake.releases), 1)
+
+    def test_standalone_assets_must_be_the_archive_copies(self):
+        for name in ['publication-manifest.json', 'SHA256SUMS']:
+            with self.subTest(name):
+                self.setUp()
+                (self.assets_dir / name).write_bytes(b'{"stale": true}\n')
+                self.refused(f'standalone {name} differs', publish.publish_release, self.gh, self.values,
+                             self.assets_dir, self.notes, COMMIT)
+                self.assertEqual(self.fake.releases, [], 'nothing may be created before the check')
 
     def test_an_interrupted_draft_is_completed(self):
         self.fake.add_release('v0.1.0', draft=True, immutable=False,
@@ -295,6 +319,18 @@ class Publication(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in output.iterdir()), ['0.1.0', '0.2.0'])
         self.assertEqual((output / '0.2.0/SHA256SUMS').read_bytes(), self.assets2['SHA256SUMS'])
         self.assertFalse((output / 'index.html').exists())
+
+    def test_retirement_must_name_the_release_it_retires(self):
+        self.publish_both()
+        registry = self.registry(retired=[{'version': '0.1.0', 'sha256sums_sha256': '0' * 64, 'reason': 'superseded'}])
+        self.refused('retired entry for 0.1.0', self.compose, registry)
+
+    def test_compose_refuses_a_release_whose_standalone_manifest_differs(self):
+        self.publish_both()
+        release = next(r for r in self.fake.releases if r['tag_name'] == 'v0.2.0')
+        release['assets'] = [a for a in release['assets'] if a['name'] != 'publication-manifest.json']
+        self.fake.add_asset(release, 'publication-manifest.json', b'{"stale": true}\n')
+        self.refused('standalone publication-manifest.json differs', self.compose)
 
     def test_retired_versions_are_left_out(self):
         self.publish_both()
@@ -425,6 +461,18 @@ class Publication(unittest.TestCase):
             release_site.write_archive(forged, stream)
         self.refused('install.sh.asc', self.verify, self.serve_live(forged, '0.1.0'), archive=archive)
 
+    def test_archive_members_must_be_plain_paths(self):
+        for name in ['0.1.0/../../escape', '0.1.0//tmp/escape', '0.1.0/./x', 'other/x']:
+            with self.subTest(name):
+                archive = self.work / 'unsafe.tar'
+                archive.unlink(missing_ok=True)
+                with tarfile.open(archive, 'w', format=tarfile.GNU_FORMAT) as tar:
+                    info = tarfile.TarInfo(name)
+                    info.size = 1
+                    tar.addfile(info, io.BytesIO(b'x'))
+                self.refused('unsafe or duplicate member', self.verify, self.serve_live(self.site, '0.1.0'),
+                             archive=archive)
+
     def test_other_versions_must_keep_their_published_sums(self):
         manifest = self.work / 'pages-manifest.json'
         manifest.write_text(json.dumps({'versions': {'0.0.9': {'sha256sums_sha256': sha(b'old sums')}}}))
@@ -466,6 +514,31 @@ class Transport(unittest.TestCase):
         self.assertEqual((status, headers.get('Location')), (302, 'http://127.0.0.1:1/elsewhere'))
         self.assertEqual(seen, [('/asset', 'Bearer secret')])
 
+    def test_large_downloads_stream_to_disk_within_the_limit(self):
+        body = b'x' * 3000
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = f'http://127.0.0.1:{server.server_address[1]}/asset'
+        sink = io.BytesIO()
+        self.assertEqual(publish.http('GET', url, sink=sink)[2], b'')
+        self.assertEqual(sink.getvalue(), body)
+        limit, publish.MAX_ASSET = publish.MAX_ASSET, 1000
+        self.addCleanup(setattr, publish, 'MAX_ASSET', limit)
+        with self.assertRaisesRegex(publish.PublishRefused, 'size limit'):
+            publish.http('GET', url, sink=io.BytesIO())
+
     def test_pagination_stays_on_the_api_host(self):
         def transport(method, url, headers=None, data=None):
             return 200, {'Link': '<https://evil.example/next>; rel="next"'}, b'[]'
@@ -477,6 +550,16 @@ class Transport(unittest.TestCase):
         with self.assertRaises(publish.PublishRefused) as caught:
             publish.http('GET', 'http://127.0.0.1:1/x?token=secret', timeout=5)
         self.assertNotIn('secret', str(caught.exception))
+
+
+class Sums(unittest.TestCase):
+    def test_sums_paths_must_be_plain_relative_paths(self):
+        digest = 'a' * 64
+        self.assertEqual(publish.parse_sums(f'{digest}  repodata/repomd.xml\n'.encode()),
+                         {'repodata/repomd.xml': digest})
+        for path in ['../index.html', '/etc/passwd', 'a//b', './x', 'a/../b', '.hidden']:
+            with self.subTest(path), self.assertRaisesRegex(publish.PublishRefused, 'unsafe path'):
+                publish.parse_sums(f'{digest}  {path}\n'.encode())
 
 
 class Registry(unittest.TestCase):

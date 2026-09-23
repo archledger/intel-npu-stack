@@ -75,9 +75,10 @@ def member_name(member):
 
 def safe_members(tar):
     """Regular files and directories with plain relative names, each once, within the limits."""
-    members, seen, total = [], set(), 0
-    for member in tar.getmembers():
-        require(len(members) < MAX_MEMBERS, 'the release inputs archive has too many members')
+    members, seen, total, headers = [], set(), 0, 0
+    for member in tar:  # streamed header by header, so the limit holds before the archive is read in full
+        headers += 1
+        require(headers <= MAX_MEMBERS, 'the release inputs archive has too many members')
         name = member_name(member)
         if member.isdir() and name in {'', '.'}:
             continue

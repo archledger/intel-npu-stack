@@ -62,6 +62,8 @@ TAG = re.compile(r'v((?:0|[1-9][0-9]{0,9})\.(?:0|[1-9][0-9]{0,9})\.(?:0|[1-9][0-
 DIGEST = re.compile(r'[0-9a-f]{64}')
 MAX_BODY = 512 << 20
 MAX_SITE = 950 << 20
+MAX_ASSET = 1 << 30  # streamed to disk: a release archive may be as large as the whole site budget
+STANDALONE = ['SHA256SUMS', 'SHA256SUMS.asc', 'publication-manifest.json']
 MAX_PAGES = 20
 PLAIN = ['release.json', 'release.json.sig', 'profile.toml', 'install.sh', 'intel-npu-stack-install',
          'primary-command.txt', 'repodata/repomd.xml']
@@ -92,13 +94,23 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 OPENER = urllib.request.build_opener(NoRedirect)
 
 
-def http(method, url, headers=None, data=None, timeout=120):
-    """(status, headers, body) without following redirects; network failures refuse."""
+def http(method, url, headers=None, data=None, timeout=120, sink=None):
+    """(status, headers, body) without following redirects; network failures refuse.
+
+    With a sink, a successful body is streamed into it up to MAX_ASSET bytes and the returned body is empty.
+    """
     request = urllib.request.Request(url, data=data, method=method, headers=headers or {})
     try:
         with OPENER.open(request, timeout=timeout) as response:
-            body = response.read(MAX_BODY + 1)
             status, response_headers = response.status, dict(response.headers)
+            if sink is not None:
+                written = 0
+                while chunk := response.read(1 << 20):
+                    written += len(chunk)
+                    require(written <= MAX_ASSET, 'download exceeds the size limit')
+                    sink.write(chunk)
+                return status, response_headers, b''
+            body = response.read(MAX_BODY + 1)
     except urllib.error.HTTPError as error:
         status, response_headers = error.code, dict(error.headers or {})
         try:
@@ -187,15 +199,20 @@ class GitHub:
         _, _, refs = self.call('GET', f'/git/matching-refs/tags/{tag}')
         return any(ref.get('ref') == 'refs/tags/' + tag for ref in refs or [])
 
-    def asset_bytes(self, asset):
-        status, headers, body = self.transport('GET', asset['url'], self.headers('application/octet-stream'))
-        if status in {302, 307}:
-            location = headers.get('Location') or headers.get('location') or ''
-            require(location.startswith('https://'), 'an asset redirect left HTTPS')
-            status, _, body = self.transport('GET', location, {'Accept': 'application/octet-stream',
-                                                               'User-Agent': 'intel-npu-stack-release'})
+    def download_asset(self, asset, path):
+        """Stream an asset to a new file and return its SHA-256; the storage redirect gets no token."""
+        with open(path, 'xb') as sink:
+            status, headers, _ = self.transport('GET', asset['url'], self.headers('application/octet-stream'),
+                                                None, sink=sink)
+            if status in {302, 307}:
+                location = headers.get('Location') or headers.get('location') or ''
+                require(location.startswith('https://'), 'an asset redirect left HTTPS')
+                sink.seek(0)
+                sink.truncate()
+                storage_headers = {'Accept': 'application/octet-stream', 'User-Agent': 'intel-npu-stack-release'}
+                status, _, _ = self.transport('GET', location, storage_headers, None, sink=sink)
         require(status == 200, f"asset {asset.get('name')} could not be read back (HTTP {status})")
-        return body
+        return release_site.sha(path)
 
     def upload(self, release, name, path):
         base = release['upload_url'].split('{', 1)[0]
@@ -207,12 +224,26 @@ class GitHub:
         return json.loads(content)
 
 
+def check_standalone(archive, version, files):
+    """The separate SHA256SUMS, SHA256SUMS.asc and publication-manifest.json assets are the archive's own copies."""
+    with tarfile.open(archive, 'r:') as tar:
+        for name in STANDALONE:
+            try:
+                member = tar.getmember(f'{version}/{name}')
+            except KeyError:
+                raise PublishRefused(f'the {version} archive has no {name}') from None
+            require(member.isreg() and tar.extractfile(member).read() == Path(files[name]).read_bytes(),
+                    f'the standalone {name} differs from the copy in the signed archive')
+
+
 def local_assets(assets_dir, version):
     digests = {}
     for name in release_assets(version):
         path = Path(assets_dir) / name
         require(path.is_file() and not path.is_symlink(), 'publication asset is missing: ' + name)
         digests[name] = release_site.sha(path)
+    check_standalone(Path(assets_dir) / release_assets(version)[0], version,
+                     {name: Path(assets_dir) / name for name in STANDALONE})
     return digests
 
 
@@ -229,8 +260,11 @@ def publish_state(gh, values, local, commit):
     assets = {asset.get('name'): asset.get('digest') for asset in release.get('assets', [])}
     require(set(assets) <= set(local) and all(assets[name] == 'sha256:' + local[name] for name in assets),
             f'the existing {tag} release or draft differs from this publication; a stale draft is deleted by hand')
+    require(release.get('prerelease') is False, f'the existing {tag} release is a prerelease')
     if release.get('draft'):
-        require(tag_sha in {None, commit}, f'tag {tag} names another commit')
+        # Publishing a draft creates its tag at target_commitish, so the draft must already name this commit.
+        require(release.get('target_commitish') == commit and tag_sha in {None, commit},
+                f'the {tag} draft targets another commit than this publication')
         return 'draft-resume', release
     require(set(assets) == set(local) and release.get('immutable') is True and tag_sha == commit,
             f'a published {tag} release exists and is not this immutable publication')
@@ -260,7 +294,9 @@ def check_release_assets(gh, release, local, readback):
     for name, digest in local.items():
         require(assets[name].get('digest') == 'sha256:' + digest, f'the API digest of {name} differs')
         if readback:
-            require(sha_bytes(gh.asset_bytes(assets[name])) == digest, f'the uploaded {name} reads back differently')
+            with tempfile.TemporaryDirectory(prefix='readback-') as work:
+                require(gh.download_asset(assets[name], Path(work) / name) == digest,
+                        f'the uploaded {name} reads back differently')
 
 
 def publish_release(gh, values, assets_dir, notes, commit):
@@ -308,11 +344,16 @@ def load_registry(path):
     return registry
 
 
+def plain_path(path):
+    return all(release_site.SEGMENT.fullmatch(part) for part in path.split('/'))
+
+
 def parse_sums(data):
     listed = {}
     for line in data.decode().splitlines():
         match = re.fullmatch(r'([0-9a-f]{64})  (\S+)', line)
         require(match is not None and match.group(2) not in listed, 'malformed SHA256SUMS')
+        require(plain_path(match.group(2)), 'unsafe path in SHA256SUMS: ' + repr(match.group(2)))
         listed[match.group(2)] = match.group(1)
     return listed
 
@@ -340,7 +381,7 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
     output, manifest_path = Path(output), Path(manifest_path)
     require(not output.exists() and not manifest_path.exists(), 'outputs are never overwritten')
     registry = load_registry(registry_path)
-    retired = {entry['version'] for entry in registry['retired']}
+    retired = {entry['version']: entry['sha256sums_sha256'] for entry in registry['retired']}
     host, prefix, _ = site_location(values['base_url'])
     root_url = f'https://{host}{prefix}'
     candidates = sorted((release for release in gh.releases()
@@ -353,29 +394,34 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
         with tempfile.TemporaryDirectory(prefix='compose-pages-') as work:
             for release in candidates:
                 version = release['tag_name'][1:]
+                assets = {asset.get('name'): asset for asset in release.get('assets', [])}
+                folder = Path(work) / version
+                folder.mkdir()
                 if version in retired:
+                    # A retirement record must name the release it retires.
+                    require('SHA256SUMS' in assets, f"retired release {release['tag_name']} has no SHA256SUMS")
+                    digest = gh.download_asset(assets['SHA256SUMS'], folder / 'SHA256SUMS')
+                    require(assets['SHA256SUMS'].get('digest') == 'sha256:' + digest and digest == retired[version],
+                            f'the retired entry for {version} does not match its release SHA256SUMS')
                     continue
                 require(release.get('immutable') is True, f"release {release['tag_name']} is not immutable")
-                assets = {asset.get('name'): asset for asset in release.get('assets', [])}
                 require(set(assets) == set(release_assets(version)),
                         f"release {release['tag_name']} does not carry exactly the release assets")
                 data = {}
                 for name, asset in assets.items():
-                    data[name] = gh.asset_bytes(asset)
-                    require(asset.get('digest') == 'sha256:' + sha_bytes(data[name]),
+                    digest = gh.download_asset(asset, folder / name)
+                    require(asset.get('digest') == 'sha256:' + digest,
                             f"the API digest of {release['tag_name']} {name} differs from its bytes")
-                folder = Path(work) / version
-                folder.mkdir()
-                for name, content in data.items():
-                    (folder / name).write_bytes(content)
+                    data[name] = folder / name
                 try:
                     release_site.verify_signature(folder / 'SHA256SUMS.asc', folder / 'SHA256SUMS', key, fingerprint)
                 except release_site.SiteRefused as error:
                     raise PublishRefused(f'{version}: {error}') from None
-                files = unpack_release(folder / release_assets(version)[0], version, data['SHA256SUMS'],
-                                       data['SHA256SUMS.asc'], output)
-                versions[version] = {'sha256sums_sha256': sha_bytes(data['SHA256SUMS']),
-                                     'archive_sha256': sha_bytes(data[release_assets(version)[0]]),
+                files = unpack_release(data[release_assets(version)[0]], version, data['SHA256SUMS'].read_bytes(),
+                                       data['SHA256SUMS.asc'].read_bytes(), output)
+                check_standalone(data[release_assets(version)[0]], version, data)
+                versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
+                                     'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
                                      'files': files, 'release_id': release.get('id')}
         for entry in registry['published']:
             require(entry['version'] in versions, f"published version {entry['version']} is missing; retiring "
@@ -414,8 +460,10 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
     expected = {}
     with tarfile.open(archive, 'r:') as tar:
         for member in tar.getmembers():
-            require(member.isreg() and member.name.startswith(version + '/'), 'the archive is not a release archive')
-            expected[member.name[len(version) + 1:]] = tar.extractfile(member).read()
+            path = member.name[len(version) + 1:] if member.name.startswith(version + '/') else ''
+            require(member.isreg() and plain_path(path) and path not in expected,
+                    'unsafe or duplicate member in the release archive: ' + repr(member.name))
+            expected[path] = tar.extractfile(member).read()
     deadline = clock() + timeout
     while True:
         stale = [path for path in PLAIN if fetch(base + path) != (200, expected.get(path))]

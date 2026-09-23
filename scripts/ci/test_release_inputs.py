@@ -87,6 +87,19 @@ class Inputs(unittest.TestCase):
                     self.extract(archive, output=output)
                 self.assertFalse(output.exists())
 
+    def test_the_member_limit_counts_every_header_while_streaming(self):
+        limit, inputs_tool.MAX_MEMBERS = inputs_tool.MAX_MEMBERS, 50
+        self.addCleanup(setattr, inputs_tool, 'MAX_MEMBERS', limit)
+        entries = []
+        for _ in range(60):  # '.' entries are skipped, but still count
+            info = tarfile.TarInfo('./')
+            info.type = tarfile.DIRTYPE
+            entries.append((info, None))
+        archive = self.work / 'many.tar.gz'
+        self.pack(archive, entries)
+        with self.assertRaisesRegex(inputs_tool.InputsRefused, 'too many members'):
+            self.extract(archive, output=self.work / 'many')
+
     def test_inputs_that_fail_the_keyless_check_are_refused(self):
         (self.source / 'candidate.toml').write_text('status = "candidate"\n')
         archive = self.work / 'bad.tar.gz'
