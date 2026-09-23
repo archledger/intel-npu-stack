@@ -3,6 +3,7 @@
 """Contract for building the pinned installer and rendering the bootstrap pair."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -80,6 +81,13 @@ class ToolchainEnvironment(unittest.TestCase):
         with self.assertRaisesRegex(installer.InstallerRefused, 'absolute'):
             installer.toolchain_env(self.root / 't', self.src, {**self.environ, 'CARGO_HOME': 'relative'})
 
+    def test_build_jobs_default_to_four_and_never_exceed_it(self):
+        environ = {name: value for name, value in self.environ.items() if name != 'CARGO_BUILD_JOBS'}
+        self.assertEqual(installer.toolchain_env(self.root / 't', self.src, environ)['CARGO_BUILD_JOBS'], '4')
+        for bad in ['5', '64', '0', '-1', '04', 'x', '']:
+            with self.subTest(bad), self.assertRaisesRegex(installer.InstallerRefused, 'CARGO_BUILD_JOBS'):
+                installer.toolchain_env(self.root / 't', self.src, {**environ, 'CARGO_BUILD_JOBS': bad})
+
     def test_missing_or_unresolvable_toolchain_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'rustc'):
             installer.toolchain_env(self.root / 't', self.src, {**self.environ, 'PATH': str(self.root / 'none')})
@@ -154,11 +162,12 @@ class InstallerBuild(unittest.TestCase):
                         str(signature), str(data)], check=True, capture_output=True,
                        env={'PATH': '/usr/bin:/bin', 'GNUPGHOME': str(home)})
 
-    def build(self, runner=None, name='out', leg='a'):
+    def build(self, runner=None, name='out', leg='a', environ=None):
         runner = runner or FakeCargo()
         output = self.root / name
         result = installer.build(self.repo, self.commit, self.release, output, leg,
-                                 self.root / (name + '-src'), self.root / (name + '-target'), runner=runner)
+                                 self.root / (name + '-src'), self.root / (name + '-target'), runner=runner,
+                                 environ=environ or {'PATH': '/usr/bin:/bin'})
         return result, output, runner
 
     def test_build_pins_only_the_metadata_digest_and_renders_the_pair(self):
@@ -190,6 +199,28 @@ class InstallerBuild(unittest.TestCase):
                                     '--bin', 'intel-npu-stack-install'])
         self.assertEqual(result['binary_sha256'], record['binary_sha256'])
 
+    def test_record_holds_the_environment_and_umask_the_build_used(self):
+        previous = os.umask(0o027)
+        try:
+            _, output, runner = self.build(environ={'PATH': '/usr/bin:/bin', 'TZ': 'Pacific/Chatham',
+                                                    'LANG': 'de_DE.UTF-8', 'CARGO_BUILD_JOBS': '1'})
+        finally:
+            os.umask(previous)
+        record = json.loads((output / 'installer-build.json').read_text())
+        build_env = [call for call in runner.calls if call[0][:2] == ['cargo', 'build']][0][2]
+        self.assertEqual(record['build_environment'], build_env)
+        self.assertEqual(build_env['CARGO_BUILD_JOBS'], '1')
+        self.assertEqual(build_env['TZ'], 'UTC')
+        self.assertEqual(record['caller_environment'], {'TZ': 'Pacific/Chatham', 'LANG': 'de_DE.UTF-8',
+                                                        'IMAGE_DIGEST': None})
+        self.assertEqual(record['umask'], '0o27')
+
+    def test_oversized_job_count_is_refused_before_any_output(self):
+        with self.assertRaisesRegex(installer.InstallerRefused, 'CARGO_BUILD_JOBS'):
+            self.build(environ={'PATH': '/usr/bin:/bin', 'CARGO_BUILD_JOBS': '16'})
+        self.assertFalse((self.root / 'out-src').exists())
+        self.assertFalse((self.root / 'out').exists())
+
     def test_signature_under_another_key_is_refused(self):
         other = self.key('other')
         self.write_release(json.loads((self.release / 'release.json').read_text()), signer=(other[1], other[0]))
@@ -210,7 +241,7 @@ class InstallerBuild(unittest.TestCase):
     def test_dirty_tree_or_wrong_commit_is_refused(self):
         with self.assertRaisesRegex(installer.InstallerRefused, 'commit'):
             installer.build(self.repo, 'f' * 40, self.release, self.root / 'o1', 'a', self.root / 's1',
-                            self.root / 't1', runner=FakeCargo())
+                            self.root / 't1', runner=FakeCargo(), environ={'PATH': '/usr/bin:/bin'})
         (self.repo / 'Cargo.toml').write_text((self.repo / 'Cargo.toml').read_text() + '\n')
         with self.assertRaisesRegex(installer.InstallerRefused, 'clean'):
             self.build()

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 import release_trust as trust
 
@@ -46,6 +47,20 @@ class CommittedTrust(unittest.TestCase):
                                  '--field', 'base-url'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, 'https://archledger.github.io/intel-npu-stack/0.1.0/\n')
+
+
+class KeyInspection(unittest.TestCase):
+    LISTING = ('pub:-:255:22:A8FE2F718B8763D8:1789084800:1852156800::-:::scSC::::::23::0:\n'
+               'fpr:::::::::1085FBE578732D1CF0C50417A8FE2F718B8763D8:\n')
+
+    def test_a_failed_gpg_inspection_is_refused_even_with_a_fingerprint(self):
+        failed = subprocess.CompletedProcess([], 2, self.LISTING, 'gpg: read_block: read error: Invalid packet\n')
+        with mock.patch.object(trust.subprocess, 'run', return_value=failed), \
+                self.assertRaisesRegex(trust.TrustRefused, 'could not inspect'):
+            trust.pinned_fingerprint(TRUST)
+        passed = subprocess.CompletedProcess([], 0, self.LISTING, '')
+        with mock.patch.object(trust.subprocess, 'run', return_value=passed):
+            self.assertEqual(trust.pinned_fingerprint(TRUST), '1085FBE578732D1CF0C50417A8FE2F718B8763D8')
 
 
 class MetadataPin(unittest.TestCase):

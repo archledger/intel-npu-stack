@@ -79,9 +79,11 @@ def pinned_fingerprint(key_path):
     with tempfile.TemporaryDirectory(prefix='trust-gnupg-') as home:
         listing = subprocess.run(['gpg', '--homedir', home, '--batch', '--with-colons', '--show-keys',
                                   str(key_path)], capture_output=True, text=True, check=False,
-                                 env={'PATH': '/usr/bin:/bin', 'HOME': home}).stdout
+                                 env={'PATH': '/usr/bin:/bin', 'HOME': home})
+    # A partially readable key file still prints records; only a clean parse counts.
+    require(listing.returncode == 0, 'gpg could not inspect the committed release key')
     fingerprints, want = [], False
-    for line in listing.splitlines():
+    for line in listing.stdout.splitlines():
         fields = line.split(':')
         if fields[0] == 'pub':
             want = True

@@ -34,6 +34,7 @@ import release_trust
 BINARY = 'intel-npu-stack-install'
 DEFAULT_SRC = Path('/opt/intel-npu-stack-src')
 DEFAULT_TARGET = Path('/opt/intel-npu-stack-target')
+MAX_BUILD_JOBS = 4  # the project's local build budget (AGENTS.md)
 
 
 class InstallerRefused(Exception):
@@ -56,6 +57,20 @@ def minimal_env(extra=None):
     return env
 
 
+def build_jobs(environ):
+    """Cargo job count: the caller's value when it is 1 to MAX_BUILD_JOBS, otherwise refused; 4 when unset."""
+    jobs = environ.get('CARGO_BUILD_JOBS', str(MAX_BUILD_JOBS))
+    require(jobs in {str(count) for count in range(1, MAX_BUILD_JOBS + 1)},
+            f'CARGO_BUILD_JOBS must be 1 to {MAX_BUILD_JOBS}, found {jobs!r}')
+    return jobs
+
+
+def current_umask():
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
+
+
 def toolchain_env(target_dir, src_root, environ=None):
     """Minimal build environment using the real cargo/rustc of the repository's pinned toolchain.
 
@@ -74,11 +89,8 @@ def toolchain_env(target_dir, src_root, environ=None):
             and (sysroot / 'bin/rustc').is_file(), 'cannot resolve the pinned Rust toolchain sysroot')
     cargo_home = environ.get('CARGO_HOME') or str(Path(environ.get('HOME', '/nonexistent')) / '.cargo')
     require(Path(cargo_home).is_absolute(), 'CARGO_HOME must be absolute')
-    env = minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_HOME': cargo_home,
-                       'PATH': str(sysroot / 'bin') + ':/usr/bin:/bin'})
-    if environ.get('CARGO_BUILD_JOBS'):
-        env['CARGO_BUILD_JOBS'] = environ['CARGO_BUILD_JOBS']
-    return env
+    return minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_HOME': cargo_home,
+                        'CARGO_BUILD_JOBS': build_jobs(environ), 'PATH': str(sysroot / 'bin') + ':/usr/bin:/bin'})
 
 
 def run_cargo(argv, cwd, env):
@@ -162,17 +174,19 @@ def write_new(path, data, mode=0o644):
 
 
 def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_dir=DEFAULT_TARGET,
-          runner=run_cargo):
+          runner=run_cargo, environ=None):
     require(leg in {'a', 'b'}, 'leg must be a or b')
+    environ = dict(os.environ if environ is None else environ)
+    jobs = build_jobs(environ)
     output, target_dir = Path(output), Path(target_dir)
     require(not output.exists(), f'{output} already exists; outputs are never overwritten')
     require(not target_dir.exists(), f'{target_dir} already exists')
     values, metadata_digest = prepare(repo, commit, release_tree)
     trust_file = export_pinned_source(repo, commit, metadata_digest, src_root)
     if runner is run_cargo:
-        env = toolchain_env(target_dir, src_root)
+        env = toolchain_env(target_dir, src_root, environ)
     else:  # injected runners (tests) do not execute a real toolchain
-        env = minimal_env({'CARGO_TARGET_DIR': str(target_dir)})
+        env = minimal_env({'CARGO_TARGET_DIR': str(target_dir), 'CARGO_BUILD_JOBS': jobs})
     for argv in (['cargo', 'fetch', '--locked'],
                  ['cargo', 'build', '--release', '--locked', '--offline', '-p', 'stack-install', '--bin', BINARY]):
         result = runner(argv, Path(src_root), env)
@@ -208,10 +222,11 @@ def build(repo, commit, release_tree, output, leg, src_root=DEFAULT_SRC, target_
         'primary_fingerprint': values['primary_fingerprint'], 'release_json_sha256': metadata_digest,
         'pinned_trust_sha256': sha(trust_file), 'binary_sha256': binary_sha, 'install_sh_sha256': bootstrap_sha,
         'primary_command_sha256': sha(output / 'primary-command.txt'), 'src_root': str(src_root),
-        'target_dir': str(target_dir), 'toolchain': toolchain, 'cargo_home': env.get('CARGO_HOME'),
-        'path': env['PATH'],
-        'environment': {name: os.environ.get(name) for name in ['TZ', 'LANG', 'CARGO_BUILD_JOBS', 'IMAGE_DIGEST']},
-        'umask': oct(os.umask(os.umask(0))),
+        'target_dir': str(target_dir), 'toolchain': toolchain,
+        # Every variable the toolchain saw; the caller's TZ and LANG never reach it.
+        'build_environment': dict(sorted(env.items())),
+        'caller_environment': {name: environ.get(name) for name in ['TZ', 'LANG', 'IMAGE_DIGEST']},
+        'umask': oct(current_umask()),
     }
     write_new(output / 'installer-build.json', json.dumps(record, indent=2, sort_keys=True) + '\n')
     return record
