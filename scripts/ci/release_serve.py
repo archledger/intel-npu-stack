@@ -172,11 +172,31 @@ def corrupted(body):
     return body[:-1] + bytes([body[-1] ^ 0x01]) if body else b'\0'
 
 
+def installer_codes(stderr):
+    return [match.group(1) for match in map(ERROR_LINE.fullmatch, stderr.splitlines()) if match]
+
+
+def check_metadata_refusal(result, log, prefix, version):
+    """The installer fetched the changed release.json and its digest check refused it, before the signature.
+
+    Exit 20 alone is not enough: the bootstrap also exits 20 on its own failures.
+    """
+    base = prefix + version + '/'
+    wanted = sorted(base + name for name in ['install.sh', 'intel-npu-stack-install', 'release.json'])
+    fetched = sorted({path for path, status in log if status == 200})
+    require(result.returncode == 20 and installer_codes(result.stderr) == ['INSTALL_INTEGRITY_FAILED']
+            and fetched == wanted and all(status == 200 for _, status in log),
+            f'changed release.json: expected the installer to fetch {wanted} and refuse with '
+            f'INSTALL_INTEGRITY_FAILED, got exit {result.returncode}, fetched {fetched}: '
+            + result.stderr.strip()[-400:])
+    return {'exit': result.returncode, 'class': 'integrity-refused', 'stderr_tail': result.stderr.strip()[-400:]}
+
+
 def classify(returncode, stderr):
     """verified: past release verification, stopped at the platform; integrity-refused: exit 20; else unexpected."""
     if returncode == 20:
         return 'integrity-refused'
-    codes = [match.group(1) for match in map(ERROR_LINE.fullmatch, stderr.splitlines()) if match]
+    codes = installer_codes(stderr)
     if len(codes) == 1 and ((returncode == 10 and codes[0] == 'INSTALL_PROFILE_UNSUPPORTED')
                             or (returncode == 30 and codes[0].startswith('INSTALL_PLATFORM_'))):
         return 'verified'
@@ -394,9 +414,8 @@ def serve_test(site_root, repo, user, work, live=False):
             report['fetched'] = [path for path, _ in log]
 
             server.corrupt = {version + '/release.json'}
-            report['corrupt_release_json'] = expect(run_primary(site_dir, user), 'integrity-refused',
-                                                    'changed release.json')
-            server.take_log()
+            result = run_primary(site_dir, user)
+            report['corrupt_release_json'] = check_metadata_refusal(result, server.take_log(), prefix, version)
             server.corrupt = {version + '/install.sh'}
             report['corrupt_install_sh'] = expect(run_primary(site_dir, user), 'integrity-refused',
                                                   'changed install.sh')

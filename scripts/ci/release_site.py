@@ -6,7 +6,8 @@
                           --profile FILE [--support-notes FILE] --output site/<version>
   release_site.py check   --source-commit SHA --site DIR --profile FILE [--support-notes FILE]
                           --stage unsigned|signed [--expected-files REPORT] [--report FILE]
-  release_site.py sign    --site DIR --gpg-home DIR --fingerprint FPR [--passphrase-file FILE]
+  release_site.py sign    --source-commit SHA --site DIR --profile FILE [--support-notes FILE]
+                          --expected-files REPORT --gpg-home DIR --fingerprint FPR [--passphrase-file FILE]
                           [--require-passphrase]
   release_site.py archive --source-commit SHA --site DIR --profile FILE [--support-notes FILE]
                           --expected-files REPORT --output intel-npu-stack-<version>.tar
@@ -353,18 +354,18 @@ def load_legs(leg_a, leg_b):
     for file in sorted(LEG_FILES - {'installer-build.json'}):
         require((Path(leg_a) / file).read_bytes() == (Path(leg_b) / file).read_bytes(),
                 'tool drift between legs: ' + file + ' differs')
-    first, second = legs['a'], legs['b']
+    check_legs_agree(legs['a'], legs['b'])
+    return legs
+
+
+def check_legs_agree(first, second):
+    """Two well-formed leg records that differ only in the perturbed job count, TZ, LANG and umask."""
     for field in LEG_AGREE:
-        require(first.get(field) == second.get(field), 'tool drift between legs: ' + field)
+        require(first[field] == second[field], 'tool drift between legs: ' + field)
 
     def unperturbed(record):
-        environment = record.get('build_environment')
-        require(isinstance(environment, dict), 'installer leg record lacks its build environment')
-        return {key: value for key, value in environment.items() if key != 'CARGO_BUILD_JOBS'}
+        return {key: value for key, value in record['build_environment'].items() if key != 'CARGO_BUILD_JOBS'}
     require(unperturbed(first) == unperturbed(second), 'tool drift between legs: build_environment')
-    require((first.get('caller_environment') or {}).get('IMAGE_DIGEST')
-            == (second.get('caller_environment') or {}).get('IMAGE_DIGEST'), 'tool drift between legs: image')
-    return legs
 
 
 def check_installer_records(site, values, metadata, commit):
@@ -381,6 +382,7 @@ def check_installer_records(site, values, metadata, commit):
         check_leg_record(record, name)
         for field, value in expected.items():
             require(record.get(field) == value, f'installer leg {name} record does not match the site: {field}')
+    check_legs_agree(document['legs']['a'], document['legs']['b'])
     return document['legs']
 
 
@@ -493,10 +495,12 @@ def compose(repo, commit, tree, records, leg_a, leg_b, profile, notes_path, outp
         raise
 
 
-def sign(site, gnupghome, fingerprint, passphrase_file=None):
+def sign(site, gnupghome, fingerprint, repo, commit, profile, notes_path, expected_files, passphrase_file=None):
+    """Sign a site only after it passes the unsigned stage with exactly the verified unsigned bytes."""
     site = Path(site)
     require(not any((site / name).exists() for name in FINALIZE_FILES), 'the site is already signed')
-    site_files(site)
+    report = verify_site(site, repo, commit, profile, notes_path, 'unsigned')
+    require(report['files'] == expected_files, 'the site is not the verified unsigned site')
     written = []
     try:
         for name in [BINARY, 'install.sh']:
@@ -529,6 +533,8 @@ def archive(site, output, repo, commit, profile, notes_path, expected_files):
     require(VERSION.fullmatch(version) is not None, 'the site directory must be named after the release version')
     require(output.name == f'intel-npu-stack-{version}.tar', f'the archive must be named intel-npu-stack-{version}.tar')
     require(not output.exists(), f'{output} already exists; outputs are never overwritten')
+    require(not Path(os.path.abspath(output)).parent.resolve().is_relative_to(site.resolve()),
+            'the archive must be written outside the site')
     verify_site(site, repo, commit, profile, notes_path, 'signed', expected_files)
     require(load_json(site / 'release.json').get('stack_release') == version, 'release.json names another version')
     files = site_files(site)
@@ -568,10 +574,24 @@ def lint_public_text(text):
     return text
 
 
+def check_archive_holds(archive_path, site):
+    """The archive holds exactly the site's files, byte for byte, in archive order."""
+    files = site_files(site)
+    with tarfile.open(archive_path, 'r:') as tar:
+        members = tar.getmembers()
+        require([member.name for member in members] == [site.name + '/' + f for f in files]
+                and all(member.isreg() for member in members), 'the archive does not hold exactly this site')
+        for member, relative in zip(members, files):
+            with tar.extractfile(member) as data:
+                require(hashlib.file_digest(data, 'sha256').hexdigest() == sha(site / relative),
+                        'the archive does not hold this site: ' + relative + ' differs')
+
+
 def render_notes(site, archive_path):
     site, archive_path = Path(site), Path(archive_path)
     version = site.name
     require(archive_path.name == f'intel-npu-stack-{version}.tar', 'the archive does not belong to this version')
+    check_archive_holds(archive_path, site)
     matrix = load_json(site / 'support-matrix.json')
     repository = matrix['repository']
     slug = repository_slug(repository['base_url'], version)
@@ -657,7 +677,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     needed = {'compose': ['source_commit', 'tree', 'records', 'leg_a', 'leg_b', 'profile', 'output'],
               'check': ['source_commit', 'site', 'profile', 'stage'],
-              'sign': ['site', 'gpg_home', 'fingerprint'],
+              'sign': ['source_commit', 'site', 'profile', 'expected_files', 'gpg_home', 'fingerprint'],
               'archive': ['source_commit', 'site', 'profile', 'expected_files', 'output'],
               'notes': ['site', 'archive', 'output']}[args.command]
     missing = [name for name in needed if getattr(args, name) is None]
@@ -665,7 +685,7 @@ def main(argv=None):
         parser.error(args.command + ' requires ' + ', '.join('--' + name.replace('_', '-') for name in missing))
     try:
         notes_path = args.support_notes
-        if args.command in {'compose', 'check', 'archive'} and notes_path is None:
+        if args.command in {'compose', 'check', 'sign', 'archive'} and notes_path is None:
             version = release_trust.check_committed(args.repo)['version']
             notes_path = args.repo / 'release' / version / 'support-notes.toml'
         if args.command == 'compose':
@@ -682,7 +702,8 @@ def main(argv=None):
             passphrase = (release_sign.check_passphrase_file(args.passphrase_file)
                           if args.passphrase_file else None)
             require(passphrase or not args.require_passphrase, '--require-passphrase needs --passphrase-file')
-            result = sign(args.site, args.gpg_home, args.fingerprint, passphrase)
+            result = sign(args.site, args.gpg_home, args.fingerprint, args.repo, args.source_commit, args.profile,
+                          notes_path, unsigned_report(args.expected_files), passphrase)
         elif args.command == 'archive':
             result = {'archive': str(args.output),
                       'sha256': archive(args.site, args.output, args.repo, args.source_commit, args.profile,

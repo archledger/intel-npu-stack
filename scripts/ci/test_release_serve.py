@@ -88,6 +88,23 @@ class Classifiers(unittest.TestCase):
             with self.subTest(code=code, stderr=stderr):
                 self.assertEqual(serve.classify(code, stderr), wanted)
 
+    def test_metadata_control_must_show_the_installer_refusing_the_changed_file(self):
+        base = '/intel-npu-stack/0.1.0/'
+        refused = 'intel-npu-stack-install: downloaded release metadata checksum mismatch [INSTALL_INTEGRITY_FAILED]'
+        fetched = [(base + name, 200) for name in ['install.sh', 'intel-npu-stack-install', 'release.json']]
+
+        def result(code, stderr):
+            return subprocess.CompletedProcess([], code, '', stderr)
+        serve.check_metadata_refusal(result(20, refused), fetched, '/intel-npu-stack/', '0.1.0')
+        for label, code, stderr, log in [
+                ('bootstrap failure', 20, '', fetched[:1]),
+                ('installer never ran', 20, '', fetched[:2]),
+                ('signature fetched', 20, refused, fetched + [(base + 'release.json.sig', 200)]),
+                ('other code', 20, refused.replace('INSTALL_INTEGRITY_FAILED', 'INSTALL_METADATA_INVALID'), fetched),
+                ('not refused', 10, refused, fetched)]:
+            with self.subTest(label), self.assertRaisesRegex(serve.ServeRefused, 'changed release.json'):
+                serve.check_metadata_refusal(result(code, stderr), log, '/intel-npu-stack/', '0.1.0')
+
     def test_pages_host_must_map_only_to_loopback(self):
         def resolver(addresses):
             return lambda host, port, proto: [(socket.AF_INET, socket.SOCK_STREAM, proto, '', (a, port))

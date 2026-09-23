@@ -133,7 +133,11 @@ class Fixture:
                                         self.legs['b'], self.profile, self.notes, self.site)
         self.signed = base / 'signed/0.1.0'
         shutil.copytree(self.site, self.signed)
-        site_tool.sign(self.signed, self.key.home, self.key.fingerprint)
+        self.sign(self.signed)
+
+    def sign(self, site, expected=None):
+        return site_tool.sign(site, self.key.home, self.key.fingerprint, self.repo, self.commit, self.profile,
+                              self.notes, self.report['files'] if expected is None else expected)
 
     def archive(self, site, output):
         return site_tool.archive(site, output, self.repo, self.commit, self.profile, self.notes, self.report['files'])
@@ -374,6 +378,57 @@ class Refusals(Case):
                 (leg / 'installer-build.json').write_text(json.dumps(record))
                 self.refused('installer leg b record', compose, leg)
 
+    def test_persisted_legs_must_still_agree(self):
+        other = 'registry.example/other@sha256:' + 'ab' * 32
+
+        def new_image(legs):
+            legs['b']['image'] = legs['b']['caller_environment']['IMAGE_DIGEST'] = other
+        for label, change in {
+                'toolchain': lambda legs: legs['b']['toolchain'].update(rustc='rustc 1.86.0 (other)'),
+                'image': new_image,
+                'build_environment': lambda legs: legs['b']['build_environment'].update(PATH='/elsewhere')}.items():
+            with self.subTest(label):
+                site = self.copy(self.f.site)
+                path = site / 'records/installer-build.json'
+                document = json.loads(path.read_text())
+                change(document['legs'])
+                path.write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
+                self.refused('tool drift between legs: ' + label, self.f.verify, site)
+                shutil.rmtree(site.parent)
+
+    def test_signing_needs_the_verified_unsigned_site(self):
+        site = self.copy(self.f.site)
+        document = json.loads((site / 'support-matrix.json').read_text())
+        document['channels'] = ['stable', 'experimental']
+        (site / 'support-matrix.json').write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
+        self.refused('support-matrix.json differs', self.f.sign, site)
+        shutil.rmtree(site.parent)
+        site = self.copy(self.f.site)
+        expected = dict(self.f.report['files'])
+        expected['release.json'] = '0' * 64
+        self.refused('verified unsigned site', self.f.sign, site, expected)
+        self.assertFalse(any((site / name).exists() for name in site_tool.FINALIZE_FILES))
+
+    def test_notes_need_the_archive_of_this_site(self):
+        tar = self.work / 'intel-npu-stack-0.1.0.tar'
+        self.f.archive(self.f.signed, tar)
+        site = self.copy(self.f.signed)
+        (site / 'SHA256SUMS').write_text((site / 'SHA256SUMS').read_text() + '\n')
+        self.refused('archive', site_tool.render_notes, site, tar)
+        other = self.work / 'other/intel-npu-stack-0.1.0.tar'
+        other.parent.mkdir()
+        with tarfile.open(other, 'w', format=tarfile.GNU_FORMAT) as handle:
+            handle.add(self.f.signed / 'release.json', arcname='0.1.0/release.json')
+        self.refused('archive', site_tool.render_notes, self.f.signed, other)
+
+    def test_archive_output_must_be_outside_the_site(self):
+        site = self.copy(self.f.signed)
+        self.refused('outside the site', self.f.archive, site, site / 'intel-npu-stack-0.1.0.tar')
+        link = self.work / 'link'
+        link.symlink_to(site / 'records')
+        self.refused('outside the site', self.f.archive, site, link / 'intel-npu-stack-0.1.0.tar')
+        self.assertEqual(set(site_tool.site_files(site)), set(site_tool.site_files(self.f.signed)))
+
     def test_signing_records_must_be_the_assembly_inputs(self):
         for name in ['signed-identity.json', 'profile-rpm-build.json']:
             with self.subTest(name):
@@ -490,7 +545,7 @@ class Refusals(Case):
     def test_outputs_are_never_overwritten(self):
         self.refused('already exists', site_tool.compose, self.f.repo, self.f.commit, self.f.tree, self.f.records,
                      self.f.legs['a'], self.f.legs['b'], self.f.profile, self.f.notes, self.f.site)
-        self.refused('already signed', site_tool.sign, self.f.signed, self.f.key.home, self.f.key.fingerprint)
+        self.refused('already signed', self.f.sign, self.f.signed)
         tar = self.work / 'intel-npu-stack-0.1.0.tar'
         tar.write_bytes(b'')
         self.refused('already exists', self.f.archive, self.f.signed, tar)

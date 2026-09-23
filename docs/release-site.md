@@ -55,7 +55,8 @@ requalification`.
 release_site.py compose --source-commit SHA --tree release-tree --records records \
     --leg-a installer-a --leg-b installer-b --profile PROFILE --output site/0.1.0
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage unsigned --report verification.json
-release_site.py sign --site site/0.1.0 --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
+release_site.py sign --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
+    --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage signed --expected-files verification.json
 release_site.py archive --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --output intel-npu-stack-0.1.0.tar
@@ -77,7 +78,9 @@ trust seam and release key are the only trust anchors.
 - It requires the installer to be an x86_64 ELF that embeds the pinned values
   and to match both leg records. The leg records must have every build record
   field: the builder image digest, both toolchain versions, absolute source and
-  target directories, the build environment and the umask.
+  target directories, the build environment and the umask. They must also
+  still agree with each other apart from the perturbed job count, TZ, LANG and
+  umask.
 - It requires `records/signed-identity.json` and `records/profile-rpm-build.json`
   to be the records the assembly was built from, as listed in
   `assembly-manifest.json`.
@@ -91,7 +94,10 @@ The signed stage additionally requires:
 - `SHA256SUMS` to be exact;
 - all three signatures to satisfy the installer's strict release-key policy.
 
-`archive` runs every signed-stage check before it writes the archive. The
+`sign` runs the unsigned stage again and requires exactly the bytes of the
+verification report before it uses the key. `archive` runs every signed-stage
+check before writing, and it refuses an output path inside the site. `notes`
+requires the archive to hold exactly the site's files, byte for byte. The
 release notes are linted against tool and product names that public release
 text must not carry.
 
@@ -104,8 +110,10 @@ resolves only to 127.0.0.1. It performs these checks:
   `INSTALL_PROFILE_UNSUPPORTED` or exit 30 `INSTALL_PLATFORM_*`. It must fetch
   exactly `install.sh`, the installer, `release.json`, `release.json.sig` and
   `profile.toml`.
-- A one-byte change to `release.json` must make it exit 20, and so must a
-  one-byte change to `install.sh`, before anything else is fetched.
+- A one-byte change to `release.json` must make the installer fetch it and
+  refuse it with `INSTALL_INTEGRITY_FAILED` before fetching its signature. A
+  one-byte change to `install.sh` must make the command exit 20 before
+  anything else is fetched.
 - DNF, with package and repository signature checks against the committed
   key, must download every package with the bytes and signatures that
   `release.json` records.
