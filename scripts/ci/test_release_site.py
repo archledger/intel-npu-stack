@@ -135,10 +135,13 @@ class Fixture:
                                                    'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml')})
         self.write_record('profile-generation.json', {
             'passed': True, 'test_only': False, 'profile_status': 'qualified', 'schema_version': 1,
-            'stack_release': '0.1.0', 'profile_id': 'fedora-44-verifier-fixture', 'candidate_sha256': 'd' * 64,
+            'stack_release': '0.1.0', 'profile_id': 'fedora-44-verifier-fixture',
+            'candidate_sha256': fixtures.sha(self.profile),
             'signed_identity_sha256': fixtures.sha(self.records / 'provider-identity.json'),
             'output_sha256': fixtures.sha(self.tree / 'profile.toml'), 'primary_fingerprint': self.key.fingerprint,
-            'components': {}, 'scope': 'fixture'})
+            'components': {'fixture': {'package': 'verifier-fixture', 'nevr': '0:1.0.0-1',
+                                       'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm)}},
+            'scope': 'candidate-to-release profile digest rewrite'})
         self.write_record('profile-rpm-build.json', {
             'profile_filename': rpm.name, 'source_profile_sha256': fixtures.sha(self.tree / 'profile.toml'),
             'unsigned_sha256': 'c' * 64, 'signed_sha256': fixtures.sha(rpm),
@@ -420,6 +423,43 @@ class Refusals(Case):
                 self.refused('tool drift between legs: ' + label, self.f.verify, site)
                 shutil.rmtree(site.parent)
 
+    def test_report_paths_are_checked_before_anything_runs(self):
+        report = self.work / 'unsigned-report.json'
+        report.write_text(json.dumps(self.f.report))
+        site = self.copy(self.f.site)
+        taken = self.work / 'taken.json'
+        taken.write_text('{}\n')
+        argv = ['sign', '--repo', str(self.f.repo), '--source-commit', self.f.commit, '--profile', str(self.f.profile),
+                '--site', str(site), '--expected-files', str(report), '--gpg-home', str(self.f.key.home),
+                '--fingerprint', self.f.key.fingerprint]
+        for target, message in [(taken, 'already exists'), (self.work / 'missing/report.json', 'directory')]:
+            with self.subTest(message), contextlib.redirect_stderr(io.StringIO()) as errors, \
+                    self.assertRaises(SystemExit):
+                site_tool.main(argv + ['--report', str(target)])
+            self.assertIn(message, errors.getvalue())
+            self.assertFalse(any((site / name).exists() for name in site_tool.FINALIZE_FILES))
+
+    def test_notes_refuse_an_archive_with_other_metadata(self):
+        files = site_tool.site_files(self.f.signed)
+        for label, adjust in {'mode': lambda info: setattr(info, 'mode', 0o777),
+                              'owner': lambda info: setattr(info, 'uname', 'builder'),
+                              'mtime': lambda info: setattr(info, 'mtime', 1)}.items():
+            with self.subTest(label):
+                tar = self.work / label / 'intel-npu-stack-0.1.0.tar'
+                tar.parent.mkdir()
+                with tarfile.open(tar, 'w', format=tarfile.GNU_FORMAT) as handle:
+                    for index, relative in enumerate(files):
+                        path = self.f.signed / relative
+                        info = tarfile.TarInfo('0.1.0/' + relative)
+                        info.size, info.uid, info.gid, info.uname, info.gname = path.stat().st_size, 0, 0, '', ''
+                        info.mtime = site_tool.EPOCH
+                        info.mode = 0o755 if relative in site_tool.EXECUTABLES else 0o644
+                        if index == 0:
+                            adjust(info)
+                        with path.open('rb') as data:
+                            handle.addfile(info, data)
+                self.refused('archive', site_tool.render_notes, self.f.signed, tar)
+
     def test_signing_uses_only_the_committed_release_key(self):
         site = self.copy(self.f.site)
         with self.assertRaises(site_tool.REFUSALS) as caught:
@@ -488,19 +528,26 @@ class Refusals(Case):
                 update(document)
                 (site / path).write_text(json.dumps(document, indent=2, sort_keys=True) + '\n')
             return apply
-        cases = {
-            'provider-identity.json is not a passed production identity': change(provider_path, dict.clear),
-            'provider-identity.json is not a passed production identity for the release key':
-                change(provider_path, lambda d: d.update(primary_fingerprint='0' * 40)),
-            'provider-identity.json is not the identity': change(provider_path, lambda d: d['packages'].append(
-                {'name': 'extra', 'role': 'runtime'})),
-            'profile-generation.json does not describe': change(generation_path,
-                                                                lambda d: d.update(output_sha256='0' * 64)),
-            'profile-generation.json does not describe this release profile':
-                change(generation_path, lambda d: d.update(signed_identity_sha256='0' * 64)),
-        }
-        for message, apply in cases.items():
-            with self.subTest(message):
+        provider = 'records/provider-identity.json is not'
+        generation = 'records/profile-generation.json does not describe this release profile'
+        cases = [
+            ('emptied provider', provider, change(provider_path, dict.clear)),
+            ('provider for another key', provider, change(provider_path,
+                                                          lambda d: d.update(primary_fingerprint='0' * 40))),
+            ('provider with an extra package', provider, change(provider_path, lambda d: d['packages'].append(
+                {'name': 'extra', 'role': 'runtime'}))),
+            ('another output profile', generation, change(generation_path, lambda d: d.update(output_sha256='0' * 64))),
+            ('another identity', generation, change(generation_path,
+                                                    lambda d: d.update(signed_identity_sha256='0' * 64))),
+            ('another candidate', generation, change(generation_path, lambda d: d.update(candidate_sha256='0' * 64))),
+            ('fabricated component', generation, change(generation_path,
+                                                        lambda d: d['components']['fixture'].update(nevr='0:9-9'))),
+            ('missing component', generation, change(generation_path, lambda d: d['components'].clear())),
+            ('extra field', generation, change(generation_path, lambda d: d.update(note='fabricated'))),
+            ('another schema', generation, change(generation_path, lambda d: d.update(schema_version=2))),
+        ]
+        for label, message, apply in cases:
+            with self.subTest(label):
                 site = self.copy(self.f.site)
                 apply(site)
                 self.refused(message, self.f.verify, site)

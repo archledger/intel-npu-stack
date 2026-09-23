@@ -61,7 +61,7 @@ release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --
 release_site.py archive --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --output intel-npu-stack-0.1.0.tar
 release_site.py notes --site site/0.1.0 --archive intel-npu-stack-0.1.0.tar --output notes.md
-release_serve.py serve-test --site-root site --report serve.json
+release_serve.py serve-test --site-root site --expected-files verification.json --report serve.json
 release_serve.py serve-test --live --site-root site --report live.json
 ```
 
@@ -87,8 +87,9 @@ trust seam and release key are the only trust anchors.
   identities for the release key. The signed identity must list the release
   packages and the signed repository digest. The provider identity must be the
   signed identity without the profile package and the repository digest.
-  `records/profile-generation.json` must name the provider identity and the
-  shipped `profile.toml` by digest. `records/profile-rpm-build.json` must
+  `records/profile-generation.json` must be exactly the generator's record for
+  this release: the candidate (the selected profile), the provider identity, the
+  shipped `profile.toml` and every rewritten component digest. `records/profile-rpm-build.json` must
   describe the one `profile` package of the signed `release.json`, the shipped
   profile, the signed identity's unsigned digest and a reproducible build pair.
   `assembly-manifest.json` is not signed, so its input digests are only a
@@ -108,14 +109,20 @@ It runs the unsigned stage again and requires exactly the bytes of the
 verification report before it uses the key. Reports and release notes must be
 written outside the site, and so must the `serve-test` report. `archive` runs every signed-stage
 check before writing, and it refuses an output path inside the site. `notes`
-requires the archive to hold exactly the site's files, byte for byte. The
+requires the archive to hold exactly the site's files, byte for byte, with the
+normalized member metadata. Report and notes paths must not exist yet and are
+checked before anything runs. The
 release notes are linted against tool and product names that public release
 text must not carry.
 
 `serve-test` runs as root in a disposable container in which the Pages host
 resolves only to 127.0.0.1. It performs these checks:
 
+- It refuses to run anything unless the site equals its verification report
+  and `install.sh` and `primary-command.txt` are exactly the committed
+  renderings for the site's installer.
 - It adds a throwaway CA to the trust anchors and serves the site on port 443.
+  A failure to remove the CA again fails the run.
 - It runs the primary command with `--dry-run` as an unprivileged user. The
   command must pass release verification and stop at the platform: exit 10
   `INSTALL_PROFILE_UNSUPPORTED` or exit 30 `INSTALL_PLATFORM_*`. It must fetch

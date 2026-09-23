@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Serve a composed site as the Pages host over local HTTPS and run the published install path against it.
 
-  release_serve.py serve-test --site-root DIR [--repo DIR] [--user ci] [--work DIR] [--report FILE]
+  release_serve.py serve-test --site-root DIR --expected-files REPORT [--repo DIR] [--user ci] [--work DIR]
+                              [--report FILE]
   release_serve.py serve-test --live [--site-root DIR] [--repo DIR] [--user ci] [--work DIR] [--report FILE]
 
 serve-test runs as root in a disposable container in which the Pages host of
@@ -30,6 +31,7 @@ release.json after verifying it under the committed key (and, with
 the trust anchor is removed again, also when setup fails.
 """
 import argparse
+import contextlib
 import hashlib
 import http.server
 import json
@@ -377,11 +379,37 @@ def install_anchor(ca, anchor=ANCHOR, refresh=refresh_trust):
 
 
 def remove_anchor(anchor=ANCHOR, refresh=refresh_trust):
+    """Best-effort removal while an earlier failure is already on its way out."""
     anchor.unlink(missing_ok=True)
     try:
         refresh()
     except ServeRefused:
         pass
+
+
+@contextlib.contextmanager
+def trust_anchor(ca, anchor=ANCHOR, refresh=refresh_trust):
+    """The throwaway CA is trusted only inside the block; a failed cleanup fails an otherwise passing run."""
+    install_anchor(ca, anchor, refresh)
+    try:
+        yield
+    except BaseException:
+        remove_anchor(anchor, refresh)
+        raise
+    anchor.unlink(missing_ok=True)
+    try:
+        refresh()
+    except ServeRefused as error:
+        raise ServeRefused('the throwaway CA could not be removed from the trust store: ' + str(error)) from None
+
+
+def check_local_site(site_dir, repo, values, expected_files):
+    """Nothing from a local site runs unless it is the verified site and its commands are the rendered ones."""
+    files = release_site.digests(site_dir, release_site.site_files(site_dir))
+    require(files == expected_files, 'the local site differs from its verification report')
+    rendered = release_site.render_installer_set(repo, values, release_site.sha(Path(site_dir) / FETCHED[1]))
+    for name, data in rendered.items():
+        require((Path(site_dir) / name).read_bytes() == data, name + ' is not the command rendered for this installer')
 
 
 def expect(result, wanted, label):
@@ -391,7 +419,7 @@ def expect(result, wanted, label):
     return {'exit': result.returncode, 'class': outcome, 'stderr_tail': result.stderr.strip()[-400:]}
 
 
-def serve_test(site_root, repo, user, work, live=False):
+def serve_test(site_root, repo, user, work, live=False, expected_files=None):
     values = release_trust.check_committed(repo)
     host, prefix, version = location(values['base_url'])
     require(version == values['version'], 'the base URL does not end in the release version')
@@ -415,34 +443,32 @@ def serve_test(site_root, repo, user, work, live=False):
     require_root()
     check_local(host)
     site_dir = Path(site_root) / version
+    require(expected_files is not None, 'the local serve test needs the verification report (--expected-files)')
+    check_local_site(site_dir, repo, values, expected_files)
     release = json.loads((site_dir / 'release.json').read_text())
     ca, leaf, leaf_key = make_certificates(work / 'tls', host)
-    install_anchor(ca)  # removes the anchor itself if it cannot finish
-    try:
-        with SiteServer(site_root, prefix, leaf, leaf_key) as server:
-            result = run_primary(site_dir, user)
-            report['primary'] = expect(result, 'verified', 'primary command')
-            log = server.take_log()
-            wanted = sorted((prefix + version + '/' + name, 200) for name in FETCHED)
-            require(sorted(set(log)) == wanted and all(status == 200 for _, status in log),
-                    f'the install path fetched {sorted(set(log))}, expected {wanted}')
-            report['fetched'] = [path for path, _ in log]
+    with trust_anchor(ca), SiteServer(site_root, prefix, leaf, leaf_key) as server:
+        result = run_primary(site_dir, user)
+        report['primary'] = expect(result, 'verified', 'primary command')
+        log = server.take_log()
+        wanted = sorted((prefix + version + '/' + name, 200) for name in FETCHED)
+        require(sorted(set(log)) == wanted and all(status == 200 for _, status in log),
+                f'the install path fetched {sorted(set(log))}, expected {wanted}')
+        report['fetched'] = [path for path, _ in log]
 
-            server.corrupt = {version + '/release.json'}
-            result = run_primary(site_dir, user)
-            report['corrupt_release_json'] = check_metadata_refusal(result, server.take_log(), prefix, version)
-            server.corrupt = {version + '/install.sh'}
-            report['corrupt_install_sh'] = expect(run_primary(site_dir, user), 'integrity-refused',
-                                                  'changed install.sh')
-            log = server.take_log()
-            require(log == [(prefix + version + '/install.sh', 200)],
-                    'a changed install.sh must stop the command before anything else is fetched: ' + repr(log))
-            server.corrupt = set()
-            report['dnf_packages_verified'] = dnf_check(release, values['base_url'], key,
-                                                        values['primary_fingerprint'], work)
-            check_dnf_requests(server.take_log(), prefix, version, release)
-    finally:
-        remove_anchor()
+        server.corrupt = {version + '/release.json'}
+        result = run_primary(site_dir, user)
+        report['corrupt_release_json'] = check_metadata_refusal(result, server.take_log(), prefix, version)
+        server.corrupt = {version + '/install.sh'}
+        report['corrupt_install_sh'] = expect(run_primary(site_dir, user), 'integrity-refused',
+                                              'changed install.sh')
+        log = server.take_log()
+        require(log == [(prefix + version + '/install.sh', 200)],
+                'a changed install.sh must stop the command before anything else is fetched: ' + repr(log))
+        server.corrupt = set()
+        report['dnf_packages_verified'] = dnf_check(release, values['base_url'], key,
+                                                    values['primary_fingerprint'], work)
+        check_dnf_requests(server.take_log(), prefix, version, release)
     report['passed'] = True
     return report
 
@@ -456,14 +482,24 @@ def main(argv=None):
     parser.add_argument('--user', default='ci')
     parser.add_argument('--work', type=Path)
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--expected-files', type=Path,
+                        help='the release_site.py check report of the local site (required without --live)')
     args = parser.parse_args(argv)
     if args.site_root is None and not args.live:
         parser.error('serve-test requires --site-root (optional with --live)')
     try:
         if args.report is not None:
             release_site.require_outside(args.report, [args.site_root], 'report')
+            release_site.require_new_file(args.report, 'report')
+        expected = None
+        if args.expected_files is not None:
+            verified = release_site.load_json(args.expected_files)
+            require(verified.get('stage') in {'unsigned', 'signed'} and isinstance(verified.get('files'), dict),
+                    '--expected-files must be a release_site.py check report')
+            expected = verified['files']
         with tempfile.TemporaryDirectory(prefix='serve-test-') as scratch:
-            report = serve_test(args.site_root, args.repo, args.user, args.work or Path(scratch), args.live)
+            report = serve_test(args.site_root, args.repo, args.user, args.work or Path(scratch), args.live,
+                                expected)
         if args.report is not None:
             with open(args.report, 'x') as stream:
                 stream.write(json.dumps(report, indent=2, sort_keys=True) + '\n')

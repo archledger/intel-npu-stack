@@ -17,8 +17,11 @@ import tempfile
 import unittest
 
 import release_serve as serve
+import release_site
+import release_trust
 import test_check_release as fixtures
 
+REPO = Path(__file__).resolve().parents[2]
 BASE_URL = 'https://archledger.github.io/intel-npu-stack/0.1.0/'
 HOST = 'archledger.github.io'
 
@@ -178,6 +181,31 @@ class Classifiers(unittest.TestCase):
             serve.install_anchor(ca, anchor, lambda: None)
             self.assertEqual(anchor.read_text(), 'certificate\n')
 
+    def test_failed_trust_store_cleanup_fails_an_otherwise_passing_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ca, anchor = Path(tmp) / 'ca.crt', Path(tmp) / 'serve-test.crt'
+            ca.write_text('certificate\n')
+            calls = []
+
+            def refresh():
+                calls.append(anchor.exists())
+                if not anchor.exists():
+                    raise serve.ServeRefused('update-ca-trust failed')
+            with self.assertRaisesRegex(serve.ServeRefused, 'trust store'):
+                with serve.trust_anchor(ca, anchor, refresh):
+                    pass
+            self.assertFalse(anchor.exists())
+
+            class Earlier(Exception):
+                pass
+            with self.assertRaises(Earlier):  # an earlier failure is kept, not replaced by the cleanup failure
+                with serve.trust_anchor(ca, anchor, refresh):
+                    raise Earlier()
+            self.assertFalse(anchor.exists())
+            with serve.trust_anchor(ca, anchor, lambda: None):
+                self.assertTrue(anchor.exists())
+            self.assertFalse(anchor.exists())
+
     def test_fetches_refuse_non_https_redirects(self):
         argv = serve.curl_command('https://archledger.github.io/intel-npu-stack/0.1.0/release.json', '/w/out')
         for option, value in [('--proto', '=https'), ('--proto-redir', '=https')]:
@@ -274,6 +302,47 @@ class LiveRelease(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which('openssl'), 'openssl is required')
+@unittest.skipUnless(shutil.which('gpg'), 'gpg is required')
+class LocalSiteIdentity(unittest.TestCase):
+    """Before anything from a local site runs, the site must be the verified one and its commands the rendered ones."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='local-site-')
+        self.addCleanup(self.tmp.cleanup)
+        self.values = release_trust.check_committed(REPO)
+        self.site = Path(self.tmp.name) / '0.1.0'
+        self.site.mkdir()
+        (self.site / 'intel-npu-stack-install').write_bytes(b'\x7fELF installer')
+        rendered = release_site.render_installer_set(REPO, self.values,
+                                                     fixtures.sha(self.site / 'intel-npu-stack-install'))
+        for name, data in rendered.items():
+            (self.site / name).write_bytes(data)
+        (self.site / 'release.json').write_text('{}\n')
+        self.report = {name: fixtures.sha(self.site / name) for name in release_site.site_files(self.site)}
+
+    def check(self):
+        serve.check_local_site(self.site, REPO, self.values, self.report)
+
+    def test_verified_site_with_rendered_commands_passes(self):
+        self.check()
+
+    def test_changed_or_extra_files_are_refused(self):
+        (self.site / 'release.json').write_text('{"changed": true}\n')
+        with self.assertRaisesRegex(serve.ServeRefused, 'verification report'):
+            self.check()
+        (self.site / 'release.json').write_text('{}\n')
+        (self.site / 'extra.txt').write_text('x\n')
+        with self.assertRaisesRegex(serve.ServeRefused, 'verification report'):
+            self.check()
+
+    def test_a_command_other_than_the_rendered_one_is_refused(self):
+        command = self.site / 'primary-command.txt'
+        command.write_text('touch /tmp/owned; ' + command.read_text())
+        self.report['primary-command.txt'] = fixtures.sha(command)
+        with self.assertRaisesRegex(serve.ServeRefused, 'primary-command.txt'):
+            self.check()
+
+
 class LocalPages(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

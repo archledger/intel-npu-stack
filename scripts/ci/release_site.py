@@ -63,6 +63,8 @@ LEG_RECORD_FIELDS = {'leg', 'source_commit', 'version', 'base_url', 'primary_fin
                      'src_root', 'target_dir', 'toolchain', 'image', 'build_environment', 'caller_environment',
                      'umask'}
 ASSEMBLY_RECORDS = ['signed-identity.json', 'profile-rpm-build.json']
+GENERATION_FIELDS = {'passed', 'test_only', 'profile_status', 'scope', 'schema_version', 'stack_release', 'profile_id',
+                     'candidate_sha256', 'signed_identity_sha256', 'output_sha256', 'primary_fingerprint', 'components'}
 LEG_AGREE = ['source_commit', 'version', 'base_url', 'primary_fingerprint', 'release_json_sha256',
              'pinned_trust_sha256', 'binary_sha256', 'install_sh_sha256', 'primary_command_sha256', 'src_root',
              'target_dir', 'toolchain', 'image']
@@ -384,7 +386,7 @@ def production_identity(record, fingerprint):
             and all(isinstance(entry, dict) for entry in record['packages']))
 
 
-def check_signing_records(site, release, values, profile):
+def check_signing_records(site, release, values, profile, candidate):
     """The signing job's records describe this release: key, packages, repository, profile and each other."""
     provider = load_json(site / 'records/provider-identity.json')
     signed = load_json(site / 'records/signed-identity.json')
@@ -408,11 +410,25 @@ def check_signing_records(site, release, values, profile):
             == by_name([entry for entry in signed['packages'] if entry.get('role') != 'profile']),
             'records/provider-identity.json is not the identity the signed identity extends')
     check_profile_build(site, release, signed, profile)
-    expected = {'passed': True, 'test_only': False, 'profile_status': 'qualified', 'stack_release': values['version'],
-                'profile_id': profile.get('id'), 'primary_fingerprint': fingerprint,
+    # The generator rewrote each component digest from the identity; candidate.toml is the selected profile.
+    by_name = {entry.get('name'): entry for entry in signed['packages']}
+    components = {}
+    for capability, component in sorted(profile.get('components', {}).items()):
+        package = component.get('provider', {}).get('package')
+        entry = by_name.get(package, {})
+        require(entry.get('signed_sha256') == component.get('sha256'),
+                'records/profile-generation.json does not describe this release profile')
+        components[capability] = {'package': package, 'nevr': entry.get('nevr'),
+                                   'unsigned_sha256': entry.get('unsigned_sha256'),
+                                   'signed_sha256': entry.get('signed_sha256')}
+    expected = {'passed': True, 'test_only': False, 'profile_status': 'qualified', 'schema_version': 1,
+                'stack_release': values['version'], 'profile_id': profile.get('id'), 'primary_fingerprint': fingerprint,
+                'candidate_sha256': sha(candidate),
                 'signed_identity_sha256': sha(site / 'records/provider-identity.json'),
-                'output_sha256': sha(site / 'profile.toml')}
-    require(all(generation.get(key) == value for key, value in expected.items()),
+                'output_sha256': sha(site / 'profile.toml'), 'components': components}
+    require(set(generation) == GENERATION_FIELDS
+            and isinstance(generation['scope'], str) and generation['scope'].strip()
+            and all(generation[key] == value for key, value in expected.items()),
             'records/profile-generation.json does not describe this release profile')
 
 
@@ -486,7 +502,7 @@ def verify_site(site, repo, commit, profile, notes_path, stage, expected_files=N
     for name in ASSEMBLY_RECORDS:
         require(assembled.get(name) == sha(site / 'records' / name),
                 f'records/{name} is not the signing record the assembly was built from')
-    check_signing_records(site, release, values, load_toml(site / 'profile.toml'))
+    check_signing_records(site, release, values, load_toml(site / 'profile.toml'), profile)
 
     for name, data in render_installer_set(repo, values, sha(site / BINARY)).items():
         require((site / name).read_bytes() == data, name + ' differs from its rendering')
@@ -647,6 +663,9 @@ def check_archive_holds(archive_path, site):
         require([member.name for member in members] == [site.name + '/' + f for f in files]
                 and all(member.isreg() for member in members), 'the archive does not hold exactly this site')
         for member, relative in zip(members, files):
+            require((member.mode, member.uid, member.gid, member.uname, member.gname, member.mtime)
+                    == (0o755 if relative in EXECUTABLES else 0o644, 0, 0, '', '', EPOCH),
+                    'the archive does not have the normalized metadata: ' + relative)
             with tar.extractfile(member) as data:
                 require(hashlib.file_digest(data, 'sha256').hexdigest() == sha(site / relative),
                         'the archive does not hold this site: ' + relative + ' differs')
@@ -718,6 +737,13 @@ def require_outside(path, roots, label):
                 f'the {label} must be written outside the site')
 
 
+def require_new_file(path, label):
+    """An output that does not exist yet in an existing directory, checked before anything changes."""
+    path = Path(path)
+    require(not path.exists() and not path.is_symlink(), f'the {label} {path} already exists')
+    require(path.parent.is_dir(), f'the {label} directory {path.parent} does not exist')
+
+
 def unsigned_report(path):
     """The file digests of an unsigned-stage verification report."""
     report = load_json(path)
@@ -760,8 +786,10 @@ def main(argv=None):
         sites = [args.site, args.output if args.command == 'compose' else None]
         if args.report is not None:
             require_outside(args.report, sites, 'report')
+            require_new_file(args.report, 'report')
         if args.command == 'notes':
             require_outside(args.output, [args.site], 'release notes')
+            require_new_file(args.output, 'release notes')
         notes_path = args.support_notes
         if args.command in {'compose', 'check', 'sign', 'archive'} and notes_path is None:
             version = release_trust.check_committed(args.repo)['version']
