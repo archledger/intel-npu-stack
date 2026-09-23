@@ -57,6 +57,11 @@ FINALIZE_FILES = ['SHA256SUMS', 'SHA256SUMS.asc', BINARY + '.asc', 'install.sh.a
 LEG_FILES = {*INSTALLER_SET, 'installer-trust.rs', 'installer-build.json'}
 LEG_BINDINGS = [('binary_sha256', BINARY), ('install_sh_sha256', 'install.sh'),
                 ('primary_command_sha256', 'primary-command.txt'), ('pinned_trust_sha256', 'installer-trust.rs')]
+LEG_RECORD_FIELDS = {'leg', 'source_commit', 'version', 'base_url', 'primary_fingerprint', 'release_json_sha256',
+                     'pinned_trust_sha256', 'binary_sha256', 'install_sh_sha256', 'primary_command_sha256',
+                     'src_root', 'target_dir', 'toolchain', 'image', 'build_environment', 'caller_environment',
+                     'umask'}
+ASSEMBLY_RECORDS = ['signed-identity.json', 'profile-rpm-build.json']
 LEG_AGREE = ['source_commit', 'version', 'base_url', 'primary_fingerprint', 'release_json_sha256',
              'pinned_trust_sha256', 'binary_sha256', 'install_sh_sha256', 'primary_command_sha256', 'src_root',
              'target_dir', 'toolchain', 'image']
@@ -303,13 +308,45 @@ def render_sha256sums(site):
     return ''.join(f'{sha(Path(site) / f)}  {f}\n' for f in files).encode()
 
 
+def check_leg_record(record, name):
+    """An installer build record with every provenance field present and well formed."""
+    invalid = f'installer leg {name} record '
+    require(isinstance(record, dict) and set(record) == LEG_RECORD_FIELDS,
+            invalid + 'must have exactly the build record fields: ' + ', '.join(sorted(LEG_RECORD_FIELDS)))
+    require(record['leg'] == name, invalid + 'names another leg')
+    require(isinstance(record['source_commit'], str) and re.fullmatch(r'[0-9a-f]{40}', record['source_commit']),
+            invalid + 'has an invalid source_commit')
+    for field in ['release_json_sha256', 'pinned_trust_sha256', 'binary_sha256', 'install_sh_sha256',
+                  'primary_command_sha256']:
+        require(isinstance(record[field], str) and DIGEST.fullmatch(record[field]), invalid + 'has an invalid ' + field)
+    require(isinstance(record['image'], str) and release_installer.IMAGE_DIGEST.fullmatch(record['image']),
+            invalid + 'lacks a builder image digest')
+    toolchain = record['toolchain']
+    require(isinstance(toolchain, dict) and set(toolchain) == {'rustc', 'cargo'}
+            and all(isinstance(value, str) and value.strip() for value in toolchain.values()),
+            invalid + 'lacks the rustc and cargo versions')
+    for field in ['src_root', 'target_dir']:
+        require(isinstance(record[field], str) and Path(record[field]).is_absolute(),
+                invalid + 'has a non-absolute ' + field)
+    environment = record['build_environment']
+    require(isinstance(environment, dict) and all(isinstance(k, str) and isinstance(v, str)
+                                                 for k, v in environment.items())
+            and {'PATH', 'CARGO_TARGET_DIR', 'CARGO_BUILD_JOBS'} <= set(environment),
+            invalid + 'lacks its build environment')
+    caller = record['caller_environment']
+    require(isinstance(caller, dict) and set(caller) == {'TZ', 'LANG', 'IMAGE_DIGEST'}
+            and caller['IMAGE_DIGEST'] == record['image'], invalid + 'has an invalid caller environment')
+    require(isinstance(record['umask'], str) and re.fullmatch(r'0o[0-7]{1,4}', record['umask']),
+            invalid + 'has an invalid umask')
+    return record
+
+
 def load_legs(leg_a, leg_b):
     """Both leg outputs, byte-equal, with records that bind their bytes and agree on everything but perturbation."""
     legs = {}
     for name, directory in (('a', Path(leg_a)), ('b', Path(leg_b))):
         require(set(site_files(directory)) == LEG_FILES, f'installer leg {name} has an unexpected file set')
-        record = load_json(directory / 'installer-build.json')
-        require(record.get('leg') == name, f'installer leg {name} record names another leg')
+        record = check_leg_record(load_json(directory / 'installer-build.json'), name)
         for field, file in LEG_BINDINGS:
             require(record.get(field) == sha(directory / file), f'installer leg {name} record does not bind {file}')
         legs[name] = record
@@ -341,7 +378,7 @@ def check_installer_records(site, values, metadata, commit):
                 'primary_command_sha256': sha(site / 'primary-command.txt'),
                 'pinned_trust_sha256': sha(site / 'records/installer-trust.rs')}
     for name, record in document['legs'].items():
-        require(isinstance(record, dict) and record.get('leg') == name, 'installer build record names another leg')
+        check_leg_record(record, name)
         for field, value in expected.items():
             require(record.get(field) == value, f'installer leg {name} record does not match the site: {field}')
     return document['legs']
@@ -376,6 +413,11 @@ def verify_site(site, repo, commit, profile, notes_path, stage, expected_files=N
     for literal in (metadata, values['base_url'], values['primary_fingerprint']):
         require(literal.encode() in binary, 'the installer lacks a pinned trust value: ' + literal)
     legs = check_installer_records(site, values, metadata, commit)
+    assembled = load_json(site / 'assembly-manifest.json').get('input_digests')
+    require(isinstance(assembled, dict), 'assembly-manifest.json records no input digests')
+    for name in ASSEMBLY_RECORDS:
+        require(assembled.get(name) == sha(site / 'records' / name),
+                f'records/{name} is not the signing record the assembly was built from')
     identity = load_json(site / 'records/signed-identity.json')
     require(identity.get('repomd_sha256') == release['repository']['repomd_sha256']
             and identity.get('primary_fingerprint') == values['primary_fingerprint'],

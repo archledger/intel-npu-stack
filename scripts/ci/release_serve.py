@@ -136,6 +136,37 @@ def live_release(base_url, key, fingerprint, work, fetch=curl_fetch, local=None)
     return document
 
 
+def live_verified_files(base_url, names, key, fingerprint, work, fetch=curl_fetch, local_root=None):
+    """Fetch top-level files of the live site into a new directory, each checked against the signed SHA256SUMS.
+
+    Nothing fetched is used before its digest matches; with local_root, each file must also equal the
+    expected site's copy.
+    """
+    directory = Path(tempfile.mkdtemp(prefix='live-files-', dir=work))
+    sums, signature = directory / 'SHA256SUMS', directory / 'SHA256SUMS.asc'
+    fetch(base_url + 'SHA256SUMS', sums)
+    fetch(base_url + 'SHA256SUMS.asc', signature)
+    try:
+        release_site.verify_signature(signature, sums, key, fingerprint)
+    except release_site.SiteRefused as error:
+        raise ServeRefused('live SHA256SUMS: ' + str(error)) from None
+    listed = {}
+    for line in sums.read_text().splitlines():
+        match = re.fullmatch(r'([0-9a-f]{64})  (\S+)', line)
+        require(match is not None, 'malformed live SHA256SUMS line')
+        listed[match.group(2)] = match.group(1)
+    os.chmod(directory, 0o755)
+    for name in names:
+        require(SEGMENT.fullmatch(name) is not None and name in listed, name + ' is not listed in the live SHA256SUMS')
+        path = directory / name
+        fetch(base_url + name, path)
+        require(release_site.sha(path) == listed[name], 'the live ' + name + ' differs from SHA256SUMS')
+        require(local_root is None or (Path(local_root) / name).read_bytes() == path.read_bytes(),
+                'the live ' + name + ' differs from the expected site')
+        os.chmod(path, 0o644)
+    return directory
+
+
 def corrupted(body):
     """The same bytes with exactly one byte changed."""
     return body[:-1] + bytes([body[-1] ^ 0x01]) if body else b'\0'
@@ -336,10 +367,11 @@ def serve_test(site_root, repo, user, work, live=False):
     if live:
         local = Path(site_root, version, 'release.json') if site_root else None
         release = live_release(values['base_url'], key, values['primary_fingerprint'], work, local=local)
-        with tempfile.TemporaryDirectory(dir=work) as scratch:
-            site_dir = Path(scratch)
-            curl_fetch(values['base_url'] + 'primary-command.txt', site_dir / 'primary-command.txt')
-            report['primary'] = expect(run_primary(site_dir, user), 'verified', 'live primary command')
+        # The command is executed only after it matches the signed SHA256SUMS (and the expected site).
+        site_dir = live_verified_files(values['base_url'], ['primary-command.txt'], key,
+                                       values['primary_fingerprint'], work,
+                                       local_root=Path(site_root, version) if site_root else None)
+        report['primary'] = expect(run_primary(site_dir, user), 'verified', 'live primary command')
         report['dnf_packages_verified'] = dnf_check(release, values['base_url'], key, values['primary_fingerprint'],
                                                     work)
         report['passed'] = True

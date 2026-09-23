@@ -122,6 +122,12 @@ class Fixture:
         (self.records / 'signed-identity.json').write_text(json.dumps(
             {'repomd_sha256': fixtures.sha(self.tree / 'repodata/repomd.xml'),
              'primary_fingerprint': self.key.fingerprint}) + '\n')
+        (self.records / 'profile-rpm-build.json').write_text('{"reproducible": true}\n')
+        # The assembler records the digests of the signing records it was built from.
+        manifest = json.loads((self.tree / 'assembly-manifest.json').read_text())
+        manifest['input_digests'] = {name: fixtures.sha(self.records / name)
+                                     for name in ['signed-identity.json', 'profile-rpm-build.json']}
+        (self.tree / 'assembly-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
         self.site = base / 'site/0.1.0'
         self.report = site_tool.compose(self.repo, self.commit, self.tree, self.records, self.legs['a'],
                                         self.legs['b'], self.profile, self.notes, self.site)
@@ -344,9 +350,37 @@ class Refusals(Case):
         (leg / 'installer-build.json').write_text(json.dumps(record))
         self.refused('tool drift between legs: build_environment', compose, leg)
         record = json.loads((self.f.legs['b'] / 'installer-build.json').read_text())
-        record['image'] = 'registry.example/other@sha256:' + 'ab' * 32
+        record['image'] = record['caller_environment']['IMAGE_DIGEST'] = 'registry.example/other@sha256:' + 'ab' * 32
         (leg / 'installer-build.json').write_text(json.dumps(record))
         self.refused('tool drift between legs: image', compose, leg)
+
+    def test_leg_records_need_every_provenance_field(self):
+        def compose(leg_b):
+            site_tool.compose(self.f.repo, self.f.commit, self.f.tree, self.f.records, self.f.legs['a'], leg_b,
+                              self.f.profile, self.f.notes, self.work / 'out/0.1.0')
+        original = json.loads((self.f.legs['b'] / 'installer-build.json').read_text())
+        for field, value in [('image', None), ('toolchain', None), ('src_root', None),
+                             ('image', 'fedora:44'), ('toolchain', {'rustc': ''}), ('src_root', 'relative'),
+                             ('source_commit', 'abc'), ('umask', '18')]:
+            with self.subTest(field=field, value=value):
+                leg = self.work / ('leg-' + field)
+                shutil.rmtree(leg, ignore_errors=True)
+                shutil.copytree(self.f.legs['b'], leg)
+                record = dict(original)
+                if value is None:
+                    del record[field]
+                else:
+                    record[field] = value
+                (leg / 'installer-build.json').write_text(json.dumps(record))
+                self.refused('installer leg b record', compose, leg)
+
+    def test_signing_records_must_be_the_assembly_inputs(self):
+        for name in ['signed-identity.json', 'profile-rpm-build.json']:
+            with self.subTest(name):
+                site = self.copy(self.f.site)
+                (site / 'records' / name).write_text('{}\n')
+                self.refused('assembly', self.f.verify, site)
+                shutil.rmtree(site.parent)
 
     def test_pinned_trust_must_be_the_committed_seam_pinned_to_release_json(self):
         site = self.copy(self.f.site)

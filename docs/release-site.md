@@ -75,7 +75,12 @@ trust seam and release key are the only trust anchors.
   requires `records/installer-trust.rs` to equal the result.
 - It requires the base URL and key fingerprint to match the committed seam.
 - It requires the installer to be an x86_64 ELF that embeds the pinned values
-  and to match both leg records.
+  and to match both leg records. The leg records must have every build record
+  field: the builder image digest, both toolchain versions, absolute source and
+  target directories, the build environment and the umask.
+- It requires `records/signed-identity.json` and `records/profile-rpm-build.json`
+  to be the records the assembly was built from, as listed in
+  `assembly-manifest.json`.
 - It re-renders `install.sh`, `primary-command.txt`, `support-matrix.json` and
   `publication-manifest.json` and requires byte equality, and it requires the
   exact file set.
@@ -106,8 +111,9 @@ resolves only to 127.0.0.1. It performs these checks:
   `release.json` records.
 
 The server indexes the site's regular files when it starts and serves only
-those. `--live` runs the positive checks against the real host. It takes the
-package inventory from the published `release.json` after verifying it under
-the committed key, and with `--site-root` it requires that file to equal the
-expected site's. The throwaway CA is removed again even if setup fails. The
+those. `--live` runs the positive checks against the real host. It runs the
+published primary command only after the command matches the signed
+`SHA256SUMS`. It takes the package inventory from the published `release.json`
+after verifying it under the committed key. With `--site-root`, both files
+must equal the expected site's. The throwaway CA is removed again even if setup fails. The
 exact DNF5 option syntax is proven in the release rehearsal.

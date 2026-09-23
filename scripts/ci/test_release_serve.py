@@ -161,6 +161,10 @@ class LiveRelease(unittest.TestCase):
         (cls.published / 'release.json').write_text(
             '{"repository": {"base_url": "' + BASE_URL + '"}, "packages": []}\n')
         cls.key.sign(cls.published / 'release.json')
+        (cls.published / 'primary-command.txt').write_text('echo verified\n')
+        (cls.published / 'SHA256SUMS').write_text(''.join(
+            f'{fixtures.sha(cls.published / name)}  {name}\n' for name in ['primary-command.txt', 'release.json']))
+        cls.key.sign(cls.published / 'SHA256SUMS', output=str(cls.published / 'SHA256SUMS.asc'))
 
     @classmethod
     def tearDownClass(cls):
@@ -178,6 +182,38 @@ class LiveRelease(unittest.TestCase):
     def test_verified_live_metadata_is_used(self):
         self.assertEqual(self.live()['repository']['base_url'], BASE_URL)
         self.assertEqual(self.live(local=self.published / 'release.json')['packages'], [])
+
+    def verified(self, names, **kwargs):
+        work = tempfile.mkdtemp(prefix='verified-')
+        self.addCleanup(shutil.rmtree, work, True)
+        return serve.live_verified_files(BASE_URL, names, self.key.public, self.key.fingerprint, work, self.fetch,
+                                         **kwargs)
+
+    def test_live_files_are_checked_against_the_signed_sums_before_use(self):
+        directory = self.verified(['primary-command.txt'])
+        self.assertEqual((directory / 'primary-command.txt').read_text(), 'echo verified\n')
+        with self.assertRaisesRegex(serve.ServeRefused, 'not listed'):
+            self.verified(['install.sh'])
+        command = self.published / 'primary-command.txt'
+        command.write_text('echo tampered\n')
+        try:
+            with self.assertRaisesRegex(serve.ServeRefused, 'differs from SHA256SUMS'):
+                self.verified(['primary-command.txt'])
+        finally:
+            command.write_text('echo verified\n')
+        with tempfile.TemporaryDirectory() as tmp:
+            local = Path(tmp) / 'primary-command.txt'
+            local.write_text('echo expected elsewhere\n')
+            with self.assertRaisesRegex(serve.ServeRefused, 'expected site'):
+                self.verified(['primary-command.txt'], local_root=Path(tmp))
+        signature = self.published / 'SHA256SUMS.asc'
+        original = signature.read_bytes()
+        try:
+            self.other.sign(self.published / 'SHA256SUMS', output=str(signature))
+            with self.assertRaisesRegex(serve.ServeRefused, 'release-key policy'):
+                self.verified(['primary-command.txt'])
+        finally:
+            signature.write_bytes(original)
 
     def test_unverified_or_different_metadata_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
