@@ -56,6 +56,7 @@ jobs:
             finding=$(jq ".findings | map(select(.observation != \"check-failed\")) | .[$index]" kernels.json)
             key=$(printf '%s' "$finding" | jq -r '.dedup_key')
             printf '%s' "$finding" | jq -r '
+              def cell: gsub("(?<c>[\\\\|`])"; "\\\(.c)");
               {"probe-required": "- `probe-required`: the kernel is inside the profile window and admitted by policy. Record a per-kernel probe as described in docs/kernel-probes.md.",
                "probe-failed": "- `probe-failed`: a recorded probe of the current component set failed. Fix the failure or narrow the window before closing this issue.",
                "requalification-required": "- `requalification-required`: the kernel is at or above the profile window. Installation refuses it on that profile until a profile is qualified for its series."} as $guidance |
@@ -64,7 +65,7 @@ jobs:
               "- Bodhi status: \(.bodhi_status)\n" +
               "- Update: \(.update)\n\n" +
               "| Profile | Window | Action |\n|---|---|---|\n" +
-              ([.actions[] | "| \(.profile | gsub("[|`]"; "")) | \(.window) | `\(.action)` |"] | join("\n")) + "\n\n" +
+              ([.actions[] | "| \(.profile | cell) | \(.window | cell) | `\(.action)` |"] | join("\n")) + "\n\n" +
               ([.actions[].action] | unique | map($guidance[.]) | join("\n")) + "\n"' > issue-body.md
             issue=$(printf '%s' "$finding" | jq -r '.issue // empty')
             if [ -z "$issue" ]; then
