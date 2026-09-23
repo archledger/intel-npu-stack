@@ -49,9 +49,17 @@ fn main() -> ExitCode {
     }
 }
 
-fn synthetic_facts() -> Result<PlatformFacts, InstallError> {
-    let kernel = stack_schema::KernelVersion::parse_release("7.1.13")
-        .expect("hardcoded synthetic kernel release is valid by construction");
+/// Synthetic facts for a disposable VM guest. The kernel is the profile's own
+/// minimum, which is inside the release's half-open kernel window by the
+/// profile schema, so the harness follows whatever window the release pins.
+fn synthetic_facts(profile: &stack_schema::Profile) -> Result<PlatformFacts, InstallError> {
+    let kernel = stack_schema::KernelVersion::parse_release(&profile.kernel.min).map_err(|_| {
+        InstallError {
+            exit_code: 10,
+            code: "INSTALL_PROFILE_UNSUPPORTED",
+            message: "profile kernel minimum is not a valid release",
+        }
+    })?;
     Ok(PlatformFacts {
         os_id: "fedora".into(),
         os_version_id: "44".into(),
@@ -80,8 +88,8 @@ fn run(options: InstallOptions) -> Result<ExitCode, InstallError> {
         },
         &runner,
     )?;
-    let facts = synthetic_facts()?;
     let profile = release.profile();
+    let facts = synthetic_facts(profile)?;
     validate_request(&options, &facts, std::slice::from_ref(profile))?;
     let packages = release
         .manifest()

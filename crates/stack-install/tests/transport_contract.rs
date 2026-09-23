@@ -153,6 +153,7 @@ fn exact_release_is_authenticated_and_bound_before_it_can_be_used() {
     for base in [
         "https://downloads.example.invalid/0.1.0/",
         "https://github.com/example/project/releases/download/v0.1.0/",
+        "https://archledger.github.io/intel-npu-stack/0.1.0/",
     ] {
         let runner = FixtureTransport::new("");
         let release = fetch_release(&location(&digest, base), &runner).unwrap();
@@ -192,6 +193,8 @@ fn unsafe_release_location_is_rejected_before_any_process() {
     for base in [
         "http://example.invalid/0.1.0/",
         "https://example.invalid/latest/",
+        "https://archledger.github.io/intel-npu-stack/latest/",
+        "https://archledger.github.io/intel-npu-stack/",
         "https://example.invalid/0.1.0/../",
     ] {
         let runner = FixtureTransport::new("");

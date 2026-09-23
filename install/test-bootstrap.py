@@ -140,5 +140,29 @@ sys.exit(int(os.environ['TEST_CURL_EXIT']))
         self.assertEqual(result.returncode, 0, result.stderr)
 
 
+
+class PagesLocation(unittest.TestCase):
+    """The published pair renders for the versioned GitHub Pages base."""
+
+    BASE = 'https://archledger.github.io/intel-npu-stack/0.1.0/'
+
+    def test_bootstrap_and_primary_command_render_for_pages(self):
+        digest = hashlib.sha256(b'installer').hexdigest()
+        with tempfile.TemporaryDirectory() as temporary:
+            for name, text in [
+                    ('install.sh', renderer.render_bootstrap('0.1.0', self.BASE + 'intel-npu-stack-install', digest)),
+                    ('primary', renderer.render_install_command('0.1.0', self.BASE + 'install.sh', digest))]:
+                script = Path(temporary) / name
+                script.write_text(text)
+                self.assertEqual(subprocess.run(['sh', '-n', str(script)]).returncode, 0, name)
+                self.assertIn(self.BASE, text)
+
+    def test_unversioned_pages_urls_are_refused(self):
+        digest = hashlib.sha256(b'installer').hexdigest()
+        for url in ['https://archledger.github.io/intel-npu-stack/install.sh',
+                    'https://archledger.github.io/intel-npu-stack/latest/install.sh']:
+            with self.subTest(url), self.assertRaises(ValueError):
+                renderer.render_install_command('0.1.0', url, digest)
+
 if __name__ == '__main__':
     unittest.main()
