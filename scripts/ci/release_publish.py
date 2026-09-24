@@ -7,6 +7,7 @@
   release_publish.py publish-release --assets DIR --notes FILE --sha COMMIT
   release_publish.py compose-pages --registry FILE --output _site --manifest FILE [--new-version V]
   release_publish.py verify-live --archive FILE [--pages-manifest FILE] [--fetched DIR] [--timeout SECONDS]
+                                 [--sha COMMIT]
 
 Standard library only. The REST API base comes from GITHUB_API_URL, the
 repository from GITHUB_REPOSITORY and the token from GH_TOKEN. The version, base
@@ -47,8 +48,9 @@ verify-live waits until the plain URLs of the version serve the archive's
 bytes, then streams every file to disk cache-busted and compares its digest,
 repacks the fetched files into the canonical archive, verifies SHA256SUMS.asc
 and install.sh.asc, requires the fetched files to be exactly those the signed
-SHA256SUMS lists with its digests, and compares the live SHA256SUMS of the
-other versions with the Pages manifest.
+SHA256SUMS lists with its digests and the signed publication-manifest.json to
+name this version, base URL and release key (and the --sha commit when given),
+and compares the live SHA256SUMS of the other versions with the Pages manifest.
 
 Every release archive is first scanned by its raw tar headers (release_tar):
 at most MAX_MEMBERS headers, extension headers included, and only regular
@@ -570,7 +572,7 @@ def site_location(base_url):
 
 
 def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=None, timeout=1200,
-                fetch=fetch_public, sleep=time.sleep, clock=time.monotonic):
+                fetch=fetch_public, sleep=time.sleep, clock=time.monotonic, commit=None):
     version, base = values['version'], values['base_url']
     expected = {}
     with open_archive(archive) as tar:
@@ -608,6 +610,7 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
                 'the live files are not exactly the files the signed SHA256SUMS lists')
         for path, digest in sorted(listed.items()):
             require(release_site.sha(root / path) == digest, f'the live {path} differs from the signed SHA256SUMS')
+        check_identity(root, version, base, fingerprint, commit)
     others = {}
     if pages_manifest is not None:
         host, prefix, _ = site_location(base)
@@ -649,7 +652,7 @@ def main(argv=None):
         if args.command == 'verify-live':
             require(args.archive is not None, 'verify-live requires --archive')
             result = verify_live(values, key, values['primary_fingerprint'], args.archive, args.pages_manifest,
-                                 args.fetched, args.timeout)
+                                 args.fetched, args.timeout, commit=args.sha)
         else:
             gh = GitHub(os.environ.get('GITHUB_API_URL', 'https://api.github.com'),
                         os.environ.get('GITHUB_REPOSITORY'), os.environ.get('GH_TOKEN'))

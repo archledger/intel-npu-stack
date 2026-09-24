@@ -203,7 +203,9 @@ only the standard library:
   streams every file to disk and compares it with the archive, repacks the live
   files into the canonical archive, verifies `SHA256SUMS.asc` and
   `install.sh.asc` under the committed key, and requires the files to be
-  exactly those the signed `SHA256SUMS` lists, with its digests.
+  exactly those the signed `SHA256SUMS` lists, with its digests. The signed
+  `publication-manifest.json` must name this version, base URL and release key,
+  and the `--sha` commit when one is given.
 
 Before `tarfile` reads a release archive or the inputs tarball,
 `scripts/ci/release_tar.py` scans its raw headers. At most 20000 headers are

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 """Contract for publishing through immutable releases and composing the Pages site, against a fake GitHub."""
+import contextlib
 import hashlib
 import http.server
 import io
@@ -712,6 +713,20 @@ class Publication(unittest.TestCase):
                     release_site.write_archive(site, stream)
                 self.refused(message, self.verify, self.serve_live(site, '0.1.0'), archive=archive)
 
+    def test_live_verification_is_bound_to_the_signed_release_identity(self):
+        for label, identity in [('an older signed site repacked under this version', {'pinned': '0.0.9'}),
+                                ('another base URL', {'base_url': 'https://archledger.github.io/other/0.1.0/'}),
+                                ('another release key', {'primary_fingerprint': self.other.fingerprint})]:
+            with self.subTest(label):
+                self.setUp()
+                site, archive, _ = make_release(self.work / 'old', self.key, '0.1.0', **identity)
+                self.refused('the signed publication manifest in the 0.1.0 archive names another release',
+                             self.verify, self.serve_live(site, '0.1.0'), archive=archive)
+        with self.subTest('another commit'):
+            self.setUp()
+            self.refused('names another release', self.verify, self.serve_live(self.site, '0.1.0'), commit='d' * 40)
+            self.assertTrue(self.verify(self.serve_live(self.site, '0.1.0'), commit=COMMIT)[0]['passed'])
+
     def test_live_installer_bootstrap_signature_must_pass_the_key_policy(self):
         # Every live byte equals the archive, but the archive's install.sh.asc is by another key.
         forged = self.work / 'forged/0.1.0'
@@ -849,6 +864,14 @@ class Transport(unittest.TestCase):
         with self.assertRaises(publish.PublishRefused) as caught:
             publish.http('GET', 'http://127.0.0.1:1/x?token=secret', timeout=5)
         self.assertNotIn('secret', str(caught.exception))
+
+
+class Wiring(unittest.TestCase):
+    def test_verify_live_is_given_the_release_commit(self):
+        with mock.patch.object(publish, 'verify_live', return_value={'passed': True}) as verify, \
+                contextlib.redirect_stdout(io.StringIO()):
+            publish.main(['verify-live', '--archive', 'release.tar', '--sha', 'd' * 40])
+        self.assertEqual(verify.call_args.kwargs['commit'], 'd' * 40)
 
 
 class Sums(unittest.TestCase):
