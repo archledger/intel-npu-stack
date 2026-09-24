@@ -46,8 +46,9 @@ site must fit the size budget.
 verify-live waits until the plain URLs of the version serve the archive's
 bytes, then streams every file to disk cache-busted and compares its digest,
 repacks the fetched files into the canonical archive, verifies SHA256SUMS.asc
-and install.sh.asc, and compares the live SHA256SUMS of the other versions with
-the Pages manifest.
+and install.sh.asc, requires the fetched files to be exactly those the signed
+SHA256SUMS lists with its digests, and compares the live SHA256SUMS of the
+other versions with the Pages manifest.
 
 Every release archive is first scanned by its raw tar headers (release_tar):
 at most MAX_MEMBERS headers, extension headers included, and only regular
@@ -255,9 +256,11 @@ class GitHub:
     def upload(self, release, name, path):
         base = release['upload_url'].split('{', 1)[0]
         url = base + '?' + urllib.parse.urlencode({'name': name})
-        data = Path(path).read_bytes()
-        status, _, content = self.transport('POST', url, self.headers(extra={
-            'Content-Type': 'application/octet-stream', 'Content-Length': str(len(data))}), data)
+        # The open file is the body: http.client sends it in blocks, so no asset is held in memory.
+        with Path(path).open('rb') as data:
+            status, _, content = self.transport('POST', url, self.headers(extra={
+                'Content-Type': 'application/octet-stream', 'Content-Length': str(os.fstat(data.fileno()).st_size)}),
+                data)
         require(status == 201, f'uploading {name} returned HTTP {status}')
         return json.loads(content)
 
@@ -600,6 +603,11 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
             release_site.verify_signature(root / 'install.sh.asc', root / 'install.sh', key, fingerprint)
         except release_site.SiteRefused as error:
             raise PublishRefused('live ' + str(error)) from None
+        listed = parse_sums((root / 'SHA256SUMS').read_bytes())
+        require(set(listed) | {'SHA256SUMS', 'SHA256SUMS.asc'} == set(expected),
+                'the live files are not exactly the files the signed SHA256SUMS lists')
+        for path, digest in sorted(listed.items()):
+            require(release_site.sha(root / path) == digest, f'the live {path} differs from the signed SHA256SUMS')
     others = {}
     if pages_manifest is not None:
         host, prefix, _ = site_location(base)

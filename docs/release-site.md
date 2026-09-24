@@ -182,7 +182,7 @@ only the standard library:
   refused, and a stale draft is deleted by hand.
 - `publish-release` runs the same publication checks before it creates or
   resumes anything, and the notes must be the `release_site.py notes` rendering
-  of this site and archive. It uploads the archive, `SHA256SUMS`,
+  of this site and archive. It streams the archive, `SHA256SUMS`,
   `SHA256SUMS.asc` and `publication-manifest.json` to a draft. It sets the
   draft's title and notes to this publication's and streams every asset back to
   disk without sending the token to the storage host. It then publishes the
@@ -200,9 +200,10 @@ only the standard library:
   immutable too. The live `SHA256SUMS` of the other versions must be unchanged,
   and the site must stay within 950 MiB.
 - `verify-live` waits until the plain URLs serve the new release. It then
-  streams every file to disk and compares it with the archive, repacks the
-  live files into the canonical archive, and verifies `SHA256SUMS.asc` and
-  `install.sh.asc` under the committed key.
+  streams every file to disk and compares it with the archive, repacks the live
+  files into the canonical archive, verifies `SHA256SUMS.asc` and
+  `install.sh.asc` under the committed key, and requires the files to be
+  exactly those the signed `SHA256SUMS` lists, with its digests.
 
 Before `tarfile` reads a release archive or the inputs tarball,
 `scripts/ci/release_tar.py` scans its raw headers. At most 20000 headers are

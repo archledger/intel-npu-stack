@@ -40,7 +40,7 @@ class FakeGitHub:
         self.releases, self.blobs, self.tags = [], {}, {}
         self.immutable_on_publish, self.tag_override, self.page_size = True, None, 2
         self.corrupt, self.fail, self.storage_auth, self.next_id = set(), {}, [], 1
-        self.frozen_notes = False
+        self.frozen_notes, self.upload_bodies = False, []
 
     def new_id(self):
         self.next_id += 1
@@ -66,6 +66,10 @@ class FakeGitHub:
         self.releases.append(release)
         return release
 
+    @staticmethod
+    def require_length(headers, body):
+        assert int((headers or {})['Content-Length']) == len(body), 'the upload must declare its length'
+
     def reply(self, status, body=None, headers=None):
         return status, headers or {}, b'' if body is None else json.dumps(body).encode()
 
@@ -88,7 +92,10 @@ class FakeGitHub:
                 return self.reply(status, {'message': 'injected'})
         if url.startswith(UPLOADS):
             release = next(r for r in self.releases if r['id'] == int(path.split('/')[-2]))
-            return self.reply(201, self.add_asset(release, query['name'][0], data))
+            self.upload_bodies.append(data)
+            body = data.read() if hasattr(data, 'read') else data
+            self.require_length(headers, body)
+            return self.reply(201, self.add_asset(release, query['name'][0], body))
         repo = f'/repos/{REPOSITORY}'
         rest = path[len(repo):] if path.startswith(repo) else None
         if rest == '/pages' and method == 'GET':
@@ -299,6 +306,9 @@ class Publication(unittest.TestCase):
         self.assertEqual(self.fake.tags['v0.1.0'], COMMIT)
         self.assertTrue(self.fake.storage_auth and not any(self.fake.storage_auth),
                         'asset downloads must not send the token to the storage host')
+        bodies = self.fake.upload_bodies
+        self.assertTrue(bodies and not any(isinstance(body, bytes) for body in bodies),
+                        'uploads must stream from the asset file')
         again = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertEqual(again['state'], 'published-resume')
         self.assertEqual(len(self.fake.releases), 1)
@@ -686,6 +696,22 @@ class Publication(unittest.TestCase):
                 tar.add(self.site / relative, arcname='0.1.0/' + relative)
         self.refused('repack', self.verify, self.serve_live(self.site, '0.1.0'), archive=other)
 
+    def test_live_files_must_be_exactly_the_signed_sums(self):
+        for label, change, message in [
+                ('edited after signing', lambda site: (site / 'release.json').write_bytes(b'{"edited": true}\n'),
+                 'the live release.json differs from the signed SHA256SUMS'),
+                ('unlisted file', lambda site: (site / 'extra.txt').write_bytes(b'extra\n'),
+                 'the live files are not exactly the files the signed SHA256SUMS lists')]:
+            with self.subTest(label):
+                self.setUp()
+                site = self.work / 'edited/0.1.0'
+                shutil.copytree(self.site, site)
+                change(site)
+                archive = self.work / 'intel-npu-stack-0.1.0.tar'
+                with archive.open('xb') as stream:
+                    release_site.write_archive(site, stream)
+                self.refused(message, self.verify, self.serve_live(site, '0.1.0'), archive=archive)
+
     def test_live_installer_bootstrap_signature_must_pass_the_key_policy(self):
         # Every live byte equals the archive, but the archive's install.sh.asc is by another key.
         forged = self.work / 'forged/0.1.0'
@@ -784,6 +810,33 @@ class Transport(unittest.TestCase):
         self.addCleanup(setattr, publish, 'MAX_ASSET', limit)
         with self.assertRaisesRegex(publish.PublishRefused, 'size limit'):
             publish.http('GET', url, sink=io.BytesIO())
+
+    def test_uploads_stream_the_file_with_its_length(self):
+        received = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers['Content-Length'])
+                received.append((length, self.headers.get('Transfer-Encoding'), self.rfile.read(length)))
+                answer = json.dumps({'id': 7, 'name': 'asset'}).encode()
+                self.send_response(201)
+                self.send_header('Content-Length', str(len(answer)))
+                self.end_headers()
+                self.wfile.write(answer)
+
+            def log_message(self, *args):
+                pass
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        with tempfile.TemporaryDirectory() as work:
+            path = Path(work) / 'asset'
+            path.write_bytes(bytes(range(256)) * 400)
+            gh = publish.GitHub(API, REPOSITORY, 'token-value')
+            release = {'upload_url': f'http://127.0.0.1:{server.server_address[1]}/assets{{?name,label}}'}
+            self.assertEqual(gh.upload(release, 'asset', path), {'id': 7, 'name': 'asset'})
+        self.assertEqual(received, [(102400, None, bytes(range(256)) * 400)])
 
     def test_pagination_stays_on_the_api_host(self):
         def transport(method, url, headers=None, data=None):
