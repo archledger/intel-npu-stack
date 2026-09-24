@@ -9,9 +9,10 @@ headers read nor that memory. scan() walks the raw 512-byte headers of the
 (decompressed) stream first, with the header parser tarfile uses. It counts
 every header, extension headers included, allows only the header types the
 caller names, caps extension data and runs of extension headers, refuses pax
-records that change a member's size or describe a sparse file, and seeks over
-member data without reading it. open_stream() gives the decompressed stream
-that is scanned and then handed to tarfile, so both read the same bytes.
+records that change a member's size or describe a sparse file, can cap the sum
+of the declared member sizes, and seeks over member data without reading it.
+open_stream() gives the decompressed stream that is scanned and then handed to
+tarfile, so both read the same bytes.
 """
 import bz2
 import gzip
@@ -69,9 +70,13 @@ def pax_keys(data):
     return keys
 
 
-def scan(stream, limit, types):
-    """The number of raw headers before the end marker; refused beyond limit, outside types or the bounds."""
-    headers = run = 0
+def scan(stream, limit, types, max_bytes=None):
+    """The number of raw headers before the end marker; refused beyond limit, outside types or the bounds.
+
+    With max_bytes, the sizes the regular members declare are summed and refused past it before their data is
+    skipped, so a compressed stream is never decompressed beyond that budget.
+    """
+    headers = run = total = 0
     while True:
         block = stream.read(BLOCK)
         if len(block) < BLOCK or not any(block):
@@ -97,4 +102,7 @@ def scan(stream, limit, types):
         else:
             run = 0
             if info.type in tarfile.REGULAR_TYPES:  # tarfile skips data only for regular members
+                total += info.size
+                refuse_unless(max_bytes is None or total <= max_bytes,
+                              f'the regular members declare more than {max_bytes} bytes')
                 stream.seek(stored, 1)

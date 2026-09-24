@@ -118,6 +118,16 @@ class Inputs(unittest.TestCase):
         with self.assertRaisesRegex(inputs_tool.InputsRefused, 'too many members'):
             self.extract(archive, output=self.work / 'hidden')
 
+    def test_declared_sizes_are_bounded_before_decompression_reaches_the_data(self):
+        limit, inputs_tool.MAX_UNPACKED = inputs_tool.MAX_UNPACKED, 4096
+        self.addCleanup(setattr, inputs_tool, 'MAX_UNPACKED', limit)
+        info = tarfile.TarInfo('big')
+        info.size = 1 << 20
+        archive = self.work / 'big.tar.gz'
+        self.pack(archive, [(info, bytes(1 << 20))])
+        with self.assertRaisesRegex(inputs_tool.InputsRefused, 'regular members declare more than 4096 bytes'):
+            self.extract(archive, output=self.work / 'big')
+
     def test_inputs_are_scanned_before_tarfile_reads_them(self):
         info = tarfile.TarInfo('././@LongLink')
         info.type, info.size = tarfile.GNUTYPE_LONGNAME, 900 << 20

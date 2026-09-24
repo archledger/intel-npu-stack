@@ -24,11 +24,11 @@ draft-resume (a draft whose assets are a byte-identical subset of this
 publication) or published-resume (an immutable release with exactly these
 assets whose tag is the release commit), and refuses anything else.
 
-publish-release runs the same publication checks, creates or resumes the
-draft, sets its title and notes, uploads the missing assets, reads every asset
-back, publishes it as the latest release and requires the release to be
-immutable with the same title, notes and assets and its tag at the release
-commit.
+publish-release runs the same publication checks, requires the notes to be the
+release_site rendering of this site and archive, creates or resumes the draft,
+sets its title and notes, uploads the missing assets, reads every asset back,
+publishes it as the latest release and requires the release to be immutable
+with the same title, notes and assets and its tag at the release commit.
 
 compose-pages builds _site/<version>/ from every non-draft, non-prerelease
 vX.Y.Z release. Every such release must be immutable. A release retired in
@@ -309,8 +309,11 @@ def canonical_sha(root):
         return hashlib.file_digest(rendered, 'sha256').hexdigest()
 
 
-def local_assets(assets_dir, values, commit, key):
-    """Digests of the publication assets, once the signed archive is proven to be this release within budget."""
+def local_assets(assets_dir, values, commit, key, notes=None):
+    """Digests of the publication assets, once the signed archive is proven to be this release within budget.
+
+    With notes, they must also be the release_site rendering of this site and archive.
+    """
     version, assets = values['version'], Path(assets_dir)
     digests = {}
     for name in release_assets(version):
@@ -333,6 +336,12 @@ def local_assets(assets_dir, values, commit, key):
         require(canonical_sha(root) == digests[archive.name],
                 f'the {version} archive is not the canonical archive of its site')
         total = site_bytes(root)
+        if notes is not None:
+            try:
+                rendered = release_site.render_notes(root, archive)
+            except release_site.SiteRefused as error:
+                raise PublishRefused(f'{version}: {error}') from None
+            require(rendered == Path(notes).read_bytes(), 'the release notes are not the rendering of this release')
     require(total <= MAX_SITE, f'the {version} site is {total} bytes, above the {MAX_SITE}-byte Pages budget')
     return digests
 
@@ -392,7 +401,7 @@ def check_release_assets(gh, release, local, readback):
 
 def publish_release(gh, values, assets_dir, notes, commit, key):
     version, tag = values['version'], 'v' + values['version']
-    local = local_assets(assets_dir, values, commit, key)
+    local = local_assets(assets_dir, values, commit, key, notes)
     body = Path(notes).read_text()
     require(0 < len(body) <= 120000, 'release notes must be non-empty and within the GitHub limit')
     title = f'Intel NPU Stack {version}'

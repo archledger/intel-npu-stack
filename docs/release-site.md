@@ -181,12 +181,13 @@ only the standard library:
   assets, tag at the release commit). Prereleases and anything else are
   refused, and a stale draft is deleted by hand.
 - `publish-release` runs the same publication checks before it creates or
-  resumes anything. It uploads the archive, `SHA256SUMS`, `SHA256SUMS.asc` and
-  `publication-manifest.json` to a draft. It sets the draft's title and notes
-  to this publication's and streams every asset back to disk without sending
-  the token to the storage host. It then publishes the release as the latest
-  and requires it to be immutable, with the same title and notes and its tag at
-  the release commit.
+  resumes anything, and the notes must be the `release_site.py notes` rendering
+  of this site and archive. It uploads the archive, `SHA256SUMS`,
+  `SHA256SUMS.asc` and `publication-manifest.json` to a draft. It sets the
+  draft's title and notes to this publication's and streams every asset back to
+  disk without sending the token to the storage host. It then publishes the
+  release as the latest and requires it to be immutable, with the same title
+  and notes and its tag at the release commit.
 - `compose-pages` builds the Pages tree from immutable, non-draft,
   non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the
   files its signed `SHA256SUMS` lists, each at a plain relative path, and the
@@ -209,5 +210,7 @@ allowed, extension headers included. Only the header types each archive needs
 are admitted: regular files and GNU long names in a release archive, and also
 directories and pax headers in the inputs. Extension data is capped at 64 KiB,
 with at most four extension headers in a row. pax records that change a size or
-describe a sparse file are refused, and member data is skipped, not read. The
-release workflow does not call these tools yet.
+describe a sparse file are refused, and member data is skipped, not read. For
+the inputs, the declared member sizes must also fit the 8 GiB unpacked budget
+before any data is decompressed. The release workflow does not call these tools
+yet.

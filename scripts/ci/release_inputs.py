@@ -13,9 +13,9 @@ repeats the same for the archive handed between jobs, whose digest must equal
 both the dispatch input and the preflight job's output. Before tarfile reads the
 (decompressed) tarball, release_tar scans its raw headers: at most MAX_MEMBERS
 headers, extension headers included, and only files, directories, GNU long
-names and pax headers. Safe extraction then accepts only regular files and
-directories with plain relative names, each at most once, within the size
-limit, and extracts with the tarfile data filter.
+names and pax headers, whose declared sizes fit MAX_UNPACKED. Safe extraction
+then accepts only regular files and directories with plain relative names, each
+at most once, within the size limit, and extracts with the tarfile data filter.
 Outputs are never overwritten.
 """
 import argparse
@@ -108,7 +108,7 @@ def extract(archive, output):
     try:
         with release_tar.open_stream(archive) as stream:
             # The raw headers are bounded first; tarfile then reads the same decompressed bytes.
-            release_tar.scan(stream, MAX_MEMBERS, release_tar.INPUT_TYPES)
+            release_tar.scan(stream, MAX_MEMBERS, release_tar.INPUT_TYPES, MAX_UNPACKED)
             stream.seek(0)
             with tarfile.open(fileobj=stream, mode='r:') as tar:
                 members = safe_members(tar)

@@ -153,11 +153,19 @@ def make_release(root, key, version, **identity):
     manifest = {'installer': {'pinned': {'version': pinned, 'base_url': named['base_url'],
                                          'primary_fingerprint': named['primary_fingerprint']}},
                 'source_commit': named['source_commit']}
+    matrix = {'repository': {'base_url': named['base_url'], 'key_fingerprint': named['primary_fingerprint']},
+              'kernel': {'min': '7.2.5', 'max_exclusive': '7.3.0', 'module': 'intel_vpu', 'policy': 'Policy.',
+                         'tested': [{'release': '7.2.6-200.fc44.x86_64', 'tests': ['probe']}]},
+              'hardware': [{'vendor': '8086', 'device': '643e'}], 'not_supported': ['kernels from 7.3.0'],
+              'platform': {'version_id': '44', 'arch': 'x86_64', 'id': 'fedora'},
+              'profile': {'id': 'fixture', 'status': 'qualified'}, 'qualification': {'evidence_sha256': '0' * 64},
+              'rollback': {'index': 'evidence/rollback/rollback-index.json', 'instructions': 'docs/install-fedora.md'}}
     files = {'release.json': f'{{"stack_release": "{version}"}}\n'.encode(), 'release.json.sig': b'signature\n',
              'profile.toml': b'id = "fixture"\n', 'install.sh': b'#!/bin/sh\nexit 0\n',
              'intel-npu-stack-install': b'\x7fELF installer ' + version.encode() + bytes(200),
              'primary-command.txt': b'(true)\n', 'repodata/repomd.xml': b'<repomd/>\n',
-             'publication-manifest.json': (json.dumps(manifest, sort_keys=True) + '\n').encode()}
+             'publication-manifest.json': (json.dumps(manifest, sort_keys=True) + '\n').encode(),
+             'support-matrix.json': (json.dumps(matrix, sort_keys=True) + '\n').encode()}
     for name, data in files.items():
         (site / name).parent.mkdir(parents=True, exist_ok=True)
         (site / name).write_bytes(data)
@@ -214,7 +222,7 @@ class Publication(unittest.TestCase):
         for name, data in self.assets.items():
             (self.assets_dir / name).write_bytes(data)
         self.notes = self.work / 'notes.md'
-        self.notes.write_text('# Intel NPU Stack 0.1.0\n')
+        self.notes.write_bytes(release_site.render_notes(self.site, self.archive))
         self.live = {}
 
     def fetch(self, url, sink=None):
@@ -286,7 +294,7 @@ class Publication(unittest.TestCase):
         self.assertEqual(result['state'], 'fresh')
         release = self.fake.releases[0]
         self.assertEqual((release['draft'], release['immutable'], release['body']),
-                         (False, True, '# Intel NPU Stack 0.1.0\n'))
+                         (False, True, self.notes.read_text()))
         self.assertEqual(sorted(a['name'] for a in release['assets']), sorted(self.assets))
         self.assertEqual(self.fake.tags['v0.1.0'], COMMIT)
         self.assertTrue(self.fake.storage_auth and not any(self.fake.storage_auth),
@@ -317,7 +325,17 @@ class Publication(unittest.TestCase):
         draft.update(name='Old title', body='stale qualification digests\n')
         publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertEqual((draft['draft'], draft['name'], draft['body']),
-                         (False, 'Intel NPU Stack 0.1.0', '# Intel NPU Stack 0.1.0\n'))
+                         (False, 'Intel NPU Stack 0.1.0', self.notes.read_text()))
+
+    def test_the_notes_must_be_the_rendering_of_this_release(self):
+        for label, notes in [('stale', b'# Intel NPU Stack 0.1.0\n'),
+                             ('edited digest', self.notes.read_bytes().replace(b'| SHA256SUMS | `', b'| SHA256SUMS | `0'))]:
+            with self.subTest(label):
+                self.setUp()
+                self.notes.write_bytes(notes)
+                self.refused('the release notes are not the rendering of this release', publish.publish_release,
+                             self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
+                self.assertEqual(self.fake.releases, [], 'nothing may be created before the check')
 
     def test_notes_are_checked_before_and_after_publication(self):
         draft = self.fake.add_release('v0.1.0', draft=True, immutable=False)

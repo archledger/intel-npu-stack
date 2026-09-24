@@ -65,8 +65,8 @@ class CountingStream(io.BytesIO):
         return data
 
 
-def scan(data, limit=100, types=release_tar.INPUT_TYPES):
-    return release_tar.scan(io.BytesIO(data), limit, types)
+def scan(data, limit=100, types=release_tar.INPUT_TYPES, **kwargs):
+    return release_tar.scan(io.BytesIO(data), limit, types, **kwargs)
 
 
 class Scan(unittest.TestCase):
@@ -141,6 +141,17 @@ class Scan(unittest.TestCase):
             with self.subTest(label):
                 data = header('././@PaxHeader', tarfile.XHDTYPE, len(body)) + padded(body)
                 self.refused('malformed pax header', data + member() + END)
+
+    def test_declared_member_sizes_are_bounded_before_their_data_is_skipped(self):
+        data = member(data=bytes(600)) + header('big', size=10 << 20) + END
+        self.assertEqual(release_tar.scan(io.BytesIO(member(data=bytes(600)) + END), 100, release_tar.INPUT_TYPES,
+                                          max_bytes=600), 1)
+        stream = io.BytesIO(data)
+        with self.assertRaisesRegex(release_tar.TarRefused, 'regular members declare more than 1000 bytes'):
+            release_tar.scan(stream, 100, release_tar.INPUT_TYPES, max_bytes=1000)
+        # one header and two data blocks for the first member, then the header of the oversized one
+        self.assertEqual(stream.tell(), 4 * tarfile.BLOCKSIZE, 'the oversized member must not be skipped')
+        self.refused('declare more than 599 bytes', member(data=bytes(600)) + END, max_bytes=599)
 
     def test_member_data_is_skipped_not_read(self):
         stream = CountingStream(member(data=bytes(4 << 20)) + END)
