@@ -173,6 +173,18 @@ def make_release(root, key, version, **identity):
     return site, archive, assets
 
 
+def noncanonical(archive):
+    """The same members as a canonical archive, in reverse order with other metadata."""
+    with tarfile.open(archive) as tar:
+        members = [(member, tar.extractfile(member).read()) for member in tar.getmembers()]
+    stream = io.BytesIO()
+    with tarfile.open(fileobj=stream, mode='w', format=tarfile.PAX_FORMAT) as tar:
+        for member, data in reversed(members):
+            member.mtime, member.mode = 1, 0o600
+            tar.addfile(member, io.BytesIO(data))
+    return stream.getvalue()
+
+
 @unittest.skipUnless(TOOLS, 'gpg is required')
 class Publication(unittest.TestCase):
     @classmethod
@@ -378,6 +390,10 @@ class Publication(unittest.TestCase):
         (self.assets_dir / 'publication-manifest.json').write_bytes(b'{"edited": true}\n')
         self.refused_before_publication('publication-manifest.json differs from SHA256SUMS')
 
+    def test_a_noncanonical_archive_is_refused_before_publication(self):
+        (self.assets_dir / 'intel-npu-stack-0.1.0.tar').write_bytes(noncanonical(self.archive))
+        self.refused_before_publication('not the canonical archive of its site')
+
     def test_a_site_over_the_pages_budget_is_refused_before_publication(self):
         size = sum(path.stat().st_size for path in self.site.rglob('*') if path.is_file())
         with mock.patch.object(publish, 'MAX_SITE', size - 1):
@@ -465,6 +481,20 @@ class Publication(unittest.TestCase):
                              self.compose)
                 self.assertFalse((self.work / 'out/_site').exists())
 
+    def test_compose_binds_each_release_to_its_tag_commit(self):
+        cases = [
+            ('a tag at another commit', lambda: self.fake.tags.update({'v0.2.0': 'd' * 40}),
+             'the signed publication manifest in the 0.2.0 archive names another release'),
+            ('a missing tag', lambda: self.fake.tags.pop('v0.2.0'), 'release v0.2.0 has no tag'),
+        ]
+        for label, damage, message in cases:
+            with self.subTest(label):
+                self.setUp()
+                self.publish_both()
+                damage()
+                self.refused(message, self.compose)
+                self.assertFalse((self.work / 'out/_site').exists())
+
     def test_compose_refusals(self):
         def replace(version, name, data, digest=None):
             release = next(r for r in self.fake.releases if r['tag_name'] == 'v' + version)
@@ -503,6 +533,8 @@ class Publication(unittest.TestCase):
             ('live drift', 'live 0.1.0/SHA256SUMS differs',
              lambda: self.live.update({'/intel-npu-stack/0.1.0/SHA256SUMS': b'changed'})),
             ('extra asset', 'exactly the release assets', lambda: replace('0.2.0', 'notes.txt', b'extra')),
+            ('noncanonical archive', 'not the canonical archive of its site',
+             lambda: replace('0.2.0', tar_name, noncanonical(self.archive2))),
         ]
         for label, message, damage in cases:
             with self.subTest(label):

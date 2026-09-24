@@ -18,10 +18,11 @@ exists for the version, and the live release.json returns 404. The publish
 phase first checks the publication itself: SHA256SUMS.asc must pass the
 release-key policy, the archive must hold exactly the files SHA256SUMS lists,
 its signed publication-manifest.json must name this version, base URL, release
-key and commit, and the site must fit the Pages budget. It then classifies the
-state as fresh, draft-resume (a draft whose assets are a byte-identical subset
-of this publication) or published-resume (an immutable release with exactly
-these assets whose tag is the release commit), and refuses anything else.
+key and commit, the archive must be the canonical archive of its site, and the
+site must fit the Pages budget. It then classifies the state as fresh,
+draft-resume (a draft whose assets are a byte-identical subset of this
+publication) or published-resume (an immutable release with exactly these
+assets whose tag is the release commit), and refuses anything else.
 
 publish-release runs the same publication checks, creates or resumes the
 draft, sets its title and notes, uploads the missing assets, reads every asset
@@ -35,11 +36,12 @@ release/published-versions.json is left out, and its retired entry must have
 the digest of its SHA256SUMS. Every other release must carry exactly the four
 release assets with matching API digests and a SHA256SUMS.asc that passes the
 release-key policy, and its archive must hold exactly the files SHA256SUMS
-lists plus the two sums files. Its signed publication-manifest.json must name
-its own version, the base URL of that version and the release key. Every
-published version in the registry must be present with the same SHA256SUMS.
-The live SHA256SUMS of every version other than --new-version must equal its
-release's, and the site must fit the size budget.
+lists plus the two sums files, packed canonically. Its signed
+publication-manifest.json must name its own version, the base URL of that
+version, the release key and the commit its tag names. Every published version
+in the registry must be present with the same SHA256SUMS. The live SHA256SUMS
+of every version other than --new-version must equal its release's, and the
+site must fit the size budget.
 
 verify-live waits until the plain URLs of the version serve the archive's
 bytes, then streams every file to disk cache-busted and compares its digest,
@@ -280,6 +282,14 @@ def site_bytes(root):
     return sum(path.stat().st_size for path in Path(root).rglob('*') if path.is_file())
 
 
+def canonical_sha(root):
+    """The SHA-256 of the canonical archive of a site directory."""
+    with tempfile.TemporaryFile() as rendered:
+        release_site.write_archive(root, rendered)
+        rendered.seek(0)
+        return hashlib.file_digest(rendered, 'sha256').hexdigest()
+
+
 def local_assets(assets_dir, values, commit, key):
     """Digests of the publication assets, once the signed archive is proven to be this release within budget."""
     version, assets = values['version'], Path(assets_dir)
@@ -300,6 +310,9 @@ def local_assets(assets_dir, values, commit, key):
                        (assets / 'SHA256SUMS.asc').read_bytes(), work)
         root = Path(work) / version
         check_identity(root, version, values['base_url'], values['primary_fingerprint'], commit)
+        # verify-live repacks the live files canonically, so any other packing could never be verified.
+        require(canonical_sha(root) == digests[archive.name],
+                f'the {version} archive is not the canonical archive of its site')
         total = site_bytes(root)
     require(total <= MAX_SITE, f'the {version} site is {total} bytes, above the {MAX_SITE}-byte Pages budget')
     return digests
@@ -485,7 +498,11 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
                     raise PublishRefused(f'{version}: {error}') from None
                 files = unpack_release(data[release_assets(version)[0]], version, data['SHA256SUMS'].read_bytes(),
                                        data['SHA256SUMS.asc'].read_bytes(), output)
-                check_identity(output / version, version, f'{root_url}{version}/', fingerprint)
+                tag_commit = gh.tag_commit(release['tag_name'])
+                require(tag_commit is not None, f"release {release['tag_name']} has no tag")
+                check_identity(output / version, version, f'{root_url}{version}/', fingerprint, tag_commit)
+                require(canonical_sha(output / version) == release_site.sha(data[release_assets(version)[0]]),
+                        f'the {version} archive is not the canonical archive of its site')
                 check_standalone(data[release_assets(version)[0]], version, data)
                 versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
                                      'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
@@ -548,11 +565,8 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
                 status, _ = fetch(cache_busted(base + path), sink=sink)
             require(status == 200 and release_site.sha(target) == digest,
                     f'the live {path} differs from the release (HTTP {status})')
-        with tempfile.TemporaryFile() as rendered:
-            release_site.write_archive(root, rendered)
-            rendered.seek(0)
-            require(hashlib.file_digest(rendered, 'sha256').hexdigest() == release_site.sha(archive),
-                    'the live files do not repack into the release archive')
+        require(canonical_sha(root) == release_site.sha(archive),
+                'the live files do not repack into the release archive')
         try:
             release_site.verify_signature(root / 'SHA256SUMS.asc', root / 'SHA256SUMS', key, fingerprint)
             release_site.verify_signature(root / 'install.sh.asc', root / 'install.sh', key, fingerprint)
