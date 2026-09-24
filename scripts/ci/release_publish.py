@@ -37,7 +37,8 @@ release/published-versions.json is left out, and its retired entry must have
 the digest of its SHA256SUMS. Every other release must carry exactly the four
 release assets with matching API digests and a SHA256SUMS.asc that passes the
 release-key policy, and its archive must hold exactly the files SHA256SUMS
-lists plus the two sums files, packed canonically. Its signed
+lists plus the two sums files, packed canonically. The release must carry its
+title and the release_site notes rendered from its site and archive. Its signed
 publication-manifest.json must name its own version, the base URL of that
 version, the release key and the commit its tag names. Every published version
 in the registry must be present with the same SHA256SUMS. The live SHA256SUMS
@@ -101,6 +102,18 @@ def require(condition, message):
 
 def sha_bytes(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def release_title(version):
+    return f'Intel NPU Stack {version}'
+
+
+def rendered_notes(site, archive, version):
+    """The release_site notes of a verified site and its canonical archive."""
+    try:
+        return release_site.render_notes(site, archive)
+    except release_site.SiteRefused as error:
+        raise PublishRefused(f'{version}: {error}') from None
 
 
 def release_assets(version):
@@ -342,11 +355,8 @@ def local_assets(assets_dir, values, commit, key, notes=None):
                 f'the {version} archive is not the canonical archive of its site')
         total = site_bytes(root)
         if notes is not None:
-            try:
-                rendered = release_site.render_notes(root, archive)
-            except release_site.SiteRefused as error:
-                raise PublishRefused(f'{version}: {error}') from None
-            require(rendered == Path(notes).read_bytes(), 'the release notes are not the rendering of this release')
+            require(rendered_notes(root, archive, version) == Path(notes).read_bytes(),
+                    'the release notes are not the rendering of this release')
     require(total <= MAX_SITE, f'the {version} site is {total} bytes, above the {MAX_SITE}-byte Pages budget')
     return digests
 
@@ -409,7 +419,7 @@ def publish_release(gh, values, assets_dir, notes, commit, key):
     local = local_assets(assets_dir, values, commit, key, notes)
     body = Path(notes).read_text()
     require(0 < len(body) <= 120000, 'release notes must be non-empty and within the GitHub limit')
-    title = f'Intel NPU Stack {version}'
+    title = release_title(version)
     state, release = publish_state(gh, values, local, commit)
     if state == 'fresh':
         _, _, release = gh.call('POST', '/releases', expect=(201,), body={
@@ -536,6 +546,10 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
                 check_identity(output / version, version, f'{root_url}{version}/', fingerprint, tag_commit)
                 require(canonical_sha(output / version) == release_site.sha(data[release_assets(version)[0]]),
                         f'the {version} archive is not the canonical archive of its site')
+                # A release made or edited outside publish-release must still carry exactly what it would have set.
+                notes = rendered_notes(output / version, data[release_assets(version)[0]], version).decode()
+                require(release.get('name') == release_title(version) and release.get('body') == notes,
+                        f"release {release['tag_name']} does not carry its title and rendered notes")
                 check_standalone(data[release_assets(version)[0]], version, data)
                 versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
                                      'archive_sha256': release_site.sha(data[release_assets(version)[0]]),

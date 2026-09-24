@@ -502,9 +502,15 @@ class Publication(unittest.TestCase):
                                      registry or self.registry(), output, manifest, new_version, fetch=self.fetch,
                                      **kwargs), output
 
+    def published(self, version, assets, site, archive):
+        """An immutable release as publish-release leaves it: the assets, the title and the rendered notes."""
+        release = self.fake.add_release('v' + version, assets=assets)
+        release.update(name=f'Intel NPU Stack {version}', body=release_site.render_notes(site, archive).decode())
+        return release
+
     def publish_both(self):
-        self.fake.add_release('v0.1.0', assets=self.assets)
-        self.fake.add_release('v0.2.0', assets=self.assets2)
+        self.published('0.1.0', self.assets, self.site, self.archive)
+        self.published('0.2.0', self.assets2, self.site2, self.archive2)
         self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = self.assets['SHA256SUMS']
 
     def test_composes_every_immutable_release_and_skips_drafts_and_prereleases(self):
@@ -559,7 +565,7 @@ class Publication(unittest.TestCase):
             with self.subTest(label):
                 self.setUp()
                 assets = make_release(self.work / f'repacked-{index}', self.key, '0.2.0', **identity)[2]
-                self.fake.add_release('v0.1.0', assets=self.assets)
+                self.published('0.1.0', self.assets, self.site, self.archive)
                 self.fake.add_release('v0.2.0', assets=assets)
                 self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = self.assets['SHA256SUMS']
                 self.refused('the signed publication manifest in the 0.2.0 archive names another release',
@@ -578,6 +584,18 @@ class Publication(unittest.TestCase):
                 self.publish_both()
                 damage()
                 self.refused(message, self.compose)
+                self.assertFalse((self.work / 'out/_site').exists())
+
+    def test_compose_requires_each_release_to_carry_its_title_and_rendered_notes(self):
+        for label, change in [('another title', {'name': 'Intel NPU Stack'}),
+                              ('stale notes', {'body': '# Intel NPU Stack 0.2.0\n'}),
+                              ('edited notes', None)]:
+            with self.subTest(label):
+                self.setUp()
+                self.publish_both()
+                release = next(r for r in self.fake.releases if r['tag_name'] == 'v0.2.0')
+                release.update(change or {'body': release['body'].replace('| SHA256SUMS | `', '| SHA256SUMS | `0')})
+                self.refused('release v0.2.0 does not carry its title and rendered notes', self.compose)
                 self.assertFalse((self.work / 'out/_site').exists())
 
     def test_compose_refusals(self):

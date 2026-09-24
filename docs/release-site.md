@@ -192,7 +192,8 @@ only the standard library:
   non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the
   files its signed `SHA256SUMS` lists, each at a plain relative path, and the
   separate asset files must be its own copies. The archive must be packed
-  canonically, and its signed `publication-manifest.json` must name that
+  canonically, the release must carry its title and the notes rendered from its
+  site and archive, and its signed `publication-manifest.json` must name that
   version, its base URL, the release key and the commit its tag names. Every
   version listed in `release/published-versions.json` must be present with the
   recorded `SHA256SUMS`. Removing one needs a reviewed `retired` entry whose
