@@ -203,4 +203,5 @@ only the standard library:
   live files into the canonical archive, and verifies `SHA256SUMS.asc` and
   `install.sh.asc` under the committed key.
 
-The release workflow does not call these tools yet.
+Every release archive is read header by header and refused beyond 20000
+members. The release workflow does not call these tools yet.

@@ -402,6 +402,44 @@ class Publication(unittest.TestCase):
             self.assertEqual(publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT,
                                                      self.key.public)['state'], 'fresh')
 
+    def flood(self, headers=500):
+        """An archive of many empty duplicate members, cheap to write and costly to materialize."""
+        path = self.work / 'flood.tar'
+        path.unlink(missing_ok=True)
+        with tarfile.open(path, 'w', format=tarfile.GNU_FORMAT) as tar:
+            for _ in range(headers):
+                tar.addfile(tarfile.TarInfo('0.1.0/SHA256SUMS'), io.BytesIO(b''))
+        return path
+
+    def headers_read(self, function, *args, **kwargs):
+        """Refused for too many members after reading at most the limit plus two headers."""
+        reads, original = [], tarfile.TarFile.next
+
+        def counted(tar):
+            reads.append(1)
+            return original(tar)
+        with mock.patch.object(publish, 'MAX_MEMBERS', 50), mock.patch.object(tarfile.TarFile, 'next', counted):
+            self.refused('too many members', function, *args, **kwargs)
+        self.assertLessEqual(len(reads), 52)
+
+    def test_archive_headers_are_counted_while_they_are_read(self):
+        (self.assets_dir / 'intel-npu-stack-0.1.0.tar').write_bytes(self.flood().read_bytes())
+        self.headers_read(publish.publish_release, self.gh, self.values, self.assets_dir, self.notes, COMMIT,
+                          self.key.public)
+        self.assertEqual(self.fake.releases, [])
+        self.headers_read(publish.unpack_release, self.flood(), '0.1.0', self.assets['SHA256SUMS'],
+                          self.assets['SHA256SUMS.asc'], self.work / 'unpacked')
+        self.headers_read(self.verify, lambda url, sink=None: (404, b''), archive=self.flood())
+
+    def test_the_member_limit_admits_a_site_of_exactly_that_size(self):
+        with tarfile.open(self.archive) as tar:
+            count = len(tar.getmembers())
+        with mock.patch.object(publish, 'MAX_MEMBERS', count - 1):
+            self.refused_before_publication('too many members')
+        with mock.patch.object(publish, 'MAX_MEMBERS', count):
+            self.assertEqual(publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT,
+                                                     self.key.public)['state'], 'fresh')
+
     # compose-pages -----------------------------------------------------------------------------------
 
     def registry(self, published=(), retired=()):
@@ -535,6 +573,8 @@ class Publication(unittest.TestCase):
             ('extra asset', 'exactly the release assets', lambda: replace('0.2.0', 'notes.txt', b'extra')),
             ('noncanonical archive', 'not the canonical archive of its site',
              lambda: replace('0.2.0', tar_name, noncanonical(self.archive2))),
+            ('too many members', 'too many members',
+             lambda: replace('0.2.0', tar_name, retar(original * 2000))),
         ]
         for label, message, damage in cases:
             with self.subTest(label):

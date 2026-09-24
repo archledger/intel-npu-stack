@@ -48,6 +48,9 @@ bytes, then streams every file to disk cache-busted and compares its digest,
 repacks the fetched files into the canonical archive, verifies SHA256SUMS.asc
 and install.sh.asc, and compares the live SHA256SUMS of the other versions with
 the Pages manifest.
+
+Every release archive is read header by header and refused beyond MAX_MEMBERS
+members.
 """
 import argparse
 import hashlib
@@ -74,6 +77,7 @@ DIGEST = re.compile(r'[0-9a-f]{64}')
 MAX_BODY = 512 << 20
 MAX_SITE = 950 << 20
 MAX_ASSET = 1 << 30  # streamed to disk: a release archive may be as large as the whole site budget
+MAX_MEMBERS = 20000  # a site holds tens of files
 STANDALONE = ['SHA256SUMS', 'SHA256SUMS.asc', 'publication-manifest.json']
 MAX_PAGES = 20
 PLAIN = ['release.json', 'release.json.sig', 'profile.toml', 'install.sh', 'intel-npu-stack-install',
@@ -255,14 +259,22 @@ class GitHub:
         return json.loads(content)
 
 
+def archive_members(tar):
+    """Every member of a release archive, read header by header so the limit holds before the rest is read."""
+    members = []
+    for member in tar:
+        members.append(member)
+        require(len(members) <= MAX_MEMBERS, 'the release archive has too many members')
+    return members
+
+
 def check_standalone(archive, version, files):
     """The separate SHA256SUMS, SHA256SUMS.asc and publication-manifest.json assets are the archive's own copies."""
     with tarfile.open(archive, 'r:') as tar:
+        members = {member.name: member for member in archive_members(tar)}
         for name in STANDALONE:
-            try:
-                member = tar.getmember(f'{version}/{name}')
-            except KeyError:
-                raise PublishRefused(f'the {version} archive has no {name}') from None
+            member = members.get(f'{version}/{name}')
+            require(member is not None, f'the {version} archive has no {name}')
             require(member.isreg() and tar.extractfile(member).read() == Path(files[name]).read_bytes(),
                     f'the standalone {name} differs from the copy in the signed archive')
 
@@ -442,7 +454,7 @@ def unpack_release(archive, version, sums, signature, destination):
     listed = parse_sums(sums)
     wanted = {version + '/' + path for path in listed} | {version + '/SHA256SUMS', version + '/SHA256SUMS.asc'}
     with tarfile.open(archive, 'r:') as tar:
-        members = tar.getmembers()
+        members = archive_members(tar)
         names = [member.name for member in members]
         require(len(names) == len(set(names)) and set(names) == wanted and all(m.isreg() for m in members),
                 f'the {version} archive does not hold exactly the files SHA256SUMS lists')
@@ -543,7 +555,7 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
     version, base = values['version'], values['base_url']
     expected = {}
     with tarfile.open(archive, 'r:') as tar:
-        for member in tar.getmembers():
+        for member in archive_members(tar):
             path = member.name[len(version) + 1:] if member.name.startswith(version + '/') else ''
             require(member.isreg() and plain_path(path) and path not in expected,
                     'unsafe or duplicate member in the release archive: ' + repr(member.name))
