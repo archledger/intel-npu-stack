@@ -19,11 +19,12 @@ exists for the version, and the live release.json returns 404. The publish
 phase first checks the publication itself: SHA256SUMS.asc must pass the
 release-key policy, the archive must hold exactly the files SHA256SUMS lists,
 its signed publication-manifest.json must name this version, base URL, release
-key and commit, the archive must be the canonical archive of its site, and the
-site must fit the Pages budget. It then classifies the state as fresh,
-draft-resume (a draft whose assets are a byte-identical subset of this
-publication) or published-resume (an immutable release with exactly these
-assets whose tag is the release commit), and refuses anything else.
+key and commit, install.sh.asc must pass the release-key policy, the archive
+must be the canonical archive of its site, and the site must fit the Pages
+budget. It then classifies the state as fresh, draft-resume (a draft whose
+assets are a byte-identical subset of this publication) or published-resume (an
+immutable release with exactly these assets whose tag is the release commit),
+and refuses anything else.
 
 publish-release runs the same publication checks, requires the notes to be the
 release_site rendering of this site and archive, creates or resumes the draft,
@@ -38,7 +39,8 @@ the digest of its SHA256SUMS. Every other release must carry exactly the four
 release assets with matching API digests and a SHA256SUMS.asc that passes the
 release-key policy, and its archive must hold exactly the files SHA256SUMS
 lists plus the two sums files, packed canonically. The release must carry its
-title and the release_site notes rendered from its site and archive. Its signed
+title and the release_site notes rendered from its site and archive, and its
+install.sh.asc must pass the release-key policy. Its signed
 publication-manifest.json must name its own version, the base URL of that
 version, the release key and the commit its tag names. Every published version
 in the registry must be present with the same SHA256SUMS. The live SHA256SUMS
@@ -315,6 +317,14 @@ def check_identity(root, version, base_url, fingerprint, commit=None):
             f'the signed publication manifest in the {version} archive names another release')
 
 
+def check_installer_signature(root, key, fingerprint, version):
+    """install.sh.asc passes the release-key policy over install.sh, as verify-live requires after deployment."""
+    try:
+        release_site.verify_signature(Path(root) / 'install.sh.asc', Path(root) / 'install.sh', key, fingerprint)
+    except release_site.SiteRefused as error:
+        raise PublishRefused(f'{version}: {error}') from None
+
+
 def site_bytes(root):
     return sum(path.stat().st_size for path in Path(root).rglob('*') if path.is_file())
 
@@ -350,6 +360,7 @@ def local_assets(assets_dir, values, commit, key, notes=None):
                        (assets / 'SHA256SUMS.asc').read_bytes(), work)
         root = Path(work) / version
         check_identity(root, version, values['base_url'], values['primary_fingerprint'], commit)
+        check_installer_signature(root, key, values['primary_fingerprint'], version)
         # verify-live repacks the live files canonically, so any other packing could never be verified.
         require(canonical_sha(root) == digests[archive.name],
                 f'the {version} archive is not the canonical archive of its site')
@@ -544,6 +555,7 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
                 tag_commit = gh.tag_commit(release['tag_name'])
                 require(tag_commit is not None, f"release {release['tag_name']} has no tag")
                 check_identity(output / version, version, f'{root_url}{version}/', fingerprint, tag_commit)
+                check_installer_signature(output / version, key, fingerprint, version)
                 require(canonical_sha(output / version) == release_site.sha(data[release_assets(version)[0]]),
                         f'the {version} archive is not the canonical archive of its site')
                 # A release made or edited outside publish-release must still carry exactly what it would have set.

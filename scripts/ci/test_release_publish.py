@@ -148,11 +148,11 @@ def answer(status, body, sink, limit=None):
     return status, body
 
 
-def make_release(root, key, version, **identity):
+def make_release(root, key, version, installer_key=None, installer_bytes=None, **identity):
     """A tiny signed site and its four release assets.
 
     identity overrides what the signed manifest names: pinned (the version), base_url, primary_fingerprint or
-    source_commit.
+    source_commit. installer_key and installer_bytes sign install.sh.asc with another key or over other bytes.
     """
     site = Path(root) / 'site' / version
     pinned = identity.pop('pinned', version)
@@ -177,7 +177,11 @@ def make_release(root, key, version, **identity):
     for name, data in files.items():
         (site / name).parent.mkdir(parents=True, exist_ok=True)
         (site / name).write_bytes(data)
-    key.sign(site / 'install.sh', output=str(site / 'install.sh.asc'))
+    signed = site / 'install.sh'
+    if installer_bytes is not None:
+        signed = Path(root) / 'other-install.sh'
+        signed.write_bytes(installer_bytes)
+    (installer_key or key).sign(signed, output=str(site / 'install.sh.asc'))
     (site / 'SHA256SUMS').write_bytes(release_site.render_sha256sums(site))
     key.sign(site / 'SHA256SUMS', output=str(site / 'SHA256SUMS.asc'))
     archive = Path(root) / f'intel-npu-stack-{version}.tar'
@@ -405,9 +409,9 @@ class Publication(unittest.TestCase):
                 self.refused_before_publication('names another release')
 
     def test_publication_requires_the_release_key_and_the_signed_files(self):
-        self.use_assets(make_release(self.work / 'foreign', self.other, '0.1.0',
+        self.use_assets(make_release(self.work / 'foreign', self.other, '0.1.0', installer_key=self.key,
                                      primary_fingerprint=self.key.fingerprint)[2])
-        self.refused_before_publication('release-key policy')
+        self.refused_before_publication('release-key policy: SHA256SUMS.asc')
         self.setUp()
         site = self.work / 'edited/0.1.0'
         shutil.copytree(self.site, site)
@@ -418,6 +422,14 @@ class Publication(unittest.TestCase):
             release_site.write_archive(site, stream)
         (self.assets_dir / 'publication-manifest.json').write_bytes(b'{"edited": true}\n')
         self.refused_before_publication('publication-manifest.json differs from SHA256SUMS')
+
+    def test_the_installer_signature_is_verified_before_publication(self):
+        for label, change in [('another key', {'installer_key': self.other}),
+                              ('other bytes', {'installer_bytes': b'#!/bin/sh\nexit 1\n'})]:
+            with self.subTest(label):
+                self.setUp()
+                self.use_assets(make_release(self.work / 'installer', self.key, '0.1.0', **change)[2])
+                self.refused_before_publication('install.sh.asc')
 
     def test_a_noncanonical_archive_is_refused_before_publication(self):
         (self.assets_dir / 'intel-npu-stack-0.1.0.tar').write_bytes(noncanonical(self.archive))
@@ -585,6 +597,14 @@ class Publication(unittest.TestCase):
                 damage()
                 self.refused(message, self.compose)
                 self.assertFalse((self.work / 'out/_site').exists())
+
+    def test_compose_verifies_each_release_installer_signature(self):
+        site, archive, assets = make_release(self.work / 'installer', self.key, '0.2.0', installer_key=self.other)
+        self.published('0.1.0', self.assets, self.site, self.archive)
+        self.published('0.2.0', assets, site, archive)
+        self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = self.assets['SHA256SUMS']
+        self.refused('install.sh.asc', self.compose)
+        self.assertFalse((self.work / 'out/_site').exists())
 
     def test_compose_requires_each_release_to_carry_its_title_and_rendered_notes(self):
         for label, change in [('another title', {'name': 'Intel NPU Stack'}),

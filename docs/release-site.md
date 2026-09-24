@@ -173,13 +173,14 @@ only the standard library:
   three separate files must be the archive's own copies, and `SHA256SUMS.asc`
   must pass the release-key policy. The archive must hold exactly the files
   `SHA256SUMS` lists. Its signed `publication-manifest.json` must name this
-  version, the committed base URL and release key, and the release commit. The
-  archive must be the canonical archive of its site, and the site must fit the
-  950 MiB Pages budget. It then classifies the state as fresh, a draft to
-  resume (its assets a byte-identical subset of this publication, targeting the
-  release commit) or a published release to resume (immutable, exactly these
-  assets, tag at the release commit). Prereleases and anything else are
-  refused, and a stale draft is deleted by hand.
+  version, the committed base URL and release key, and the release commit, and
+  `install.sh.asc` must pass the release-key policy. The archive must be the
+  canonical archive of its site, and the site must fit the 950 MiB Pages
+  budget. It then classifies the state as fresh, a draft to resume (its assets
+  a byte-identical subset of this publication, targeting the release commit) or
+  a published release to resume (immutable, exactly these assets, tag at the
+  release commit). Prereleases and anything else are refused, and a stale draft
+  is deleted by hand.
 - `publish-release` runs the same publication checks before it creates or
   resumes anything, and the notes must be the `release_site.py notes` rendering
   of this site and archive. It streams the archive, `SHA256SUMS`,
@@ -193,13 +194,14 @@ only the standard library:
   files its signed `SHA256SUMS` lists, each at a plain relative path, and the
   separate asset files must be its own copies. The archive must be packed
   canonically, the release must carry its title and the notes rendered from its
-  site and archive, and its signed `publication-manifest.json` must name that
-  version, its base URL, the release key and the commit its tag names. Every
-  version listed in `release/published-versions.json` must be present with the
-  recorded `SHA256SUMS`. Removing one needs a reviewed `retired` entry whose
-  digest is that of the release's `SHA256SUMS`, and a retired release must be
-  immutable too. The live `SHA256SUMS` of the other versions must be unchanged,
-  and the site must stay within 950 MiB.
+  site and archive, `install.sh.asc` must pass the release-key policy, and its
+  signed `publication-manifest.json` must name that version, its base URL, the
+  release key and the commit its tag names. Every version listed in
+  `release/published-versions.json` must be present with the recorded
+  `SHA256SUMS`. Removing one needs a reviewed `retired` entry whose digest is
+  that of the release's `SHA256SUMS`, and a retired release must be immutable
+  too. The live `SHA256SUMS` of the other versions must be unchanged, and the
+  site must stay within 950 MiB.
 - `verify-live` waits until the plain URLs serve the new release. It then
   streams every file to disk and compares it with the archive, repacks the live
   files into the canonical archive, verifies `SHA256SUMS.asc` and
