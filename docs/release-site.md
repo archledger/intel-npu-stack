@@ -169,27 +169,33 @@ only the standard library:
 - `check-unpublished --phase preflight` refuses unless Pages is served by
   GitHub Actions at the committed base URL, no tag, release or draft exists for
   the version, and the live `release.json` returns 404.
-- `check-unpublished --phase publish` classifies the state as fresh, a draft to
-  resume (its assets a byte-identical subset of this publication, targeting
-  the release commit) or a published release to resume (immutable, exactly
-  these assets, tag at the release commit). Prereleases and anything else are
-  refused, and a stale draft is deleted by hand.
-- `publish-release` uploads the archive, `SHA256SUMS`, `SHA256SUMS.asc` and
-  `publication-manifest.json` to a draft. The three separate files must be the
-  archive's own copies. It sets the draft's title and notes to this
-  publication's and streams every asset back to disk without sending the token
-  to the storage host. It then publishes the release as the latest and requires
-  it to be immutable, with the same title and notes and its tag at the release
-  commit.
+- `check-unpublished --phase publish` first checks the publication itself. The
+  three separate files must be the archive's own copies, and `SHA256SUMS.asc`
+  must pass the release-key policy. The archive must hold exactly the files
+  `SHA256SUMS` lists. Its signed `publication-manifest.json` must name this
+  version, the committed base URL and release key, and the release commit. The
+  site must fit the 950 MiB Pages budget. It then classifies the state as
+  fresh, a draft to resume (its assets a byte-identical subset of this
+  publication, targeting the release commit) or a published release to resume
+  (immutable, exactly these assets, tag at the release commit). Prereleases and
+  anything else are refused, and a stale draft is deleted by hand.
+- `publish-release` runs the same publication checks before it creates or
+  resumes anything. It uploads the archive, `SHA256SUMS`, `SHA256SUMS.asc` and
+  `publication-manifest.json` to a draft. It sets the draft's title and notes
+  to this publication's and streams every asset back to disk without sending
+  the token to the storage host. It then publishes the release as the latest
+  and requires it to be immutable, with the same title and notes and its tag at
+  the release commit.
 - `compose-pages` builds the Pages tree from immutable, non-draft,
   non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the
   files its signed `SHA256SUMS` lists, each at a plain relative path, and the
-  separate asset files must be its own copies. Every version listed in
-  `release/published-versions.json` must be present with the recorded
-  `SHA256SUMS`. Removing one needs a reviewed `retired` entry whose digest is
-  that of the release's `SHA256SUMS`, and a retired release must be immutable
-  too. The live `SHA256SUMS` of the other versions must be unchanged, and the
-  site must stay within 950 MiB.
+  separate asset files must be its own copies. Its signed
+  `publication-manifest.json` must name that version, its base URL and the
+  release key. Every version listed in `release/published-versions.json` must
+  be present with the recorded `SHA256SUMS`. Removing one needs a reviewed
+  `retired` entry whose digest is that of the release's `SHA256SUMS`, and a
+  retired release must be immutable too. The live `SHA256SUMS` of the other
+  versions must be unchanged, and the site must stay within 950 MiB.
 - `verify-live` waits until the plain URLs serve the new release. It then
   streams every file to disk and compares it with the archive, repacks the
   live files into the canonical archive, and verifies `SHA256SUMS.asc` and

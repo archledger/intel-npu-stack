@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import urllib.parse
 
 import release_publish as publish
@@ -139,14 +140,24 @@ def answer(status, body, sink, limit=None):
     return status, body
 
 
-def make_release(root, key, version):
-    """A tiny signed site and its four release assets."""
+def make_release(root, key, version, **identity):
+    """A tiny signed site and its four release assets.
+
+    identity overrides what the signed manifest names: pinned (the version), base_url, primary_fingerprint or
+    source_commit.
+    """
     site = Path(root) / 'site' / version
+    pinned = identity.pop('pinned', version)
+    named = {'base_url': f'https://archledger.github.io/intel-npu-stack/{pinned}/',
+             'primary_fingerprint': key.fingerprint, 'source_commit': COMMIT, **identity}
+    manifest = {'installer': {'pinned': {'version': pinned, 'base_url': named['base_url'],
+                                         'primary_fingerprint': named['primary_fingerprint']}},
+                'source_commit': named['source_commit']}
     files = {'release.json': f'{{"stack_release": "{version}"}}\n'.encode(), 'release.json.sig': b'signature\n',
              'profile.toml': b'id = "fixture"\n', 'install.sh': b'#!/bin/sh\nexit 0\n',
              'intel-npu-stack-install': b'\x7fELF installer ' + version.encode() + bytes(200),
              'primary-command.txt': b'(true)\n', 'repodata/repomd.xml': b'<repomd/>\n',
-             'publication-manifest.json': f'{{"release_version": "{version}"}}\n'.encode()}
+             'publication-manifest.json': (json.dumps(manifest, sort_keys=True) + '\n').encode()}
     for name, data in files.items():
         (site / name).parent.mkdir(parents=True, exist_ok=True)
         (site / name).write_bytes(data)
@@ -232,7 +243,7 @@ class Publication(unittest.TestCase):
 
     def test_publish_phase_states(self):
         def state():
-            return publish.check_unpublished(self.gh, self.values, 'publish', self.assets_dir, COMMIT)
+            return publish.check_unpublished(self.gh, self.values, 'publish', self.assets_dir, COMMIT, self.key.public)
         self.assertEqual(state(), 'fresh')
         draft = self.fake.add_release('v0.1.0', draft=True, immutable=False,
                                       assets={'SHA256SUMS': self.assets['SHA256SUMS']})
@@ -259,7 +270,7 @@ class Publication(unittest.TestCase):
     # publish-release ---------------------------------------------------------------------------------
 
     def test_publishes_reads_back_and_resumes_idempotently(self):
-        result = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT)
+        result = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertEqual(result['state'], 'fresh')
         release = self.fake.releases[0]
         self.assertEqual((release['draft'], release['immutable'], release['body']),
@@ -268,7 +279,7 @@ class Publication(unittest.TestCase):
         self.assertEqual(self.fake.tags['v0.1.0'], COMMIT)
         self.assertTrue(self.fake.storage_auth and not any(self.fake.storage_auth),
                         'asset downloads must not send the token to the storage host')
-        again = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT)
+        again = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertEqual(again['state'], 'published-resume')
         self.assertEqual(len(self.fake.releases), 1)
 
@@ -278,13 +289,13 @@ class Publication(unittest.TestCase):
                 self.setUp()
                 (self.assets_dir / name).write_bytes(b'{"stale": true}\n')
                 self.refused(f'standalone {name} differs', publish.publish_release, self.gh, self.values,
-                             self.assets_dir, self.notes, COMMIT)
+                             self.assets_dir, self.notes, COMMIT, self.key.public)
                 self.assertEqual(self.fake.releases, [], 'nothing may be created before the check')
 
     def test_an_interrupted_draft_is_completed(self):
         self.fake.add_release('v0.1.0', draft=True, immutable=False,
                               assets={'SHA256SUMS': self.assets['SHA256SUMS']})
-        result = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT)
+        result = publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertEqual(result['state'], 'draft-resume')
         self.assertEqual(sorted(a['name'] for a in self.fake.releases[0]['assets']), sorted(self.assets))
 
@@ -292,7 +303,7 @@ class Publication(unittest.TestCase):
         draft = self.fake.add_release('v0.1.0', draft=True, immutable=False,
                                       assets={'SHA256SUMS': self.assets['SHA256SUMS']})
         draft.update(name='Old title', body='stale qualification digests\n')
-        publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT)
+        publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertEqual((draft['draft'], draft['name'], draft['body']),
                          (False, 'Intel NPU Stack 0.1.0', '# Intel NPU Stack 0.1.0\n'))
 
@@ -301,27 +312,79 @@ class Publication(unittest.TestCase):
         draft.update(name='Old title', body='stale\n')
         self.fake.frozen_notes = True
         self.refused("draft does not carry this publication's title and notes", publish.publish_release, self.gh,
-                     self.values, self.assets_dir, self.notes, COMMIT)
+                     self.values, self.assets_dir, self.notes, COMMIT, self.key.public)
         self.assertTrue(draft['draft'], 'a draft with other notes must not be published')
         self.setUp()
         published = self.fake.add_release('v0.1.0', assets=self.assets)
         published.update(name='Intel NPU Stack 0.1.0', body='other notes\n')
         self.fake.tags['v0.1.0'] = COMMIT
         self.refused("published v0.1.0 release does not carry", publish.publish_release, self.gh, self.values,
-                     self.assets_dir, self.notes, COMMIT)
+                     self.assets_dir, self.notes, COMMIT, self.key.public)
 
     def test_publication_refusals(self):
         self.fake.corrupt = {'SHA256SUMS.asc'}
         self.refused('reads back differently', publish.publish_release, self.gh, self.values, self.assets_dir,
-                     self.notes, COMMIT)
+                     self.notes, COMMIT, self.key.public)
         self.setUp()
         self.fake.immutable_on_publish = False
         self.refused('not an immutable published release', publish.publish_release, self.gh, self.values,
-                     self.assets_dir, self.notes, COMMIT)
+                     self.assets_dir, self.notes, COMMIT, self.key.public)
         self.setUp()
         self.fake.tag_override = 'd' * 40
         self.refused('does not name the release commit', publish.publish_release, self.gh, self.values,
-                     self.assets_dir, self.notes, COMMIT)
+                     self.assets_dir, self.notes, COMMIT, self.key.public)
+
+    def use_assets(self, assets):
+        for name, data in assets.items():
+            (self.assets_dir / name).write_bytes(data)
+
+    def refused_before_publication(self, message):
+        self.refused(message, publish.check_unpublished, self.gh, self.values, 'publish', self.assets_dir, COMMIT,
+                     self.key.public)
+        self.refused(message, publish.publish_release, self.gh, self.values, self.assets_dir, self.notes, COMMIT,
+                     self.key.public)
+        self.assertEqual(self.fake.releases, [], 'nothing may be created before the check')
+
+    def test_the_publish_phase_needs_the_release_key(self):
+        self.refused('committed release key is required', publish.check_unpublished, self.gh, self.values, 'publish',
+                     self.assets_dir, COMMIT)
+
+    def test_publication_is_bound_to_the_signed_release_identity(self):
+        cases = [
+            ('an older signed site repacked under this version', {'pinned': '0.0.9'}),
+            ('another version', {'pinned': '0.0.9', 'base_url': BASE_URL}),
+            ('another base URL', {'base_url': 'https://archledger.github.io/other/0.1.0/'}),
+            ('another release key', {'primary_fingerprint': self.other.fingerprint}),
+            ('another source commit', {'source_commit': 'd' * 40}),
+        ]
+        for index, (label, identity) in enumerate(cases):
+            with self.subTest(label):
+                self.setUp()
+                self.use_assets(make_release(self.work / f'identity-{index}', self.key, '0.1.0', **identity)[2])
+                self.refused_before_publication('names another release')
+
+    def test_publication_requires_the_release_key_and_the_signed_files(self):
+        self.use_assets(make_release(self.work / 'foreign', self.other, '0.1.0',
+                                     primary_fingerprint=self.key.fingerprint)[2])
+        self.refused_before_publication('release-key policy')
+        self.setUp()
+        site = self.work / 'edited/0.1.0'
+        shutil.copytree(self.site, site)
+        (site / 'publication-manifest.json').write_bytes(b'{"edited": true}\n')
+        archive = self.assets_dir / 'intel-npu-stack-0.1.0.tar'
+        archive.unlink()
+        with archive.open('xb') as stream:
+            release_site.write_archive(site, stream)
+        (self.assets_dir / 'publication-manifest.json').write_bytes(b'{"edited": true}\n')
+        self.refused_before_publication('publication-manifest.json differs from SHA256SUMS')
+
+    def test_a_site_over_the_pages_budget_is_refused_before_publication(self):
+        size = sum(path.stat().st_size for path in self.site.rglob('*') if path.is_file())
+        with mock.patch.object(publish, 'MAX_SITE', size - 1):
+            self.refused_before_publication(f'the 0.1.0 site is {size} bytes, above the {size - 1}-byte Pages budget')
+        with mock.patch.object(publish, 'MAX_SITE', size):
+            self.assertEqual(publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT,
+                                                     self.key.public)['state'], 'fresh')
 
     # compose-pages -----------------------------------------------------------------------------------
 
@@ -383,6 +446,24 @@ class Publication(unittest.TestCase):
                                            'reason': 'superseded'}])
         manifest, output = self.compose(registry)
         self.assertEqual(sorted(manifest['versions']), ['0.2.0'])
+
+    def test_compose_binds_each_release_to_its_version(self):
+        cases = [
+            ('an older signed site repacked under a new version', {'pinned': '0.1.0'}),
+            ('another version', {'pinned': '0.1.0', 'base_url': 'https://archledger.github.io/intel-npu-stack/0.2.0/'}),
+            ('another base URL', {'base_url': 'https://archledger.github.io/other/0.2.0/'}),
+            ('another release key', {'primary_fingerprint': self.other.fingerprint}),
+        ]
+        for index, (label, identity) in enumerate(cases):
+            with self.subTest(label):
+                self.setUp()
+                assets = make_release(self.work / f'repacked-{index}', self.key, '0.2.0', **identity)[2]
+                self.fake.add_release('v0.1.0', assets=self.assets)
+                self.fake.add_release('v0.2.0', assets=assets)
+                self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = self.assets['SHA256SUMS']
+                self.refused('the signed publication manifest in the 0.2.0 archive names another release',
+                             self.compose)
+                self.assertFalse((self.work / 'out/_site').exists())
 
     def test_compose_refusals(self):
         def replace(version, name, data, digest=None):

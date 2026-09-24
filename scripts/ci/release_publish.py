@@ -15,15 +15,19 @@ URL and release key come from the committed trust seam of --repo.
 check-unpublished preflight refuses unless GitHub Pages is served by GitHub
 Actions at the committed base URL, no tag or release (draft or published)
 exists for the version, and the live release.json returns 404. The publish
-phase classifies the state as fresh, draft-resume (a draft whose assets are a
-byte-identical subset of this publication) or published-resume (an immutable
-release with exactly these assets whose tag is the release commit), and
-refuses anything else.
+phase first checks the publication itself: SHA256SUMS.asc must pass the
+release-key policy, the archive must hold exactly the files SHA256SUMS lists,
+its signed publication-manifest.json must name this version, base URL, release
+key and commit, and the site must fit the Pages budget. It then classifies the
+state as fresh, draft-resume (a draft whose assets are a byte-identical subset
+of this publication) or published-resume (an immutable release with exactly
+these assets whose tag is the release commit), and refuses anything else.
 
-publish-release creates or resumes the draft, sets its title and notes,
-uploads the missing assets, reads every asset back, publishes it as the latest
-release and requires the release to be immutable with the same title, notes
-and assets and its tag at the release commit.
+publish-release runs the same publication checks, creates or resumes the
+draft, sets its title and notes, uploads the missing assets, reads every asset
+back, publishes it as the latest release and requires the release to be
+immutable with the same title, notes and assets and its tag at the release
+commit.
 
 compose-pages builds _site/<version>/ from every non-draft, non-prerelease
 vX.Y.Z release. Every such release must be immutable. A release retired in
@@ -31,10 +35,11 @@ release/published-versions.json is left out, and its retired entry must have
 the digest of its SHA256SUMS. Every other release must carry exactly the four
 release assets with matching API digests and a SHA256SUMS.asc that passes the
 release-key policy, and its archive must hold exactly the files SHA256SUMS
-lists plus the two sums files. Every published version in the registry must be
-present with the same SHA256SUMS. The live SHA256SUMS of every version other
-than --new-version must equal its release's, and the site must fit the size
-budget.
+lists plus the two sums files. Its signed publication-manifest.json must name
+its own version, the base URL of that version and the release key. Every
+published version in the registry must be present with the same SHA256SUMS.
+The live SHA256SUMS of every version other than --new-version must equal its
+release's, and the site must fit the size budget.
 
 verify-live waits until the plain URLs of the version serve the archive's
 bytes, then streams every file to disk cache-busted and compares its digest,
@@ -260,14 +265,43 @@ def check_standalone(archive, version, files):
                     f'the standalone {name} differs from the copy in the signed archive')
 
 
-def local_assets(assets_dir, version):
+def check_identity(root, version, base_url, fingerprint, commit=None):
+    """The signed publication manifest names this version, base URL and release key, and the release commit."""
+    manifest = json.loads((Path(root) / 'publication-manifest.json').read_text())
+    installer = manifest.get('installer') if isinstance(manifest, dict) else None
+    pinned = installer.get('pinned') if isinstance(installer, dict) else None
+    require(isinstance(pinned, dict) and pinned.get('version') == version and pinned.get('base_url') == base_url
+            and pinned.get('primary_fingerprint') == fingerprint
+            and (commit is None or manifest.get('source_commit') == commit),
+            f'the signed publication manifest in the {version} archive names another release')
+
+
+def site_bytes(root):
+    return sum(path.stat().st_size for path in Path(root).rglob('*') if path.is_file())
+
+
+def local_assets(assets_dir, values, commit, key):
+    """Digests of the publication assets, once the signed archive is proven to be this release within budget."""
+    version, assets = values['version'], Path(assets_dir)
     digests = {}
     for name in release_assets(version):
-        path = Path(assets_dir) / name
+        path = assets / name
         require(path.is_file() and not path.is_symlink(), 'publication asset is missing: ' + name)
         digests[name] = release_site.sha(path)
-    check_standalone(Path(assets_dir) / release_assets(version)[0], version,
-                     {name: Path(assets_dir) / name for name in STANDALONE})
+    archive = assets / release_assets(version)[0]
+    check_standalone(archive, version, {name: assets / name for name in STANDALONE})
+    try:
+        release_site.verify_signature(assets / 'SHA256SUMS.asc', assets / 'SHA256SUMS', key,
+                                      values['primary_fingerprint'])
+    except release_site.SiteRefused as error:
+        raise PublishRefused(f'{version}: {error}') from None
+    with tempfile.TemporaryDirectory(prefix='publication-') as work:
+        unpack_release(archive, version, (assets / 'SHA256SUMS').read_bytes(),
+                       (assets / 'SHA256SUMS.asc').read_bytes(), work)
+        root = Path(work) / version
+        check_identity(root, version, values['base_url'], values['primary_fingerprint'], commit)
+        total = site_bytes(root)
+    require(total <= MAX_SITE, f'the {version} site is {total} bytes, above the {MAX_SITE}-byte Pages budget')
     return digests
 
 
@@ -295,11 +329,12 @@ def publish_state(gh, values, local, commit):
     return 'published-resume', release
 
 
-def check_unpublished(gh, values, phase, assets_dir=None, commit=None, fetch=fetch_public):
+def check_unpublished(gh, values, phase, assets_dir=None, commit=None, key=None, fetch=fetch_public):
     version, tag = values['version'], 'v' + values['version']
     if phase == 'publish':
         require(commit is not None and re.fullmatch(r'[0-9a-f]{40}', commit), 'the release commit is required')
-        return publish_state(gh, values, local_assets(assets_dir, version), commit)[0]
+        require(key is not None, 'the committed release key is required')
+        return publish_state(gh, values, local_assets(assets_dir, values, commit, key), commit)[0]
     pages = gh.pages()
     require(pages is not None and pages.get('build_type') == 'workflow'
             and str(pages.get('html_url', '')).rstrip('/') + '/' + version + '/' == values['base_url'],
@@ -323,9 +358,9 @@ def check_release_assets(gh, release, local, readback):
                         f'the uploaded {name} reads back differently')
 
 
-def publish_release(gh, values, assets_dir, notes, commit):
+def publish_release(gh, values, assets_dir, notes, commit, key):
     version, tag = values['version'], 'v' + values['version']
-    local = local_assets(assets_dir, version)
+    local = local_assets(assets_dir, values, commit, key)
     body = Path(notes).read_text()
     require(0 < len(body) <= 120000, 'release notes must be non-empty and within the GitHub limit')
     title = f'Intel NPU Stack {version}'
@@ -450,6 +485,7 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
                     raise PublishRefused(f'{version}: {error}') from None
                 files = unpack_release(data[release_assets(version)[0]], version, data['SHA256SUMS'].read_bytes(),
                                        data['SHA256SUMS.asc'].read_bytes(), output)
+                check_identity(output / version, version, f'{root_url}{version}/', fingerprint)
                 check_standalone(data[release_assets(version)[0]], version, data)
                 versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
                                      'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
@@ -466,7 +502,7 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
             status, body = fetch(cache_busted(f'{root_url}{version}/SHA256SUMS'))
             require(status == 200 and sha_bytes(body) == record['sha256sums_sha256'],
                     f'the live {version}/SHA256SUMS differs from its release (HTTP {status})')
-        total = sum(path.stat().st_size for path in output.rglob('*') if path.is_file())
+        total = site_bytes(output)
         require(total <= limit, f'the Pages site is {total} bytes, above the {limit}-byte budget')
     except BaseException:
         shutil.rmtree(output, ignore_errors=True)
@@ -570,11 +606,11 @@ def main(argv=None):
             if args.command == 'check-unpublished':
                 require(args.phase is not None, 'check-unpublished requires --phase')
                 result = {'phase': args.phase,
-                          'state': check_unpublished(gh, values, args.phase, args.assets, args.sha)}
+                          'state': check_unpublished(gh, values, args.phase, args.assets, args.sha, key)}
             elif args.command == 'publish-release':
                 require(None not in (args.assets, args.notes, args.sha),
                         'publish-release needs --assets, --notes and --sha')
-                result = publish_release(gh, values, args.assets, args.notes, args.sha)
+                result = publish_release(gh, values, args.assets, args.notes, args.sha, key)
             else:
                 require(None not in (args.registry, args.output, args.manifest),
                         'compose-pages needs --registry, --output and --manifest')
