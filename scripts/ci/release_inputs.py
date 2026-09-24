@@ -10,14 +10,18 @@ fetch-check downloads the tarball over HTTPS only (redirects included), requires
 its SHA-256 to equal the dispatch input, extracts it safely and runs the keyless
 inputs check of release_sign.py against the selected profile. extract-check
 repeats the same for the archive handed between jobs, whose digest must equal
-both the dispatch input and the preflight job's output. Safe extraction accepts
-only regular files and directories with plain relative names, each at most once,
-within size and count limits, and extracts with the tarfile data filter.
+both the dispatch input and the preflight job's output. Before tarfile reads the
+(decompressed) tarball, release_tar scans its raw headers: at most MAX_MEMBERS
+headers, extension headers included, and only files, directories, GNU long
+names and pax headers. Safe extraction then accepts only regular files and
+directories with plain relative names, each at most once, within the size
+limit, and extracts with the tarfile data filter.
 Outputs are never overwritten.
 """
 import argparse
 import hashlib
 import json
+import lzma
 import os
 from pathlib import Path
 import re
@@ -25,8 +29,10 @@ import subprocess
 import sys
 import tarfile
 import urllib.parse
+import zlib
 
 import release_sign
+import release_tar
 
 MAX_ARCHIVE = 4 << 30
 MAX_UNPACKED = 8 << 30
@@ -74,11 +80,12 @@ def member_name(member):
 
 
 def safe_members(tar):
-    """Regular files and directories with plain relative names, each once, within the limits."""
-    members, seen, total, headers = [], set(), 0, 0
-    for member in tar:  # streamed header by header, so the limit holds before the archive is read in full
-        headers += 1
-        require(headers <= MAX_MEMBERS, 'the release inputs archive has too many members')
+    """Regular files and directories with plain relative names, each once, within the size limit.
+
+    release_tar.scan has already bounded the raw headers, so iterating the members reads no more than that.
+    """
+    members, seen, total = [], set(), 0
+    for member in tar:
         name = member_name(member)
         if member.isdir() and name in {'', '.'}:
             continue
@@ -99,11 +106,17 @@ def extract(archive, output):
     output = Path(output)
     require(not output.exists(), f'{output} exists; outputs are never overwritten')
     try:
-        with tarfile.open(archive, 'r:*') as tar:
-            members = safe_members(tar)
-            output.mkdir(parents=True)
-            tar.extractall(output, members=members, filter='data')
-    except tarfile.TarError as error:
+        with release_tar.open_stream(archive) as stream:
+            # The raw headers are bounded first; tarfile then reads the same decompressed bytes.
+            release_tar.scan(stream, MAX_MEMBERS, release_tar.INPUT_TYPES)
+            stream.seek(0)
+            with tarfile.open(fileobj=stream, mode='r:') as tar:
+                members = safe_members(tar)
+                output.mkdir(parents=True)
+                tar.extractall(output, members=members, filter='data')
+    except release_tar.TarRefused as error:
+        raise InputsRefused('the release inputs archive: ' + str(error)) from None
+    except (tarfile.TarError, EOFError, zlib.error, lzma.LZMAError) as error:
         raise InputsRefused('the release inputs archive is not a readable tar: ' + str(error)) from None
     return len(members)
 

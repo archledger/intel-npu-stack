@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Contract for fetching and extracting the prepared release inputs before any key exists."""
 import contextlib
+import gzip
 import hashlib
 import io
 import json
@@ -99,6 +100,32 @@ class Inputs(unittest.TestCase):
         self.pack(archive, entries)
         with self.assertRaisesRegex(inputs_tool.InputsRefused, 'too many members'):
             self.extract(archive, output=self.work / 'many')
+
+    def test_hidden_pax_headers_count_toward_the_member_limit(self):
+        limit, inputs_tool.MAX_MEMBERS = inputs_tool.MAX_MEMBERS, 50
+        self.addCleanup(setattr, inputs_tool, 'MAX_MEMBERS', limit)
+        count = len(list(self.source.rglob('*')))
+        self.assertLess(count + 1, 50)
+        entries = []
+        for index in range(50 - count):  # a fractional mtime gives each member a pax header tarfile never yields
+            info = tarfile.TarInfo(f'extra/{index}')
+            info.mtime = 1.5
+            entries.append((info, b''))
+        archive = self.work / 'hidden.tar.gz'
+        self.pack(archive, entries)
+        with tarfile.open(archive) as tar:
+            self.assertLessEqual(len(tar.getmembers()), 50)
+        with self.assertRaisesRegex(inputs_tool.InputsRefused, 'too many members'):
+            self.extract(archive, output=self.work / 'hidden')
+
+    def test_inputs_are_scanned_before_tarfile_reads_them(self):
+        info = tarfile.TarInfo('././@LongLink')
+        info.type, info.size = tarfile.GNUTYPE_LONGNAME, 900 << 20
+        archive = self.work / 'huge-name.tar.gz'
+        with gzip.open(archive, 'wb') as stream:
+            stream.write(info.tobuf(tarfile.GNU_FORMAT, 'utf-8', 'surrogateescape') + bytes(1024))
+        with self.assertRaisesRegex(inputs_tool.InputsRefused, 'extension header'):
+            self.extract(archive, output=self.work / 'huge-name')
 
     def test_inputs_that_fail_the_keyless_check_are_refused(self):
         (self.source / 'candidate.toml').write_text('status = "candidate"\n')

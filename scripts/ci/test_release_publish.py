@@ -431,6 +431,24 @@ class Publication(unittest.TestCase):
                           self.assets['SHA256SUMS.asc'], self.work / 'unpacked')
         self.headers_read(self.verify, lambda url, sink=None: (404, b''), archive=self.flood())
 
+    def test_hidden_extension_headers_count_toward_the_member_limit(self):
+        archive = self.work / 'long-names.tar'
+        with tarfile.open(archive, 'w', format=tarfile.GNU_FORMAT) as tar:
+            for index in range(30):  # each long name adds a GNU long-name header that tarfile never yields
+                tar.addfile(tarfile.TarInfo(f'0.1.0/{"n" * 120}{index}'), io.BytesIO(b''))
+        (self.assets_dir / 'intel-npu-stack-0.1.0.tar').write_bytes(archive.read_bytes())
+        with mock.patch.object(publish, 'MAX_MEMBERS', 40):
+            self.refused_before_publication('too many members: more than 40 tar headers')
+
+    def test_a_release_archive_holds_only_regular_files_and_long_names(self):
+        archive = self.work / 'pax.tar'
+        with tarfile.open(archive, 'w', format=tarfile.PAX_FORMAT) as tar:
+            info = tarfile.TarInfo('0.1.0/SHA256SUMS')
+            info.mtime = 1.5
+            tar.addfile(info, io.BytesIO(b''))
+        (self.assets_dir / 'intel-npu-stack-0.1.0.tar').write_bytes(archive.read_bytes())
+        self.refused_before_publication("tar header type b'x' is not allowed")
+
     def test_the_member_limit_admits_a_site_of_exactly_that_size(self):
         with tarfile.open(self.archive) as tar:
             count = len(tar.getmembers())
@@ -564,7 +582,7 @@ class Publication(unittest.TestCase):
              lambda: replace('0.2.0', 'SHA256SUMS.asc', self.other_signature())),
             ('extra member', exact, lambda: replace('0.2.0', tar_name, retar(original + [member('0.2.0/extra.txt')]))),
             ('missing member', exact, lambda: replace('0.2.0', tar_name, retar(original[1:]))),
-            ('symlink member', exact, lambda: replace('0.2.0', tar_name, retar(
+            ('symlink member', "tar header type b'2' is not allowed", lambda: replace('0.2.0', tar_name, retar(
                 original[:-1] + [member(original[-1][0].name, kind=tarfile.SYMTYPE)]))),
             ('API digest', 'API digest',
              lambda: replace('0.2.0', 'SHA256SUMS', self.assets2['SHA256SUMS'], 'sha256:' + '0' * 64)),

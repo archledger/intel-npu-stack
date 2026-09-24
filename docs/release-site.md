@@ -203,5 +203,11 @@ only the standard library:
   live files into the canonical archive, and verifies `SHA256SUMS.asc` and
   `install.sh.asc` under the committed key.
 
-Every release archive is read header by header and refused beyond 20000
-members. The release workflow does not call these tools yet.
+Before `tarfile` reads a release archive or the inputs tarball,
+`scripts/ci/release_tar.py` scans its raw headers. At most 20000 headers are
+allowed, extension headers included. Only the header types each archive needs
+are admitted: regular files and GNU long names in a release archive, and also
+directories and pax headers in the inputs. Extension data is capped at 64 KiB,
+with at most four extension headers in a row. pax records that change a size or
+describe a sparse file are refused, and member data is skipped, not read. The
+release workflow does not call these tools yet.
