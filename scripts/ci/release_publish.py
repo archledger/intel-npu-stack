@@ -20,23 +20,27 @@ byte-identical subset of this publication) or published-resume (an immutable
 release with exactly these assets whose tag is the release commit), and
 refuses anything else.
 
-publish-release creates or resumes the draft, uploads the missing assets, reads
-every asset back, publishes it as the latest release and requires the release
-to be immutable with the same assets and its tag at the release commit.
+publish-release creates or resumes the draft, sets its title and notes,
+uploads the missing assets, reads every asset back, publishes it as the latest
+release and requires the release to be immutable with the same title, notes
+and assets and its tag at the release commit.
 
 compose-pages builds _site/<version>/ from every non-draft, non-prerelease
-vX.Y.Z release that is not retired in release/published-versions.json. Each
-must be immutable, carry exactly the four release assets with matching API
-digests and a SHA256SUMS.asc that passes the release-key policy, and its
-archive must hold exactly the files SHA256SUMS lists plus the two sums files.
-Every published version in the registry must be present with the same
-SHA256SUMS. The live SHA256SUMS of every version other than --new-version must
-equal its release's, and the site must fit the size budget.
+vX.Y.Z release. Every such release must be immutable. A release retired in
+release/published-versions.json is left out, and its retired entry must have
+the digest of its SHA256SUMS. Every other release must carry exactly the four
+release assets with matching API digests and a SHA256SUMS.asc that passes the
+release-key policy, and its archive must hold exactly the files SHA256SUMS
+lists plus the two sums files. Every published version in the registry must be
+present with the same SHA256SUMS. The live SHA256SUMS of every version other
+than --new-version must equal its release's, and the site must fit the size
+budget.
 
-verify-live waits until the plain URLs of the version serve the archive's bytes,
-then compares every file cache-busted, repacks the fetched files into the
-canonical archive, verifies SHA256SUMS.asc and install.sh.asc, and compares the
-live SHA256SUMS of the other versions with the Pages manifest.
+verify-live waits until the plain URLs of the version serve the archive's
+bytes, then streams every file to disk cache-busted and compares its digest,
+repacks the fetched files into the canonical archive, verifies SHA256SUMS.asc
+and install.sh.asc, and compares the live SHA256SUMS of the other versions with
+the Pages manifest.
 """
 import argparse
 import hashlib
@@ -124,10 +128,13 @@ def http(method, url, headers=None, data=None, timeout=120, sink=None):
     return status, response_headers, body
 
 
-def fetch_public(url):
-    """GET without credentials, following at most five redirects to HTTPS URLs; returns (status, body)."""
+def fetch_public(url, sink=None):
+    """GET without credentials, following at most five redirects to HTTPS URLs; returns (status, body).
+
+    With a sink, a successful body is streamed into it as http() does, and the returned body is empty.
+    """
     for _ in range(6):
-        status, headers, body = http('GET', url, {'User-Agent': 'intel-npu-stack-release'})
+        status, headers, body = http('GET', url, {'User-Agent': 'intel-npu-stack-release'}, sink=sink)
         if status not in {301, 302, 303, 307, 308}:
             return status, body
         location = urllib.parse.urljoin(url, headers.get('Location') or headers.get('location') or '')
@@ -138,6 +145,23 @@ def fetch_public(url):
 
 def cache_busted(url):
     return url + '?nocache=' + secrets.token_hex(8)
+
+
+class Digest:
+    """A sink that keeps only the SHA-256 of what is written to it."""
+
+    def __init__(self):
+        self.sha256 = hashlib.sha256()
+
+    def write(self, chunk):
+        self.sha256.update(chunk)
+
+
+def live_sha(fetch, url):
+    """(status, SHA-256 of a 200 body or None), streamed so no live file is held in memory."""
+    sink = Digest()
+    status, _ = fetch(url, sink=sink)
+    return status, (sink.sha256.hexdigest() if status == 200 else None)
 
 
 class GitHub:
@@ -304,22 +328,29 @@ def publish_release(gh, values, assets_dir, notes, commit):
     local = local_assets(assets_dir, version)
     body = Path(notes).read_text()
     require(0 < len(body) <= 120000, 'release notes must be non-empty and within the GitHub limit')
+    title = f'Intel NPU Stack {version}'
     state, release = publish_state(gh, values, local, commit)
     if state == 'fresh':
         _, _, release = gh.call('POST', '/releases', expect=(201,), body={
-            'tag_name': tag, 'target_commitish': commit, 'name': f'Intel NPU Stack {version}', 'body': body,
+            'tag_name': tag, 'target_commitish': commit, 'name': title, 'body': body,
             'draft': True, 'prerelease': False})
     if state in {'fresh', 'draft-resume'}:
+        # A resumed draft may carry another title or stale notes; they are set while the release is still a draft.
+        gh.call('PATCH', f"/releases/{release['id']}", body={'name': title, 'body': body})
         present = {asset.get('name') for asset in release.get('assets', [])}
         for name in release_assets(version):
             if name not in present:
                 gh.upload(release, name, Path(assets_dir) / name)
         _, _, release = gh.call('GET', f"/releases/{release['id']}")
+        require(release.get('draft') is True and release.get('name') == title and release.get('body') == body,
+                f'the {tag} draft does not carry this publication\'s title and notes')
         check_release_assets(gh, release, local, readback=True)
         gh.call('PATCH', f"/releases/{release['id']}", body={'draft': False, 'make_latest': 'true'})
     _, _, final = gh.call('GET', f"/releases/{release['id']}")
     require(final.get('draft') is False and final.get('immutable') is True,
             f'the {tag} release is not an immutable published release')
+    require(final.get('name') == title and final.get('body') == body,
+            f'the published {tag} release does not carry this publication\'s title and notes')
     check_release_assets(gh, final, local, readback=False)
     require(gh.tag_commit(tag) == commit, f'tag {tag} does not name the release commit')
     return {'state': state, 'release_id': final['id'], 'tag': tag, 'commit': commit, 'assets': local}
@@ -397,6 +428,7 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
                 assets = {asset.get('name'): asset for asset in release.get('assets', [])}
                 folder = Path(work) / version
                 folder.mkdir()
+                require(release.get('immutable') is True, f"release {release['tag_name']} is not immutable")
                 if version in retired:
                     # A retirement record must name the release it retires.
                     require('SHA256SUMS' in assets, f"retired release {release['tag_name']} has no SHA256SUMS")
@@ -404,7 +436,6 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
                     require(assets['SHA256SUMS'].get('digest') == 'sha256:' + digest and digest == retired[version],
                             f'the retired entry for {version} does not match its release SHA256SUMS')
                     continue
-                require(release.get('immutable') is True, f"release {release['tag_name']} is not immutable")
                 require(set(assets) == set(release_assets(version)),
                         f"release {release['tag_name']} does not carry exactly the release assets")
                 data = {}
@@ -463,10 +494,10 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
             path = member.name[len(version) + 1:] if member.name.startswith(version + '/') else ''
             require(member.isreg() and plain_path(path) and path not in expected,
                     'unsafe or duplicate member in the release archive: ' + repr(member.name))
-            expected[path] = tar.extractfile(member).read()
+            expected[path] = hashlib.file_digest(tar.extractfile(member), 'sha256').hexdigest()
     deadline = clock() + timeout
     while True:
-        stale = [path for path in PLAIN if fetch(base + path) != (200, expected.get(path))]
+        stale = [path for path in PLAIN if live_sha(fetch, base + path) != (200, expected.get(path))]
         if not stale:
             break
         require(clock() < deadline, 'the live site still serves stale or missing files: ' + ', '.join(stale))
@@ -474,12 +505,13 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
     with tempfile.TemporaryDirectory(prefix='verify-live-') as work:
         root = Path(fetched or work) / version
         require(not root.exists(), f'{root} exists; outputs are never overwritten')
-        for path, data in sorted(expected.items()):
-            status, body = fetch(cache_busted(base + path))
-            require(status == 200 and body == data, f'the live {path} differs from the release (HTTP {status})')
+        for path, digest in sorted(expected.items()):
             target = root / path
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(body)
+            with open(target, 'xb') as sink:
+                status, _ = fetch(cache_busted(base + path), sink=sink)
+            require(status == 200 and release_site.sha(target) == digest,
+                    f'the live {path} differs from the release (HTTP {status})')
         with tempfile.TemporaryFile() as rendered:
             release_site.write_archive(root, rendered)
             rendered.seek(0)

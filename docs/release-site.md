@@ -176,21 +176,23 @@ only the standard library:
   refused, and a stale draft is deleted by hand.
 - `publish-release` uploads the archive, `SHA256SUMS`, `SHA256SUMS.asc` and
   `publication-manifest.json` to a draft. The three separate files must be the
-  archive's own copies. It streams every asset back to disk without sending
-  the token to the storage host, publishes the release as the latest,
-  and requires it to be immutable with its tag at the release commit.
+  archive's own copies. It sets the draft's title and notes to this
+  publication's and streams every asset back to disk without sending the token
+  to the storage host. It then publishes the release as the latest and requires
+  it to be immutable, with the same title and notes and its tag at the release
+  commit.
 - `compose-pages` builds the Pages tree from immutable, non-draft,
-  non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the files
-  its signed `SHA256SUMS` lists, each at a plain relative path, and the
+  non-prerelease `vX.Y.Z` releases only. Each archive must hold exactly the
+  files its signed `SHA256SUMS` lists, each at a plain relative path, and the
   separate asset files must be its own copies. Every version listed in
   `release/published-versions.json` must be present with the recorded
   `SHA256SUMS`. Removing one needs a reviewed `retired` entry whose digest is
-  that of the release's `SHA256SUMS`. The live
-  `SHA256SUMS` of the other versions must be unchanged, and the site must stay
-  within 950 MiB.
+  that of the release's `SHA256SUMS`, and a retired release must be immutable
+  too. The live `SHA256SUMS` of the other versions must be unchanged, and the
+  site must stay within 950 MiB.
 - `verify-live` waits until the plain URLs serve the new release. It then
-  compares every file with the archive, repacks the live files into the
-  canonical archive, and verifies `SHA256SUMS.asc` and `install.sh.asc` under
-  the committed key.
+  streams every file to disk and compares it with the archive, repacks the
+  live files into the canonical archive, and verifies `SHA256SUMS.asc` and
+  `install.sh.asc` under the committed key.
 
 The release workflow does not call these tools yet.

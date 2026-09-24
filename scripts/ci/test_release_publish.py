@@ -39,6 +39,7 @@ class FakeGitHub:
         self.releases, self.blobs, self.tags = [], {}, {}
         self.immutable_on_publish, self.tag_override, self.page_size = True, None, 2
         self.corrupt, self.fail, self.storage_auth, self.next_id = set(), {}, [], 1
+        self.frozen_notes = False
 
     def new_id(self):
         self.next_id += 1
@@ -108,7 +109,7 @@ class FakeGitHub:
         if rest == '/releases' and method == 'POST':
             body = json.loads(data)
             release = self.add_release(body['tag_name'], draft=True, immutable=False, commit=body['target_commitish'])
-            release['body'] = body['body']
+            release['name'], release['body'] = body['name'], body['body']
             return self.reply(201, release)
         if rest and rest.startswith('/releases/assets/'):
             asset_id = int(rest.split('/')[-1])
@@ -119,6 +120,8 @@ class FakeGitHub:
             release = next(r for r in self.releases if r['id'] == int(rest.split('/')[2]))
             if method == 'PATCH':
                 body = json.loads(data)
+                if release['draft'] and not self.frozen_notes:
+                    release.update({key: body[key] for key in ('name', 'body') if key in body})
                 if body.get('draft') is False and release['draft']:
                     release['draft'], release['immutable'] = False, self.immutable_on_publish
                     self.tags[release['tag_name']] = self.tag_override or release['target_commitish']
@@ -126,12 +129,22 @@ class FakeGitHub:
         return self.reply(404, {'message': 'Not Found ' + path})
 
 
+def answer(status, body, sink, limit=None):
+    """A live response as fetch_public gives it; bodies over the limit must be streamed into a sink."""
+    if status == 200 and sink is not None:
+        sink.write(body)
+        return status, b''
+    if limit is not None and len(body) > limit:
+        raise publish.PublishRefused('response exceeds the size limit')
+    return status, body
+
+
 def make_release(root, key, version):
     """A tiny signed site and its four release assets."""
     site = Path(root) / 'site' / version
     files = {'release.json': f'{{"stack_release": "{version}"}}\n'.encode(), 'release.json.sig': b'signature\n',
              'profile.toml': b'id = "fixture"\n', 'install.sh': b'#!/bin/sh\nexit 0\n',
-             'intel-npu-stack-install': b'\x7fELF installer ' + version.encode(),
+             'intel-npu-stack-install': b'\x7fELF installer ' + version.encode() + bytes(200),
              'primary-command.txt': b'(true)\n', 'repodata/repomd.xml': b'<repomd/>\n',
              'publication-manifest.json': f'{{"release_version": "{version}"}}\n'.encode()}
     for name, data in files.items():
@@ -181,9 +194,9 @@ class Publication(unittest.TestCase):
         self.notes.write_text('# Intel NPU Stack 0.1.0\n')
         self.live = {}
 
-    def fetch(self, url):
+    def fetch(self, url, sink=None):
         path = urllib.parse.urlsplit(url).path
-        return (200, self.live[path]) if path in self.live else (404, b'')
+        return answer(200, self.live[path], sink) if path in self.live else (404, b'')
 
     def refused(self, message, function, *args, **kwargs):
         with self.assertRaises(publish.PublishRefused) as caught:
@@ -275,6 +288,28 @@ class Publication(unittest.TestCase):
         self.assertEqual(result['state'], 'draft-resume')
         self.assertEqual(sorted(a['name'] for a in self.fake.releases[0]['assets']), sorted(self.assets))
 
+    def test_a_resumed_draft_gets_this_publications_title_and_notes(self):
+        draft = self.fake.add_release('v0.1.0', draft=True, immutable=False,
+                                      assets={'SHA256SUMS': self.assets['SHA256SUMS']})
+        draft.update(name='Old title', body='stale qualification digests\n')
+        publish.publish_release(self.gh, self.values, self.assets_dir, self.notes, COMMIT)
+        self.assertEqual((draft['draft'], draft['name'], draft['body']),
+                         (False, 'Intel NPU Stack 0.1.0', '# Intel NPU Stack 0.1.0\n'))
+
+    def test_notes_are_checked_before_and_after_publication(self):
+        draft = self.fake.add_release('v0.1.0', draft=True, immutable=False)
+        draft.update(name='Old title', body='stale\n')
+        self.fake.frozen_notes = True
+        self.refused("draft does not carry this publication's title and notes", publish.publish_release, self.gh,
+                     self.values, self.assets_dir, self.notes, COMMIT)
+        self.assertTrue(draft['draft'], 'a draft with other notes must not be published')
+        self.setUp()
+        published = self.fake.add_release('v0.1.0', assets=self.assets)
+        published.update(name='Intel NPU Stack 0.1.0', body='other notes\n')
+        self.fake.tags['v0.1.0'] = COMMIT
+        self.refused("published v0.1.0 release does not carry", publish.publish_release, self.gh, self.values,
+                     self.assets_dir, self.notes, COMMIT)
+
     def test_publication_refusals(self):
         self.fake.corrupt = {'SHA256SUMS.asc'}
         self.refused('reads back differently', publish.publish_release, self.gh, self.values, self.assets_dir,
@@ -324,6 +359,16 @@ class Publication(unittest.TestCase):
         self.publish_both()
         registry = self.registry(retired=[{'version': '0.1.0', 'sha256sums_sha256': '0' * 64, 'reason': 'superseded'}])
         self.refused('retired entry for 0.1.0', self.compose, registry)
+
+    def test_a_retired_release_must_be_immutable(self):
+        self.publish_both()
+        release = next(r for r in self.fake.releases if r['tag_name'] == 'v0.1.0')
+        release['immutable'] = False
+        registry = self.registry(retired=[{'version': '0.1.0', 'sha256sums_sha256': sha(self.assets['SHA256SUMS']),
+                                           'reason': 'superseded'}])
+        self.refused('release v0.1.0 is not immutable', self.compose, registry)
+        release['immutable'] = True
+        self.assertNotIn('0.1.0', self.compose(registry)[0]['versions'])
 
     def test_compose_refuses_a_release_whose_standalone_manifest_differs(self):
         self.publish_both()
@@ -409,14 +454,15 @@ class Publication(unittest.TestCase):
     def serve_live(self, site, version, stale=None):
         stale = dict(stale or {})
 
-        def fetch(url):
+        def fetch(url, sink=None):
+            # A 100-byte in-memory limit stands for MAX_BODY: every file of the version must be streamed.
             parts = urllib.parse.urlsplit(url)
             path = parts.path.removeprefix(f'/intel-npu-stack/{version}/')
             if path in stale and stale[path] > 0 and not parts.query:
                 stale[path] -= 1
-                return 200, b'old ' + path.encode()
+                return answer(200, b'old ' + path.encode(), sink, limit=100)
             target = site / path
-            return (200, target.read_bytes()) if target.is_file() else (404, b'')
+            return answer(200, target.read_bytes(), sink, limit=100) if target.is_file() else (404, b'')
         return fetch
 
     def verify(self, fetch, archive=None, **kwargs):
@@ -441,6 +487,10 @@ class Publication(unittest.TestCase):
         shutil.copytree(self.site, broken)
         (broken / 'install.sh.asc').unlink()
         self.refused('install.sh.asc differs', self.verify, self.serve_live(broken, '0.1.0'))
+        shutil.rmtree(broken.parent)
+        shutil.copytree(self.site, broken)
+        (broken / 'publication-manifest.json').write_bytes(b'{"changed": true}\n')
+        self.refused('live publication-manifest.json differs', self.verify, self.serve_live(broken, '0.1.0'))
         other = self.work / 'noncanonical.tar'
         with tarfile.open(other, 'w', format=tarfile.GNU_FORMAT) as tar:
             for relative in release_site.site_files(self.site):
@@ -478,15 +528,15 @@ class Publication(unittest.TestCase):
         manifest.write_text(json.dumps({'versions': {'0.0.9': {'sha256sums_sha256': sha(b'old sums')}}}))
         fetch = self.serve_live(self.site, '0.1.0')
 
-        def with_old(url):
+        def with_old(url, sink=None):
             if '/0.0.9/SHA256SUMS' in url:
-                return 200, b'old sums'
-            return fetch(url)
+                return answer(200, b'old sums', sink)
+            return fetch(url, sink)
         result, _ = self.verify(with_old, pages_manifest=manifest)
         self.assertEqual(result['other_versions'], {'0.0.9': sha(b'old sums')})
 
-        def drifted(url):
-            return (200, b'changed') if '/0.0.9/SHA256SUMS' in url else fetch(url)
+        def drifted(url, sink=None):
+            return answer(200, b'changed', sink) if '/0.0.9/SHA256SUMS' in url else fetch(url, sink)
         self.refused('0.0.9/SHA256SUMS changed', self.verify, drifted, pages_manifest=manifest)
 
 
@@ -534,6 +584,13 @@ class Transport(unittest.TestCase):
         sink = io.BytesIO()
         self.assertEqual(publish.http('GET', url, sink=sink)[2], b'')
         self.assertEqual(sink.getvalue(), body)
+        body_limit, publish.MAX_BODY = publish.MAX_BODY, 1000
+        self.addCleanup(setattr, publish, 'MAX_BODY', body_limit)
+        with self.assertRaisesRegex(publish.PublishRefused, 'size limit'):
+            publish.fetch_public(url)
+        live = publish.Digest()
+        self.assertEqual(publish.fetch_public(url, sink=live), (200, b''))
+        self.assertEqual(live.sha256.hexdigest(), sha(body))
         limit, publish.MAX_ASSET = publish.MAX_ASSET, 1000
         self.addCleanup(setattr, publish, 'MAX_ASSET', limit)
         with self.assertRaisesRegex(publish.PublishRefused, 'size limit'):
