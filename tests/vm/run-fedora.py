@@ -10,8 +10,8 @@ Isolation properties (asserted by tests/vm/test-runner.py):
 - the fixture release tree and guest harness are re-verified against the
   recorded result.json digests;
 - a fresh qcow2 overlay is created per run and always removed afterwards;
-- KVM is required; CPUs (<=4) and memory (<=8192 MiB) are bounded so the
-  archhost build set keeps six logical CPUs free;
+- KVM is required; CPUs (<=4) and memory (<=8192 MiB) are bounded so a run
+  leaves room for other work on the host;
 - networking is QEMU user-mode NAT only: no bridged adapter, no host port
   forwards, no USB/PCI passthrough, no host filesystem shares;
 - the only host-side endpoint is a loopback-bound HTTPS fixture server that

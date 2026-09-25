@@ -150,7 +150,7 @@ Large links share a single Ninja job pool. The spec sets
 `CMAKE_JOB_POOLS` is cleared to avoid defining it twice through OpenVINO's
 global pool initialization. Compile parallelism retains the selected host's
 CPU budget. This addresses the observed concurrent-link saturation of 22 GiB
-RAM plus 8 GiB swap and an OOM kill on archhost.
+RAM plus 8 GiB swap and an OOM kill on the build host.
 
 Before Ninja starts, `check-link-pool.py` validates the actual generated graph:
 all C/C++ executable, module and shared-library links must use the same pool
@@ -189,11 +189,12 @@ Real GoogleTest fixtures exercise the check's passing, failed, skipped and
 empty-selection paths. This replaces a CTest label that returned success
 without running any tests; it does not replace later hardware qualification.
 
-Local laptop builds use a total four-CPU budget: `podman run --cpus=4` and
-`rpmbuild --define '_smp_build_ncpus 4'`. Do not run another CPU-heavy project
-build alongside it. Podman's CPU quota limits aggregate CPU time rather than
-pinning four particular cores. This limit favors interactive responsiveness;
-it is not a measured guarantee of desktop latency or build completion time.
+Choose an explicit CPU budget for the build host and apply it twice: as the
+container CPU limit (`--cpus=N`, plus `--cpuset-cpus` to pin cores) and as
+`rpmbuild --define '_smp_build_ncpus N'`. Do not run another CPU-heavy project
+build alongside it. A CPU quota alone limits aggregate CPU time rather than
+pinning particular cores. The budget favors the host's responsiveness; it is
+not a measured guarantee of latency or build completion time.
 
 Resume a retained RPM build through `rpmbuild -bc --short-circuit`, preserving
 the original topdir and the selected host's authorized job limit. Invoking the generated CMake build
@@ -202,12 +203,9 @@ failed with `environment variable 'RPM_ARCH' not defined` through
 `redhat-package-notes`. Keep the RPM entry point rather than reconstructing
 selected environment variables by hand.
 
-Archhost remote builds use the same Fedora image filesystem and configuration
-under Docker. The user authorized ten logical CPUs and ten jobs there, leaving
-six logical CPUs outside the build CPU set. Its verified CPU topology permits
-`--cpus=10 --cpuset-cpus=3-7,11-15`, with
-`rpmbuild --define '_smp_build_ncpus 10'`. Keep the laptop build stopped.
-Preserve `/work` and `/sources` mount paths when transferring a retained tree.
+Docker builds use the same Fedora image filesystem and configuration as
+Podman builds. Preserve `/work` and `/sources` mount paths when transferring a
+retained tree between hosts.
 
 The September 7 migration reproduced a persistent Ninja 1.13.2 dependency-log
 recovery warning on an isolated copy: an invalid duplicate path record remained

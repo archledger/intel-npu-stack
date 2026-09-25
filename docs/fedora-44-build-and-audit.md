@@ -124,8 +124,8 @@ packages. Each invocation must use its recorded immutable image identifier.
 `scripts/check-fedora-packages.sh` accepts an explicit recipe (`firmware`,
 `driver`, or `openvino`), canonical source-cache and empty output directories,
 a tested xtask executable, two immutable image digests, source epoch, job count
-and CPU set. It uses `podman` by default; `--runtime docker` selects the cached
-Docker images on archhost. It never pulls images or enables container networking.
+and CPU set. It uses `podman` by default; `--runtime docker` uses images already
+cached in Docker instead. It never pulls images or enables container networking.
 The provider gate rebuilds source archives from the offline Git cache, verifies
 the source lock, stages three independent source roots, and runs a notice
 preflight before either full build.
