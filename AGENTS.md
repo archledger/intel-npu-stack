@@ -15,4 +15,4 @@ Detailed qualification receipts and working notes are kept in the maintainer's c
 - Preserve exact qualification evidence and component digests. Never promote a profile without the required independent evidence and approval.
 - Keep this project application-neutral. Do not add downstream application code, models, configuration, activation, dependencies, services, or branding.
 - Follow test-driven development for behavior changes, as `CONTRIBUTING.md` describes, and run the locked quality gate (`./scripts/check.sh`) before claiming completion.
-- Build with at most four jobs in total (`CARGO_BUILD_JOBS=4`), as `scripts/ci/quality.sh` and CI do. Concurrent agents share those four jobs rather than each using four. The release installer build refuses more than four.
+- Build with at most four jobs in total (`CARGO_BUILD_JOBS=4`), as `scripts/ci/quality.sh` and CI do. Concurrent agents share those four jobs rather than each using four. The release installer build refuses more than four. Only a dedicated build host whose owner authorizes it may run the provider package builds with up to ten jobs, as `packaging/fedora/44/rpm/openvino/SOURCES.md` describes.
