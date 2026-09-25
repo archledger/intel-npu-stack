@@ -210,15 +210,17 @@ publish phase and `publish-release` reserve the new site's size.
   before publishing it reads the draft again: it must still be a draft, not a
   prerelease, of this tag and commit, with this title, notes and exactly these
   assets, and the tag must be absent or name the release commit. The other
-  non-draft `vX.Y.Z` releases and the `v` tags must still be as the dry
-  composition found them, both when it ends and at that point, and the live
-  `SHA256SUMS` of every version it composed must still be served. It then
+  non-draft `vX.Y.Z` releases and the `v` tags, with the object each tag names
+  in the tag listing, must still be as the dry composition found them, both
+  when it ends and at that point, so an older tag force-moved after the dry
+  composition bound its release to a commit stops the publication too. The
+  live `SHA256SUMS` of every version it composed must still be served. It then
   publishes the release as the latest, naming this tag, the release commit, the
   title, the notes and a full release again in the same request so that no
-  later change to them takes effect, and requires it to be immutable, not a prerelease and under
-  this tag, with the same title and notes and its tag at the release commit.
-  GitHub keeps a tag pushed after the last read, so only that final check can
-  refuse one.
+  later change to them takes effect, and requires it to be immutable, not a
+  prerelease and under this tag, with the same title and notes and its tag at
+  the release commit. GitHub keeps a tag pushed after the last read, so only
+  that final check can refuse one.
 - `compose-pages` builds the Pages tree from immutable, non-draft `vX.Y.Z`
   releases only. A `vX.Y.Z` release marked prerelease is refused rather than
   left out, since `publish-release` never makes one. Each archive must hold
@@ -238,22 +240,38 @@ publish phase and `publish-release` reserve the new site's size.
   of the release's `SHA256SUMS`; a retired release must be immutable too, and
   every retired entry must match such a release. A deleted release can
   therefore be neither served nor retired, and its entry and its tag have to be
-  removed by hand after review. The one removal this cannot see is a release
-  deleted together with its tag before its version is recorded; a ruleset that
-  blocks deleting `v*` tags closes that. `--new-version` must be the committed
-  version and the newest composed version, so re-running an older run's
-  `pages-build` cannot serve again what a later registry retired. The live
-  `SHA256SUMS` of the other versions must be unchanged, and the site must stay
-  within 950 MiB. `--manifest` must be a new file in an existing directory,
-  neither inside the site nor containing it. This is checked before anything
-  is downloaded, and a refusal leaves neither the site nor the manifest behind.
+  removed by hand after review.
+  The one removal this cannot see is a release deleted together with its tag
+  before its version is recorded; a ruleset that blocks deleting `v*` tags
+  closes that. `--new-version` must be the committed version and the newest
+  composed version, so re-running an older run's `pages-build` cannot serve
+  again what a later registry retired. The live `SHA256SUMS` of the other
+  versions must be unchanged, and the site must stay within 950 MiB. The
+  manifest records each composed version with the digests of its archive and
+  `SHA256SUMS`, and each retired version left out with the files it could have
+  served: those its `SHA256SUMS` lists and the two sums files, or only the sums
+  files when its `SHA256SUMS` does not parse, lists an unsafe path or more than
+  20000 files, since such a release never passed `compose-pages`.
+  `--manifest` must be a new file in an existing directory, neither inside the
+  site nor containing it.
+  This is checked before anything is downloaded, and a refusal leaves neither
+  the site nor the manifest behind.
 - `verify-live` requires `--pages-manifest`, the record `compose-pages` wrote
   with this version as `--new-version`, and the 40-hex release commit from
-  `--sha` or `GITHUB_SHA`. It waits until the plain URLs serve the new release,
-  counting network and protocol errors as not converged yet until the 20-minute
-  timeout. It then streams every file to disk and compares it with the archive,
-  repacks the live files into the canonical archive, verifies `SHA256SUMS.asc`
-  and `install.sh.asc` under the committed key, and requires the files to be
+  `--sha` or `GITHUB_SHA`. Before it fetches anything, the record's entry for
+  this version must name the archive's digest and the digest of the archive's
+  `SHA256SUMS`. It waits until every file of the archive serves the archive's
+  bytes at its plain URL, as users fetch it, and every file the record lists
+  for a retired version returns 404 at its plain URL, since the CDN caches each
+  URL on its own; that version's `release.json` and `SHA256SUMS` must return
+  404 past the CDN cache too, where the Pages origin drops a version's
+  directory as a whole. A check that passed is not repeated, and each round
+  stops at the first one that has not, so a round downloads at most the files
+  that converged in it and one stale response. Network and protocol errors
+  count as not converged yet until the 20-minute timeout. It then streams every
+  file to disk past the CDN cache and compares it with the archive, repacks the
+  live files into the canonical archive, verifies `SHA256SUMS.asc` and
+  `install.sh.asc` under the committed key, and requires the files to be
   exactly those the signed `SHA256SUMS` lists, with its digests. The signed
   `publication-manifest.json` must name this version, base URL, release key and
   commit, and the live `SHA256SUMS` of every other version the Pages manifest

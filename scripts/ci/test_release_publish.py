@@ -41,7 +41,8 @@ class FakeGitHub:
 
     def __init__(self):
         self.pages = {'build_type': 'workflow', 'html_url': 'https://archledger.github.io/intel-npu-stack/'}
-        self.releases, self.blobs, self.tags = [], {}, {}
+        # A tag names a commit or one of the annotated tag objects, each of which names a commit.
+        self.releases, self.blobs, self.tags, self.annotated = [], {}, {}, {}
         self.immutable_on_publish, self.tag_override, self.page_size = True, None, 2
         self.corrupt, self.fail, self.storage_auth, self.next_id = set(), {}, [], 1
         self.frozen_notes, self.upload_bodies, self.undrafts = False, [], []
@@ -77,6 +78,16 @@ class FakeGitHub:
             self.tags[tag] = commit
         self.releases.append(release)
         return release
+
+    def annotate(self, tag, tag_object, commit=COMMIT):
+        """Point the tag at a new annotated tag object that names commit, as git tag -s -f does."""
+        self.annotated[tag_object] = commit
+        self.tags[tag] = tag_object
+
+    def ref_object(self, tag):
+        """What the tag's ref names: its annotated tag object or its commit."""
+        target = self.tags[tag]
+        return {'type': 'tag' if target in self.annotated else 'commit', 'sha': target}
 
     @staticmethod
     def require_length(headers, body):
@@ -125,14 +136,19 @@ class FakeGitHub:
             return self.reply(200, self.pages) if self.pages else self.reply(404, {'message': 'Not Found'})
         if rest and rest.startswith('/git/matching-refs/tags/'):
             prefix = rest.split('/git/matching-refs/tags/')[1]
-            # Listed by name, as git lists refs, and paged like the releases.
-            return self.listing([{'ref': 'refs/tags/' + tag} for tag in sorted(self.tags) if tag.startswith(prefix)],
-                                query, f'{API}{path}?page=')
+            # Listed by name with the object each ref names, as git lists refs, and paged like the releases.
+            return self.listing([{'ref': 'refs/tags/' + tag, 'object': self.ref_object(tag)}
+                                 for tag in sorted(self.tags) if tag.startswith(prefix)], query, f'{API}{path}?page=')
         if rest and rest.startswith('/git/ref/tags/'):
             tag = rest.split('/git/ref/tags/')[1]
             if tag not in self.tags:
                 return self.reply(404, {'message': 'Not Found'})
-            return self.reply(200, {'object': {'type': 'commit', 'sha': self.tags[tag]}})
+            return self.reply(200, {'object': self.ref_object(tag)})
+        if rest and rest.startswith('/git/tags/'):
+            tag_object = rest.split('/git/tags/')[1]
+            if tag_object not in self.annotated:
+                return self.reply(404, {'message': 'Not Found'})
+            return self.reply(200, {'object': {'type': 'commit', 'sha': self.annotated[tag_object]}})
         if rest == '/releases' and method == 'GET':
             return self.listing(self.releases, query, f'{API}{repo}/releases?per_page=100&page=')
         if rest == '/releases' and method == 'POST':
@@ -176,11 +192,12 @@ def answer(status, body, sink, limit=None):
     return status, body
 
 
-def make_release(root, key, version, installer_key=None, installer_bytes=None, **identity):
+def make_release(root, key, version, installer_key=None, installer_bytes=None, extra=None, **identity):
     """A tiny signed site and its four release assets.
 
     identity overrides what the signed manifest names: pinned (the version), base_url, primary_fingerprint or
-    source_commit. installer_key and installer_bytes sign install.sh.asc with another key or over other bytes.
+    source_commit. installer_key and installer_bytes sign install.sh.asc with another key or over other bytes, and
+    extra adds files, such as packages, to the site.
     """
     site = Path(root) / 'site' / version
     pinned = identity.pop('pinned', version)
@@ -201,7 +218,7 @@ def make_release(root, key, version, installer_key=None, installer_bytes=None, *
              'intel-npu-stack-install': b'\x7fELF installer ' + version.encode() + bytes(200),
              'primary-command.txt': b'(true)\n', 'repodata/repomd.xml': b'<repomd/>\n',
              'publication-manifest.json': (json.dumps(manifest, sort_keys=True) + '\n').encode(),
-             'support-matrix.json': (json.dumps(matrix, sort_keys=True) + '\n').encode()}
+             'support-matrix.json': (json.dumps(matrix, sort_keys=True) + '\n').encode(), **(extra or {})}
     for name, data in files.items():
         (site / name).parent.mkdir(parents=True, exist_ok=True)
         (site / name).write_bytes(data)
@@ -231,6 +248,11 @@ def noncanonical(archive):
             member.mtime, member.mode = 1, 0o600
             tar.addfile(member, io.BytesIO(data))
     return stream.getvalue()
+
+
+def many_sums(count):
+    """A SHA256SUMS that lists count files at plain relative paths."""
+    return ''.join(f'{"0" * 64}  packages/{index}.rpm\n' for index in range(count)).encode()
 
 
 @unittest.skipUnless(TOOLS, 'gpg is required')
@@ -309,7 +331,7 @@ class Publication(unittest.TestCase):
     def retire_older_versions(self):
         """Retired releases of 0.0.1 to 0.0.3, whose tags come before v0.1.0 and fill the first page of tags."""
         for version in ['0.0.1', '0.0.2', '0.0.3']:
-            sums = f'{version} sums\n'.encode()
+            sums = f'{sha(version.encode())}  release.json\n'.encode()
             self.fake.add_release('v' + version, assets={'SHA256SUMS': sums})
             self.retired.append({'version': version, 'sha256sums_sha256': sha(sums), 'reason': 'withdrawn'})
 
@@ -573,6 +595,10 @@ class Publication(unittest.TestCase):
             self.published('0.3.0', self.assets3, self.site3, self.archive3)
             self.retired.append({'version': '0.3.0', 'sha256sums_sha256': sha(self.assets3['SHA256SUMS']),
                                  'reason': 'withdrawn'})
+
+        def retire(sums):  # verify-live requires every file its SHA256SUMS lists gone
+            self.fake.add_release('v0.0.5', assets={'SHA256SUMS': sums})
+            self.retired.append({'version': '0.0.5', 'sha256sums_sha256': sha(sums), 'reason': 'withdrawn'})
         this = {'version': '0.2.0', 'sha256sums_sha256': sha(self.assets2['SHA256SUMS'])}
         room = publish.site_bytes(self.site2)
         unrecorded = 'tagged versions without an entry in published-versions.json: 0.1.0'
@@ -645,6 +671,42 @@ class Publication(unittest.TestCase):
         self.refused('the served releases or v tags changed during the room check', self.publish,
                      readback=lambda r: older.update(body='edited\n'))
         self.assertEqual([r['tag_name'] for r in self.fake.releases], ['v0.1.0'])
+
+    def test_an_older_tag_moved_after_the_room_check_resolved_it_stops_publication(self):
+        # The room check bound the older release to the commit its tag named. A force-moved tag makes the next
+        # composition refuse that release, so the new one must not become immutable; the tag listing names each
+        # tag's object, so no call per tag is needed to see the move.
+        def move():
+            self.fake.tags['v0.1.0'] = 'd' * 40
+        with self.subTest('right after the room check resolved it'):
+            self.pending()
+            resolve = self.gh.tag_commit
+
+            def resolve_then_move(tag):
+                commit = resolve(tag)
+                if tag == 'v0.1.0':
+                    move()
+                return commit
+            with mock.patch.object(self.gh, 'tag_commit', resolve_then_move):
+                self.refused('the served releases or v tags changed during the room check', self.publish)
+            self.assertEqual([r['tag_name'] for r in self.fake.releases], ['v0.1.0'], 'no draft may be created')
+        with self.subTest('during the uploads'):
+            self.setUp()
+            self.pending()
+            self.refused('the served releases or v tags changed before publication', self.publish,
+                         upload=lambda r: move())
+            new = next(r for r in self.fake.releases if r['tag_name'] == 'v0.2.0')
+            self.assertEqual((new['draft'], self.fake.undrafts), (True, []))
+        with self.subTest('an annotated tag replaced by another tag object during the uploads'):
+            # The listing names the tag object, not the commit behind it, and a signed tag moved by force gets a new
+            # object.
+            self.setUp()
+            self.pending()
+            self.fake.annotate('v0.1.0', 'a' * 40)
+            self.refused('the served releases or v tags changed before publication', self.publish,
+                         upload=lambda r: self.fake.annotate('v0.1.0', 'b' * 40, 'd' * 40))
+            new = next(r for r in self.fake.releases if r['tag_name'] == 'v0.2.0')
+            self.assertEqual((new['draft'], self.fake.undrafts), (True, []))
 
     def test_a_release_is_published_only_when_pages_can_serve_it_beside_every_older_version(self):
         self.pending()
@@ -773,7 +835,8 @@ class Publication(unittest.TestCase):
         self.assertEqual(self.fake.releases, [])
         self.headers_read(publish.unpack_release, self.flood(), '0.1.0', self.assets['SHA256SUMS'],
                           self.assets['SHA256SUMS.asc'], self.work / 'unpacked')
-        self.headers_read(self.verify, lambda url, sink=None: (404, b''), archive=self.flood())
+        self.headers_read(self.verify, lambda url, sink=None: (404, b''), archive=self.flood(),
+                          pages_manifest=self.pages_record())
 
     def test_hidden_extension_headers_count_toward_the_member_limit(self):
         archive = self.work / 'long-names.tar'
@@ -841,7 +904,7 @@ class Publication(unittest.TestCase):
         self.fake.tags['v0.3.0-rc1'] = COMMIT  # not a vX.Y.Z tag, so the registry need not record it
         registry = self.registry([{'version': '0.1.0', 'sha256sums_sha256': sha(self.assets['SHA256SUMS'])}])
         manifest, output = self.compose(registry)
-        self.assertEqual(sorted(manifest['versions']), ['0.1.0', '0.2.0'])
+        self.assertEqual((sorted(manifest['versions']), manifest['retired']), (['0.1.0', '0.2.0'], {}))
         self.assertEqual(sorted(p.name for p in output.iterdir()), ['0.1.0', '0.2.0'])
         self.assertEqual((output / '0.2.0/SHA256SUMS').read_bytes(), self.assets2['SHA256SUMS'])
         self.assertFalse((output / 'index.html').exists())
@@ -860,6 +923,28 @@ class Publication(unittest.TestCase):
         self.refused('release v0.1.0 is not immutable', self.compose, registry)
         release['immutable'] = True
         self.assertNotIn('0.1.0', self.compose(registry)[0]['versions'])
+
+    def test_a_retired_release_records_the_files_pages_could_have_served(self):
+        # verify-live requires every file a retired SHA256SUMS lists gone from under that version's directory, one
+        # fetch each. A SHA256SUMS that does not parse, lists an unsafe path or more files than a release archive may
+        # hold belongs to a release compose-pages never served, so only its two sums files are recorded, and retiring
+        # it stays possible.
+        def retire(sums):
+            self.setUp()
+            self.publish_both()
+            self.fake.add_release('v0.0.5', assets={'SHA256SUMS': sums})
+            self.retired.append({'version': '0.0.5', 'sha256sums_sha256': sha(sums), 'reason': 'withdrawn'})
+        for label, sums in [
+                ('malformed', b'withdrawn\n'),
+                ('an unsafe path', f'{"0" * 64}  ../0.1.0/release.json\n'.encode()),
+                # With the two sums files, one file more than a release archive may hold.
+                ('more files than a release archive may hold', many_sums(publish.MAX_MEMBERS - 1))]:
+            with self.subTest(label):
+                retire(sums)
+                self.assertEqual(self.compose()[0]['retired']['0.0.5'], ['SHA256SUMS', 'SHA256SUMS.asc'])
+        with self.subTest('as many files as a release archive may hold'):
+            retire(many_sums(publish.MAX_MEMBERS - 2))
+            self.assertEqual(len(self.compose()[0]['retired']['0.0.5']), publish.MAX_MEMBERS)
 
     def test_compose_refuses_a_release_whose_standalone_manifest_differs(self):
         self.publish_both()
@@ -998,12 +1083,17 @@ class Publication(unittest.TestCase):
             self.compose_into(output, manifest)
         self.assertEqual((output.exists(), manifest.exists()), (False, False))
 
-    def test_retired_versions_are_left_out(self):
+    def test_retired_versions_are_left_out_and_recorded_for_verify_live(self):
+        # verify-live requires every file of a retired version gone: each one its SHA256SUMS lists and the two sums
+        # files.
         self.publish_both()
         registry = self.registry(retired=[{'version': '0.1.0', 'sha256sums_sha256': sha(self.assets['SHA256SUMS']),
                                            'reason': 'superseded'}])
         manifest, output = self.compose(registry)
-        self.assertEqual(sorted(manifest['versions']), ['0.2.0'])
+        gone = {'0.1.0': sorted(release_site.site_files(self.site))}
+        self.assertEqual((sorted(manifest['versions']), manifest['retired']), (['0.2.0'], gone))
+        self.assertEqual(json.loads((self.work / 'out/pages-manifest.json').read_text())['retired'], gone)
+        self.assertFalse((output / '0.1.0').exists())
 
     def test_compose_binds_each_release_to_its_version(self):
         cases = [
@@ -1172,19 +1262,28 @@ class Publication(unittest.TestCase):
             return answer(200, target.read_bytes(), sink, limit=100) if target.is_file() else (404, b'')
         return fetch
 
-    def pages_record(self, **changes):
-        """The pages-manifest.json compose-pages wrote with 0.1.0 as the new version, with changes."""
+    def pages_entry(self, archive=None):
+        """What compose-pages records for 0.1.0: the digests of its archive and of the archive's SHA256SUMS."""
+        archive = Path(archive or self.archive)
+        with tarfile.open(archive) as tar:
+            sums = [tar.extractfile(member).read() for member in tar.getmembers()
+                    if member.name == '0.1.0/SHA256SUMS' and member.isreg()]
+        return {'archive_sha256': sha(archive.read_bytes()), 'sha256sums_sha256': sha(sums[-1] if sums else b'')}
+
+    def pages_record(self, archive=None, **changes):
+        """The pages-manifest.json compose-pages wrote with 0.1.0 as the new version and this archive, with changes."""
         record = {'schema_version': 1, 'base_url': BASE_URL, 'new_version': '0.1.0', 'total_bytes': 1,
-                  'versions': {'0.1.0': {'sha256sums_sha256': sha(self.assets['SHA256SUMS'])}}, **changes}
+                  'versions': {'0.1.0': self.pages_entry(archive)}, 'retired': {}, **changes}
         path = self.work / f'pages-manifest-{len(list(self.work.glob("pages-manifest-*.json")))}.json'
         path.write_text(json.dumps(record))
         return path
 
     def verify(self, fetch, archive=None, pages_manifest=None, commit=COMMIT, sleeps=None, **kwargs):
+        """verify-live against this fetch; the Pages record is by default the one composed with this archive."""
         sleeps = [] if sleeps is None else sleeps
         clock = iter(range(0, 100000, 30))
         result = publish.verify_live(self.values, self.key.public, self.key.fingerprint, archive or self.archive,
-                                     pages_manifest=pages_manifest or self.pages_record(), commit=commit,
+                                     pages_manifest=pages_manifest or self.pages_record(archive), commit=commit,
                                      fetch=fetch, sleep=sleeps.append, clock=lambda: next(clock), **kwargs)
         return result, sleeps
 
@@ -1198,15 +1297,18 @@ class Publication(unittest.TestCase):
         broken = self.work / 'broken/0.1.0'
         shutil.copytree(self.site, broken)
         (broken / 'repodata/repomd.xml').write_bytes(b'<changed/>\n')
-        self.refused('still serves stale', self.verify, self.serve_live(broken, '0.1.0'), timeout=90)
+        self.refused('the live repodata/repomd.xml is still stale or missing at its plain URL (HTTP 200)', self.verify,
+                     self.serve_live(broken, '0.1.0'), timeout=90)
         shutil.rmtree(broken.parent)
         shutil.copytree(self.site, broken)
         (broken / 'install.sh.asc').unlink()
-        self.refused('install.sh.asc differs', self.verify, self.serve_live(broken, '0.1.0'))
+        self.refused('the live install.sh.asc is still stale or missing at its plain URL (HTTP 404)', self.verify,
+                     self.serve_live(broken, '0.1.0'), timeout=90)
         shutil.rmtree(broken.parent)
         shutil.copytree(self.site, broken)
         (broken / 'publication-manifest.json').write_bytes(b'{"changed": true}\n')
-        self.refused('live publication-manifest.json differs', self.verify, self.serve_live(broken, '0.1.0'))
+        self.refused('the live publication-manifest.json is still stale or missing at its plain URL (HTTP 200)',
+                     self.verify, self.serve_live(broken, '0.1.0'), timeout=90)
         other = self.work / 'noncanonical.tar'
         with tarfile.open(other, 'w', format=tarfile.GNU_FORMAT) as tar:
             for relative in release_site.site_files(self.site):
@@ -1262,6 +1364,54 @@ class Publication(unittest.TestCase):
                      '[Errno 111] Connection refused', self.verify, down, timeout=90, sleeps=sleeps)
         self.assertEqual(len(sleeps), 2)
 
+    def test_every_file_is_polled_at_its_plain_url_until_it_serves_the_release(self):
+        # Users fetch every file at its plain URL, so an RPM the CDN still serves stale once the paths the installer
+        # reads first have converged keeps the wait going. A file is fetched there until it serves the release and
+        # never again, and a round stops at its first stale response, so the wait stays bounded on a large site.
+        rpm = 'packages/fixture-1.0-1.fc44.x86_64.rpm'
+        site, archive, _ = make_release(self.work / 'packages', self.key, '0.1.0', extra={rpm: b'\xed\xab\xee\xdb\n'})
+        live, events, stale = self.serve_live(site, '0.1.0'), [], {rpm: 3, 'support-matrix.json': 1}
+
+        def edge(url, sink=None):  # events records (path, stale) for each plain fetch and 30 for each pause
+            parts = urllib.parse.urlsplit(url)
+            path = parts.path.removeprefix('/intel-npu-stack/0.1.0/')
+            if parts.query:
+                return live(url, sink)
+            events.append((path, bool(stale.get(path))))
+            if stale.get(path):
+                stale[path] -= 1
+                return answer(200, b'old\n', sink)
+            return live(url, sink)
+        self.assertTrue(self.verify(edge, archive=archive, sleeps=events)[0]['passed'])
+        rounds = [[]]
+        for event in events:
+            if event == 30:
+                rounds.append([])
+            else:
+                rounds[-1].append(event)
+        self.assertEqual([[path for path, old in fetches if old] for fetches in rounds],
+                         [[rpm], [rpm], [rpm], ['support-matrix.json'], []])
+        self.assertEqual(sorted(path for fetches in rounds for path, old in fetches if not old),
+                         release_site.site_files(site))
+        outages = [2]
+
+        def unreachable(url, sink=None):  # right after a deployment, a network error only means not converged yet
+            if url == BASE_URL + rpm and outages[0]:
+                outages[0] -= 1
+                raise publish.NetworkRefused(f'GET {url} failed: [Errno 104] Connection reset by peer')
+            return live(url, sink)
+        result, sleeps = self.verify(unreachable, archive=archive)
+        self.assertEqual((result['passed'], len(sleeps)), (True, 2))
+        for label, fetch, status in [
+                ('stale until the timeout', self.serve_live(site, '0.1.0', {rpm: 1000}), 200),
+                ('missing until the timeout', lambda url, sink=None: (404, b'') if url == BASE_URL + rpm
+                 else live(url, sink), 404)]:
+            with self.subTest(label):
+                sleeps = []
+                self.refused(f'the live {rpm} is still stale or missing at its plain URL (HTTP {status})',
+                             self.verify, fetch, archive=archive, timeout=90, sleeps=sleeps)
+                self.assertEqual(len(sleeps), 2)
+
     def test_other_errors_and_errors_after_the_wait_fail_at_once(self):
         live = self.serve_live(self.site, '0.1.0')
 
@@ -1302,19 +1452,145 @@ class Publication(unittest.TestCase):
         self.assertEqual(fetched, [])
 
     def test_the_pages_manifest_must_be_the_record_of_composing_this_version(self):
-        fetched = []
+        fetched, files = [], ['SHA256SUMS', 'SHA256SUMS.asc', 'release.json']
         malformed = self.work / 'pages-manifest-list.json'
         malformed.write_text('[]')
+        unretired = self.pages_record()
+        unretired.write_text(json.dumps({key: value for key, value in json.loads(unretired.read_text()).items()
+                                         if key != 'retired'}))
         for label, record in [('not an object', malformed),
                               ('another schema', self.pages_record(schema_version=2)),
                               ('another base URL', self.pages_record(base_url='https://archledger.github.io/o/0.1.0/')),
                               ('composed without a new version', self.pages_record(new_version=None)),
                               ('another new version', self.pages_record(new_version='0.0.9')),
-                              ('versions that are not an object', self.pages_record(versions=[]))]:
+                              ('versions that are not an object', self.pages_record(versions=[])),
+                              ('no retired versions', unretired),
+                              # A list or a string names no files to require gone; an empty one would check nothing.
+                              ('retired versions in a list', self.pages_record(retired=['0.0.9'])),
+                              ('retired versions in an empty string', self.pages_record(retired='')),
+                              ('a retired entry that is not a version',
+                               self.pages_record(retired={'0.0.9': files, '../0': files})),
+                              ('a retired entry that only starts with a version',
+                               self.pages_record(retired={'0.0.9': files, '0.0.9-x': files})),
+                              # Each character of this name alone would pass as a plain path.
+                              ('retired files that are not a list',
+                               self.pages_record(retired={'0.0.9': 'SHA256SUMS'})),
+                              ('a retired file that is not a string',
+                               self.pages_record(retired={'0.0.9': [*files, 1]})),
+                              ('a retired file that is not a plain path',
+                               self.pages_record(retired={'0.0.9': [*files, '../0.1.0/release.json']}))]:
             with self.subTest(label):
                 self.refused('the Pages manifest is not the record of composing 0.1.0', self.verify,
                              lambda url, sink=None: fetched.append(url), pages_manifest=record)
         self.assertEqual(fetched, [], 'nothing is fetched before the record is checked')
+
+    def test_the_pages_manifest_must_record_this_archive_and_its_sums(self):
+        # verify-live qualifies the archive compose-pages recorded for this version, and no other.
+        fetched, entry = [], self.pages_entry()
+        unrecorded = 'the Pages manifest does not record this 0.1.0 archive and its SHA256SUMS'
+        for label, record, message in [
+                ('no entry for this version', self.pages_record(versions={}), unrecorded),
+                ('an entry that is not an object', self.pages_record(versions={'0.1.0': entry['archive_sha256']}),
+                 unrecorded),
+                # Neither digest may be missing: a record written before archive digests were recorded has only one.
+                ('an entry without the archive digest',
+                 self.pages_record(versions={'0.1.0': {'sha256sums_sha256': entry['sha256sums_sha256']}}), unrecorded),
+                ('an entry without the SHA256SUMS digest',
+                 self.pages_record(versions={'0.1.0': {'archive_sha256': entry['archive_sha256']}}), unrecorded),
+                ('another archive', self.pages_record(versions={'0.1.0': {**entry, 'archive_sha256': '0' * 64}}),
+                 unrecorded),
+                ('other sums', self.pages_record(versions={'0.1.0': {**entry, 'sha256sums_sha256': '0' * 64}}),
+                 unrecorded),
+                ('this archive recorded by the run of another version', self.pages_record(new_version='0.2.0'),
+                 'the Pages manifest is not the record of composing 0.1.0')]:
+            with self.subTest(label):
+                self.refused(message, self.verify, lambda url, sink=None: fetched.append(url), pages_manifest=record)
+        self.assertEqual(fetched, [], 'nothing is fetched before the record is checked')
+        result, _ = self.verify(self.serve_live(self.site, '0.1.0'), pages_manifest=self.pages_record())
+        self.assertEqual((result['passed'], result['archive_sha256']), (True, entry['archive_sha256']))
+
+    def test_retired_versions_must_be_gone_at_every_plain_url_and_past_the_cdn_cache(self):
+        # compose-pages left them out and recorded their files. The CDN caches each URL on its own, so every file
+        # must return 404 where users fetch it, the installer and the packages as much as release.json, and
+        # release.json and SHA256SUMS past the CDN cache too, where the version's directory leaves as a whole. Every
+        # retired version is checked, the older of two as much as the newer.
+        gone = {old: sorted([*release_site.site_files(self.site), f'packages/fixture-{old}-1.fc44.x86_64.rpm'])
+                for old in ['0.0.8', '0.0.9']}
+        live, record = self.serve_live(self.site, '0.1.0'), self.pages_record(retired=gone)
+
+        def lingering(name=None, busted=False, times=0, status=200, fetched=None):
+            """Every retired file returns 404 but name, a version/path that first answers times with status, or with a
+            network error when status is None, at its plain URL or past the CDN cache."""
+            served = [times]
+
+            def fetch(url, sink=None):
+                parts = urllib.parse.urlsplit(url)
+                path = parts.path.removeprefix('/intel-npu-stack/')
+                if path.startswith('0.1.0/'):
+                    return live(url, sink)
+                if fetched is not None:
+                    fetched.append((path, bool(parts.query)))
+                if path == name and bool(parts.query) == busted and served[0]:
+                    served[0] -= 1
+                    if status is None:
+                        raise publish.NetworkRefused(f'GET {parts._replace(query="").geturl()} failed: '
+                                                     '[Errno 104] Connection reset by peer')
+                    return answer(status, b'retired\n', sink)
+                return 404, b''
+            return fetch
+        fetched = []
+        result, sleeps = self.verify(lingering(fetched=fetched), pages_manifest=record)
+        self.assertEqual((result['passed'], result['retired_versions'], sleeps), (True, ['0.0.8', '0.0.9'], []))
+        self.assertEqual(sorted(fetched), sorted([(f'{old}/{path}', False) for old in gone for path in gone[old]]
+                                                 + [(f'{old}/{name}', True) for old in gone
+                                                    for name in ['release.json', 'SHA256SUMS']]))
+        rpm = 'packages/fixture-0.0.9-1.fc44.x86_64.rpm'
+        for name, busted, where in [*((f'0.0.9/{name}', False, 'at its plain URL') for name in
+                                      ['release.json', 'SHA256SUMS', 'install.sh', 'repodata/repomd.xml', rpm]),
+                                    ('0.0.9/release.json', True, 'past the CDN cache'),
+                                    ('0.0.9/SHA256SUMS', True, 'past the CDN cache'),
+                                    ('0.0.8/install.sh', False, 'at its plain URL'),
+                                    ('0.0.8/SHA256SUMS', True, 'past the CDN cache')]:
+            with self.subTest(name=name, where=where):
+                result, sleeps = self.verify(lingering(name, busted, 2), pages_manifest=record)
+                self.assertEqual((result['passed'], len(sleeps)), (True, 2))
+                self.refused(f'the retired {name} still does not return 404 {where} (HTTP 200)',
+                             self.verify, lingering(name, busted, 1000), pages_manifest=record, timeout=90)
+        for name, busted, where in [('0.0.9/install.sh', False, 'at its plain URL'),
+                                    ('0.0.9/release.json', True, 'past the CDN cache')]:
+            for status in [503, 403, 429]:
+                with self.subTest('only exactly 404 means gone', name=name, where=where, status=status):
+                    self.refused(f'the retired {name} still does not return 404 {where} (HTTP {status})',
+                                 self.verify, lingering(name, busted, 1000, status), pages_manifest=record, timeout=90)
+            with self.subTest('a network error only means not converged yet', name=name, where=where):
+                result, sleeps = self.verify(lingering(name, busted, 2, None), pages_manifest=record)
+                self.assertEqual((result['passed'], len(sleeps)), (True, 2))
+                self.refused('the live site could not be read before the timeout: '
+                             f'GET https://archledger.github.io/intel-npu-stack/{name} failed', self.verify,
+                             lingering(name, busted, 1000, None), pages_manifest=record, timeout=90)
+
+    def test_one_timeout_bounds_the_whole_wait(self):
+        # Every check waits within the same deadline, so checks that each converge within the timeout but not
+        # together are refused once it has passed, whichever check is still waiting then.
+        stale = {'release.json': 2, 'install.sh': 2}
+        result, sleeps = self.verify(self.serve_live(self.site, '0.1.0', stale), timeout=150)
+        self.assertEqual((result['passed'], len(sleeps)), (True, 4))
+        sleeps = []
+        self.refused('the live install.sh is still stale or missing at its plain URL (HTTP 200)', self.verify,
+                     self.serve_live(self.site, '0.1.0', stale), timeout=90, sleeps=sleeps)
+        self.assertEqual(len(sleeps), 2)
+        live, lingering = self.serve_live(self.site, '0.1.0', {'release.json': 2}), [2]
+
+        def retired_after_a_slow_file(url, sink=None):
+            if url == 'https://archledger.github.io/intel-npu-stack/0.0.9/install.sh' and lingering[0]:
+                lingering[0] -= 1
+                return answer(200, b'retired\n', sink)
+            return live(url, sink) if '/0.1.0/' in url else (404, b'')
+        sleeps = []
+        self.refused('the retired 0.0.9/install.sh still does not return 404 at its plain URL (HTTP 200)',
+                     self.verify, retired_after_a_slow_file, timeout=90, sleeps=sleeps,
+                     pages_manifest=self.pages_record(retired={'0.0.9': ['install.sh']}))
+        self.assertEqual(len(sleeps), 2)
 
     def test_live_sums_signature_must_pass_the_key_policy(self):
         # Every live byte equals the archive and install.sh.asc is valid, but SHA256SUMS.asc is not a signature of
@@ -1340,7 +1616,7 @@ class Publication(unittest.TestCase):
     def test_new_version_files_are_compared_past_the_cdn_cache(self):
         deployed = self.work / 'origin/0.1.0'
         shutil.copytree(self.site, deployed)
-        (deployed / 'support-matrix.json').write_bytes(b'{"changed": true}\n')  # not polled, so only this fetch sees it
+        (deployed / 'support-matrix.json').write_bytes(b'{"changed": true}\n')  # at origin; the edge serves the release
         edge, origin = self.serve_live(self.site, '0.1.0'), self.serve_live(deployed, '0.1.0')
 
         def cdn(url, sink=None):
@@ -1361,7 +1637,7 @@ class Publication(unittest.TestCase):
 
     def test_other_versions_must_keep_their_published_sums(self):
         manifest = self.pages_record(versions={'0.0.9': {'sha256sums_sha256': sha(b'old sums')},
-                                               '0.1.0': {'sha256sums_sha256': sha(self.assets['SHA256SUMS'])}})
+                                               '0.1.0': self.pages_entry()})
         fetch = self.serve_live(self.site, '0.1.0')
 
         def with_old(url, sink=None):
@@ -1471,6 +1747,25 @@ class Transport(unittest.TestCase):
         gh = publish.GitHub(API, REPOSITORY, 'token', transport=transport)
         with self.assertRaisesRegex(publish.PublishRefused, 'API host'):
             gh.releases()
+
+    def test_the_tag_listing_must_name_the_object_of_every_tag(self):
+        # The served-state snapshots compare each v tag's object; one the listing leaves out would never differ.
+        listed = {'ref': 'refs/tags/v0.1.0', 'object': {'type': 'commit', 'sha': COMMIT}}
+        for label, ref in [('no object', {'ref': 'refs/tags/v0.2.0'}),
+                           ('an object without a sha', {'ref': 'refs/tags/v0.2.0', 'object': {'type': 'commit'}}),
+                           ('an abbreviated sha', {'ref': 'refs/tags/v0.2.0',
+                                                   'object': {'type': 'commit', 'sha': COMMIT[:12]}})]:
+            with self.subTest(label):
+                gh = publish.GitHub(API, REPOSITORY, 'token', transport=lambda *args, ref=ref: (
+                    200, {}, json.dumps([listed, ref]).encode()))
+                with self.assertRaisesRegex(publish.PublishRefused, 'the tag listing names no object for v0.2.0'):
+                    gh.tags()
+        # An annotated tag's ref names its tag object, which moving the tag replaces; the commit behind it is not
+        # listed.
+        annotated = {'ref': 'refs/tags/v0.2.0', 'object': {'type': 'tag', 'sha': 'a' * 40}}
+        gh = publish.GitHub(API, REPOSITORY, 'token', transport=lambda *args: (
+            200, {}, json.dumps([listed, annotated]).encode()))
+        self.assertEqual(gh.tags(), [('v0.1.0', COMMIT), ('v0.2.0', 'a' * 40)])
 
     def test_network_errors_refuse_without_the_query(self):
         with self.assertRaises(publish.NetworkRefused) as caught:
