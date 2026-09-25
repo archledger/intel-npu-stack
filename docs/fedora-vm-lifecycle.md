@@ -44,7 +44,7 @@ corrected chain reaches the intended unsupported-platform refusal.
 
 ## What runs and where
 
-- Host side: `tests/vm/run-fedora.py` on archhost, one scenario per
+- Host side: `tests/vm/run-fedora.py` on a KVM host, one scenario per
   invocation. Every input is digest-verified first: the acquired Fedora
   Cloud Base 44 image against its recorded SHA256, and the VM fixture
   release against its own `result.json` digests (release
@@ -56,8 +56,8 @@ corrected chain reaches the intended unsupported-platform refusal.
 
 - A fresh qcow2 overlay per run over the verified image; removed after
   every run, success or timeout.
-- KVM required; at most 4 vCPUs and 8192 MiB per VM so the archhost build
-  set keeps six logical CPUs free; a per-run lock refuses concurrent runs.
+- KVM required; at most 4 vCPUs and 8192 MiB per VM, so a run leaves room
+  for other work on the host; a per-run lock refuses concurrent runs.
 - Networking is QEMU **user-mode NAT only**. No bridged adapter, no host
   port forwards, no USB/PCI passthrough, no host filesystem shares. The
   guest reaches two things: official Fedora mirrors (signature-verified by

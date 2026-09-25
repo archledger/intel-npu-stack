@@ -662,7 +662,7 @@ pub fn generate_candidate(
             vendor: "8086".to_owned(),
             device: "643e".to_owned(),
         }],
-        // Initial unqualified test target, observed on the Fedora laptop. This
+        // Initial unqualified test target, observed on the maintainer's test machine. This
         // narrow bound is not evidence that any kernel is supported.
         kernel: KernelRange {
             min: "7.1.13".to_owned(),
