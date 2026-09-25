@@ -189,12 +189,15 @@ Real GoogleTest fixtures exercise the check's passing, failed, skipped and
 empty-selection paths. This replaces a CTest label that returned success
 without running any tests; it does not replace later hardware qualification.
 
-Choose an explicit CPU budget for the build host and apply it twice: as the
-container CPU limit (`--cpus=N`, plus `--cpuset-cpus` to pin cores) and as
-`rpmbuild --define '_smp_build_ncpus N'`. Do not run another CPU-heavy project
-build alongside it. A CPU quota alone limits aggregate CPU time rather than
-pinning particular cores. The budget favors the host's responsiveness; it is
-not a measured guarantee of latency or build completion time.
+Builds use four jobs by default: the container CPU limit (`--cpus=4`, plus
+`--cpuset-cpus` to pin cores) and `rpmbuild --define '_smp_build_ncpus 4'`
+agree, and no other CPU-heavy project build runs alongside. A dedicated build
+host may use up to ten jobs, the package gate's limit, only when its owner
+authorizes that; pin a CPU set chosen from the host's actual topology and leave
+the remaining logical CPUs for the host's own work. A CPU quota alone limits
+aggregate CPU time rather than pinning particular cores. These limits favor
+the host's responsiveness; they are not a measured guarantee of latency or
+build completion time.
 
 Resume a retained RPM build through `rpmbuild -bc --short-circuit`, preserving
 the original topdir and the selected host's authorized job limit. Invoking the generated CMake build
