@@ -15,7 +15,8 @@ both the dispatch input and the preflight job's output. Before tarfile reads the
 headers, extension headers included, and only files, directories, GNU long
 names and pax headers, whose declared sizes fit MAX_UNPACKED. Safe extraction
 then accepts only regular files and directories with plain relative names, each
-at most once, within the size limit, and extracts with the tarfile data filter.
+at most once, with times from 1970 up to MAX_MTIME, within the size limit, and
+extracts with the tarfile data filter.
 Outputs are never overwritten.
 """
 import argparse
@@ -37,6 +38,7 @@ import release_tar
 MAX_ARCHIVE = 4 << 30
 MAX_UNPACKED = 8 << 30
 MAX_MEMBERS = 20000
+MAX_MTIME = 1 << 33  # extraction sets member times; this is the year 2242, well inside a 64-bit time_t
 DIGEST = re.compile(r'[0-9a-f]{64}')
 SEGMENT = re.compile(r'[A-Za-z0-9_+][A-Za-z0-9._+~@-]*')
 
@@ -82,7 +84,8 @@ def member_name(member):
 def safe_members(tar):
     """Regular files and directories with plain relative names, each once, within the size limit.
 
-    release_tar.scan has already bounded the raw headers, so iterating the members reads no more than that.
+    release_tar.scan has already bounded the raw headers and refused the forms tarfile reads differently, such as a
+    regular file named like a directory, so iterating the members reads no more than those headers.
     """
     members, seen, total = [], set(), 0
     for member in tar:
@@ -96,6 +99,8 @@ def safe_members(tar):
                 'unsafe path in the release inputs: ' + repr(member.name))
         require(name not in seen, 'duplicate path in the release inputs: ' + name)
         seen.add(name)
+        require(0 <= member.mtime < MAX_MTIME,
+                'a member of the release inputs has a time outside the supported range: ' + repr(member.name))
         total += member.size
         require(total <= MAX_UNPACKED, 'the release inputs unpack beyond the size limit')
         members.append(member)

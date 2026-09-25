@@ -2,58 +2,99 @@
 # SPDX-License-Identifier: Apache-2.0
 """Publish a verified release as an immutable GitHub release and compose the Pages site from releases.
 
-  release_publish.py check-unpublished --phase preflight
-  release_publish.py check-unpublished --phase publish --assets DIR --sha COMMIT
-  release_publish.py publish-release --assets DIR --notes FILE --sha COMMIT
+  release_publish.py check-unpublished --phase preflight --registry FILE --reserve-bytes N
+  release_publish.py check-unpublished --phase publish --registry FILE --assets DIR --sha COMMIT
+  release_publish.py publish-release --registry FILE --assets DIR --notes FILE --sha COMMIT
   release_publish.py compose-pages --registry FILE --output _site --manifest FILE [--new-version V]
-  release_publish.py verify-live --archive FILE [--pages-manifest FILE] [--fetched DIR] [--timeout SECONDS]
-                                 [--sha COMMIT]
+  release_publish.py verify-live --archive FILE --pages-manifest FILE --sha COMMIT [--fetched DIR]
+                                 [--timeout SECONDS]
 
 Standard library only. The REST API base comes from GITHUB_API_URL, the
-repository from GITHUB_REPOSITORY and the token from GH_TOKEN. The version, base
-URL and release key come from the committed trust seam of --repo.
+repository from GITHUB_REPOSITORY and the token from GH_TOKEN, which must be 1
+to 4096 visible ASCII characters, without spaces or line breaks. --sha defaults
+to GITHUB_SHA, and options must be spelled in full. The version, base URL and
+release key come from the committed trust seam of --repo.
+
+Versions are published in increasing order, and the gates compose-pages applies
+to the versions already served run before anything irreversible. Both
+check-unpublished phases and publish-release also run compose-pages dry into a
+temporary directory over every non-draft vX.Y.Z release but this version (the
+room check) before they classify or create anything: the preflight after its
+Pages, tag, release and live checks, the publish phase and publish-release
+after the publication checks. Every gate of compose-pages below must pass,
+including the live SHA256SUMS of each composed version and a registry entry for
+every other tagged version, so the change that records a release lands before
+the next release. This version must be newer than every such release, retired
+ones included, and not yet listed in --registry, and the composed site plus
+this version's bytes must fit the Pages budget. The preflight reserves
+--reserve-bytes, since the site is not built yet; the publish phase and
+publish-release reserve the size of the new site.
 
 check-unpublished preflight refuses unless GitHub Pages is served by GitHub
 Actions at the committed base URL, no tag or release (draft or published)
-exists for the version, and the live release.json returns 404. The publish
-phase first checks the publication itself: SHA256SUMS.asc must pass the
-release-key policy, the archive must hold exactly the files SHA256SUMS lists,
-its signed publication-manifest.json must name this version, base URL, release
-key and commit, install.sh.asc must pass the release-key policy, the archive
-must be the canonical archive of its site, and the site must fit the Pages
-budget. It then classifies the state as fresh, draft-resume (a draft whose
-assets are a byte-identical subset of this publication) or published-resume (an
-immutable release with exactly these assets whose tag is the release commit),
-and refuses anything else.
+exists for the version, the live release.json returns 404 and the room check
+passes. The publish phase first checks the publication itself: SHA256SUMS.asc
+must pass the release-key policy, the archive must hold exactly the files
+SHA256SUMS lists, its signed publication-manifest.json must name this version,
+base URL, release key and commit, install.sh.asc must pass the release-key
+policy, the archive must be the canonical archive of its site, and the site
+must fit the Pages budget. After the room check it classifies the state as
+fresh, draft-resume (a draft whose assets are a byte-identical subset of this
+publication, targeting the release commit, with no tag at another commit) or
+published-resume (an immutable release with exactly these assets whose tag is
+the release commit), and refuses anything else.
 
-publish-release runs the same publication checks, requires the notes to be the
-release_site rendering of this site and archive, creates or resumes the draft,
-sets its title and notes, uploads the missing assets, reads every asset back,
-publishes it as the latest release and requires the release to be immutable
-with the same title, notes and assets and its tag at the release commit.
+publish-release runs the same publication checks and the room check, requires
+the notes to be the release_site rendering of this site and archive, creates or
+resumes the draft, sets its title and notes, uploads the missing assets and
+reads every asset back. Right before publishing it reads the draft again: it
+must still be a draft, not a prerelease, of this tag and commit, with this
+title, notes and exactly these assets, and the tag must be absent or name the
+release commit. The other non-draft vX.Y.Z releases and the v tags must be as
+the room check found them, both when it ends and at that point, and the live
+SHA256SUMS of every version it composed must still be served. It then publishes the draft as the latest release, naming this
+tag, the commit, the title, the notes and a full release again in that request
+so no later change to them takes effect, and requires the release to be immutable, not a prerelease,
+under this tag, with the same title, notes and assets and its tag at the
+release commit. GitHub keeps a tag pushed after that last read, so only this
+final check can refuse one.
 
-compose-pages builds _site/<version>/ from every non-draft, non-prerelease
-vX.Y.Z release. Every such release must be immutable. A release retired in
+compose-pages builds _site/<version>/ from every non-draft vX.Y.Z release.
+Every such release must be immutable and not a prerelease. A release retired in
 release/published-versions.json is left out, and its retired entry must have
-the digest of its SHA256SUMS. Every other release must carry exactly the four
-release assets with matching API digests and a SHA256SUMS.asc that passes the
-release-key policy, and its archive must hold exactly the files SHA256SUMS
-lists plus the two sums files, packed canonically. The release must carry its
-title and the release_site notes rendered from its site and archive, and its
-install.sh.asc must pass the release-key policy. Its signed
-publication-manifest.json must name its own version, the base URL of that
-version, the release key and the commit its tag names. Every published version
-in the registry must be present with the same SHA256SUMS. The live SHA256SUMS
-of every version other than --new-version must equal its release's, and the
-site must fit the size budget.
+the digest of its SHA256SUMS; every retired entry must match such a release.
+Every other release must carry exactly the four release assets with matching
+API digests and a SHA256SUMS.asc that passes the release-key policy, and its
+archive must hold exactly the files SHA256SUMS lists plus the two sums files,
+packed canonically. The release must carry its title and the release_site notes
+rendered from its site and archive, and its install.sh.asc must pass the
+release-key policy. Its signed publication-manifest.json must name its own
+version, the base URL of that version, the release key and the commit its tag
+names. The registry must be schema 1 (the integer) without repeated keys, and
+a retired entry needs a reason. Every published version in the registry must
+be present with the same SHA256SUMS, and every vX.Y.Z tag but that of
+--new-version must have a registry entry, published or retired. Composing needs
+each release's tag, and GitHub keeps the tag of a deleted release, so a release
+deleted before or after it was recorded stops the next run; only deleting both
+a release and its tag before the version is recorded goes unseen. --new-version
+must be the committed version and the newest composed version, so a re-run of
+an older run cannot serve again what a later registry retired. The live
+SHA256SUMS of every version other than --new-version must equal its release's,
+and the site must fit the size budget. The manifest must be a new file in an
+existing directory, neither inside the site nor containing it; this is checked
+before anything is downloaded, and a refusal leaves neither the site nor the
+manifest.
 
-verify-live waits until the plain URLs of the version serve the archive's
-bytes, then streams every file to disk cache-busted and compares its digest,
-repacks the fetched files into the canonical archive, verifies SHA256SUMS.asc
-and install.sh.asc, requires the fetched files to be exactly those the signed
-SHA256SUMS lists with its digests and the signed publication-manifest.json to
-name this version, base URL and release key (and the --sha commit when given),
-and compares the live SHA256SUMS of the other versions with the Pages manifest.
+verify-live requires the Pages manifest compose-pages wrote with this version as
+--new-version, and the 40-hex release commit. It waits until the plain URLs of
+the version serve the archive's bytes, counting network and protocol errors as
+not converged yet until the timeout, then streams every file to disk
+cache-busted and compares its digest, repacks the fetched files into the
+canonical archive, verifies SHA256SUMS.asc and install.sh.asc, requires the
+fetched files to be exactly those the signed SHA256SUMS lists with its digests
+and the signed publication-manifest.json to name this version, base URL,
+release key and commit, and compares the live SHA256SUMS of the other versions
+with the Pages manifest. Every other network or protocol error refuses at once.
 
 Every release archive is first scanned by its raw tar headers (release_tar):
 at most MAX_MEMBERS headers, extension headers included, and only regular
@@ -62,6 +103,7 @@ files and GNU long names.
 import argparse
 import contextlib
 import hashlib
+from http.client import HTTPException  # not `import http.client`: the module's http() would shadow the package
 import json
 import os
 from pathlib import Path
@@ -95,6 +137,10 @@ PLAIN = ['release.json', 'release.json.sig', 'profile.toml', 'install.sh', 'inte
 
 class PublishRefused(Exception):
     """A publication gate failed."""
+
+
+class NetworkRefused(PublishRefused):
+    """A network or HTTP protocol failure; only verify-live's wait for the new files retries it."""
 
 
 def require(condition, message):
@@ -131,7 +177,7 @@ OPENER = urllib.request.build_opener(NoRedirect)
 
 
 def http(method, url, headers=None, data=None, timeout=120, sink=None):
-    """(status, headers, body) without following redirects; network failures refuse.
+    """(status, headers, body) without following redirects; network and protocol failures refuse.
 
     With a sink, a successful body is streamed into it up to MAX_ASSET bytes and the returned body is empty.
     """
@@ -151,10 +197,10 @@ def http(method, url, headers=None, data=None, timeout=120, sink=None):
         status, response_headers = error.code, dict(error.headers or {})
         try:
             body = error.read(MAX_BODY + 1)
-        except OSError:
+        except (OSError, HTTPException):
             body = b''
-    except (urllib.error.URLError, OSError) as error:
-        raise PublishRefused(f'{method} {urllib.parse.urlsplit(url)._replace(query="").geturl()} failed: '
+    except (urllib.error.URLError, OSError, HTTPException) as error:
+        raise NetworkRefused(f'{method} {urllib.parse.urlsplit(url)._replace(query="").geturl()} failed: '
                              f'{getattr(error, "reason", error)}') from None
     require(len(body) <= MAX_BODY, 'response exceeds the size limit')
     return status, response_headers, body
@@ -203,6 +249,9 @@ class GitHub:
         require(re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository or '') is not None,
                 'GITHUB_REPOSITORY must be owner/name')
         require(bool(token), 'GH_TOKEN is required')
+        # http.client would refuse any other header value with the whole Authorization value in its error.
+        require(re.fullmatch(r'[\x21-\x7e]{1,4096}', token) is not None,
+                'GH_TOKEN must be 1 to 4096 visible ASCII characters (no spaces or line breaks)')
         self.api, self.repository, self.token, self.transport = api_url.rstrip('/'), repository, token, transport
 
     def headers(self, accept='application/vnd.github+json', extra=None):
@@ -255,6 +304,10 @@ class GitHub:
         _, _, refs = self.call('GET', f'/git/matching-refs/tags/{tag}')
         return any(ref.get('ref') == 'refs/tags/' + tag for ref in refs or [])
 
+    def tags(self):
+        """The names of the tags that start with v."""
+        return [ref.get('ref', '').removeprefix('refs/tags/') for ref in self.paged('/git/matching-refs/tags/v')]
+
     def download_asset(self, asset, path):
         """Stream an asset to a new file and return its SHA-256; the storage redirect gets no token."""
         with open(path, 'xb') as sink:
@@ -306,14 +359,13 @@ def check_standalone(archive, version, files):
                     f'the standalone {name} differs from the copy in the signed archive')
 
 
-def check_identity(root, version, base_url, fingerprint, commit=None):
+def check_identity(root, version, base_url, fingerprint, commit):
     """The signed publication manifest names this version, base URL and release key, and the release commit."""
     manifest = json.loads((Path(root) / 'publication-manifest.json').read_text())
     installer = manifest.get('installer') if isinstance(manifest, dict) else None
     pinned = installer.get('pinned') if isinstance(installer, dict) else None
     require(isinstance(pinned, dict) and pinned.get('version') == version and pinned.get('base_url') == base_url
-            and pinned.get('primary_fingerprint') == fingerprint
-            and (commit is None or manifest.get('source_commit') == commit),
+            and pinned.get('primary_fingerprint') == fingerprint and manifest.get('source_commit') == commit,
             f'the signed publication manifest in the {version} archive names another release')
 
 
@@ -338,7 +390,7 @@ def canonical_sha(root):
 
 
 def local_assets(assets_dir, values, commit, key, notes=None):
-    """Digests of the publication assets, once the signed archive is proven to be this release within budget.
+    """Digests of the publication assets and the site's bytes, once the signed archive is proven to be this release.
 
     With notes, they must also be the release_site rendering of this site and archive.
     """
@@ -369,7 +421,7 @@ def local_assets(assets_dir, values, commit, key, notes=None):
             require(rendered_notes(root, archive, version) == Path(notes).read_bytes(),
                     'the release notes are not the rendering of this release')
     require(total <= MAX_SITE, f'the {version} site is {total} bytes, above the {MAX_SITE}-byte Pages budget')
-    return digests
+    return digests, total
 
 
 def publish_state(gh, values, local, commit):
@@ -396,12 +448,17 @@ def publish_state(gh, values, local, commit):
     return 'published-resume', release
 
 
-def check_unpublished(gh, values, phase, assets_dir=None, commit=None, key=None, fetch=fetch_public):
+def check_unpublished(gh, values, phase, registry, assets_dir=None, commit=None, key=None, reserve=None,
+                      fetch=fetch_public):
     version, tag = values['version'], 'v' + values['version']
+    require(key is not None, 'the committed release key is required')
     if phase == 'publish':
         require(commit is not None and re.fullmatch(r'[0-9a-f]{40}', commit), 'the release commit is required')
-        require(key is not None, 'the committed release key is required')
-        return publish_state(gh, values, local_assets(assets_dir, values, commit, key), commit)[0]
+        local, size = local_assets(assets_dir, values, commit, key)
+        check_pages_room(gh, values, key, registry, size, fetch)
+        return publish_state(gh, values, local, commit)[0]
+    # The site is not built yet, so the preflight reserves the most bytes it may take.
+    require(type(reserve) is int and reserve > 0, 'the preflight needs a positive number of bytes to reserve')
     pages = gh.pages()
     require(pages is not None and pages.get('build_type') == 'workflow'
             and str(pages.get('html_url', '')).rstrip('/') + '/' + version + '/' == values['base_url'],
@@ -411,6 +468,7 @@ def check_unpublished(gh, values, phase, assets_dir=None, commit=None, key=None,
             f'a release or draft for {tag} already exists')
     status, _ = fetch(cache_busted(values['base_url'] + 'release.json'))
     require(status == 404, f'the live release.json must not exist before publication (HTTP {status})')
+    check_pages_room(gh, values, key, registry, reserve, fetch)
     return 'fresh'
 
 
@@ -425,12 +483,29 @@ def check_release_assets(gh, release, local, readback):
                         f'the uploaded {name} reads back differently')
 
 
-def publish_release(gh, values, assets_dir, notes, commit, key):
+def check_draft(gh, release_id, tag, commit, title, body, local):
+    """Right before the irreversible undraft: still a draft of a full release of this tag, commit, notes and assets."""
+    _, _, release = gh.call('GET', f'/releases/{release_id}')
+    require(release.get('draft') is True and release.get('prerelease') is False and release.get('tag_name') == tag
+            and release.get('target_commitish') == commit, f'the {tag} draft changed before publication')
+    require(release.get('name') == title and release.get('body') == body,
+            f'the {tag} draft does not carry this publication\'s title and notes')
+    check_release_assets(gh, release, local, readback=False)
+    # An existing tag is kept on publication, whatever the draft targets.
+    require(gh.tag_commit(tag) in {None, commit}, f'tag {tag} names another commit than this publication')
+
+
+def publish_release(gh, values, assets_dir, notes, commit, key, registry, fetch=fetch_public):
     version, tag = values['version'], 'v' + values['version']
-    local = local_assets(assets_dir, values, commit, key, notes)
+    local, size = local_assets(assets_dir, values, commit, key, notes)
     body = Path(notes).read_text()
     require(0 < len(body) <= 120000, 'release notes must be non-empty and within the GitHub limit')
     title = release_title(version)
+    # The room check downloads every served release and the uploads and readback below take minutes more; what it
+    # composed must still stand when it ends and again right before the undraft.
+    served = served_state(gh, version)
+    _, room = check_pages_room(gh, values, key, registry, size, fetch)
+    require(served_state(gh, version) == served, 'the served releases or v tags changed during the room check')
     state, release = publish_state(gh, values, local, commit)
     if state == 'fresh':
         _, _, release = gh.call('POST', '/releases', expect=(201,), body={
@@ -447,10 +522,20 @@ def publish_release(gh, values, assets_dir, notes, commit, key):
         require(release.get('draft') is True and release.get('name') == title and release.get('body') == body,
                 f'the {tag} draft does not carry this publication\'s title and notes')
         check_release_assets(gh, release, local, readback=True)
-        gh.call('PATCH', f"/releases/{release['id']}", body={'draft': False, 'make_latest': 'true'})
+        # The readback takes minutes: the draft is read again right before it is published, and the request that
+        # publishes it names the tag, the commit, the title, the notes and a full release again, so no later change
+        # to those takes effect.
+        check_draft(gh, release['id'], tag, commit, title, body, local)
+        require(served_state(gh, version) == served, 'the served releases or v tags changed before publication')
+        check_live_sums(fetch, site_root(values['base_url']), room)
+        gh.call('PATCH', f"/releases/{release['id']}", body={
+            'draft': False, 'make_latest': 'true', 'tag_name': tag, 'target_commitish': commit, 'prerelease': False,
+            'name': title, 'body': body})
     _, _, final = gh.call('GET', f"/releases/{release['id']}")
     require(final.get('draft') is False and final.get('immutable') is True,
             f'the {tag} release is not an immutable published release')
+    require(final.get('prerelease') is False and final.get('tag_name') == tag,
+            f'the {tag} release was published as a prerelease or under another tag')
     require(final.get('name') == title and final.get('body') == body,
             f'the published {tag} release does not carry this publication\'s title and notes')
     check_release_assets(gh, final, local, readback=False)
@@ -458,10 +543,17 @@ def publish_release(gh, values, assets_dir, notes, commit, key):
     return {'state': state, 'release_id': final['id'], 'tag': tag, 'commit': commit, 'assets': local}
 
 
+def unique_keys(pairs):
+    """A JSON object whose keys are unique, so no later key silently replaces what a reviewer read."""
+    require(len({key for key, _ in pairs}) == len(pairs), 'published-versions.json repeats a key')
+    return dict(pairs)
+
+
 def load_registry(path):
-    registry = json.loads(Path(path).read_text())
+    registry = json.loads(Path(path).read_text(), object_pairs_hook=unique_keys)
     require(isinstance(registry, dict) and set(registry) == {'schema_version', 'published', 'retired'}
-            and registry['schema_version'] == 1, 'published-versions.json must be schema 1 with published and retired')
+            and type(registry['schema_version']) is int and registry['schema_version'] == 1,
+            'published-versions.json must be schema 1 with published and retired')
     seen = set()
     for kind, fields in (('published', {'version', 'sha256sums_sha256'}),
                          ('retired', {'version', 'sha256sums_sha256', 'reason'})):
@@ -509,84 +601,176 @@ def unpack_release(archive, version, sums, signature, destination):
     return len(names)
 
 
+def version_key(version):
+    return tuple(int(part) for part in version.split('.'))
+
+
+def compose_releases(gh, key, fingerprint, registry, root_url, output, pending=None):
+    """Unpack every non-draft vX.Y.Z release but the pending version into output once it passes every gate.
+
+    Returns the composed versions. A retired release is only matched with its entry. Every published entry must
+    match a composed release and every retired entry an immutable one; check_recorded requires the other direction,
+    an entry for every tagged version. The pending version is neither composed nor looked for, and every other
+    release, retired ones included, must be older: versions are published in increasing order.
+    """
+    retired = {entry['version']: entry['sha256sums_sha256'] for entry in registry['retired']}
+    candidates = sorted((release for release in gh.releases()
+                         if not release.get('draft') and TAG.fullmatch(release.get('tag_name') or '')
+                         and release['tag_name'] != f'v{pending}'),
+                        key=lambda release: version_key(release['tag_name'][1:]))
+    newer = [release['tag_name'] for release in candidates
+             if pending is not None and version_key(release['tag_name'][1:]) >= version_key(pending)]
+    require(not newer, f'versions are published in increasing order, and {pending} is not newer than '
+            + ', '.join(newer))
+    versions, retired_found = {}, set()
+    with tempfile.TemporaryDirectory(prefix='compose-pages-') as work:
+        for release in candidates:
+            version = release['tag_name'][1:]
+            assets = {asset.get('name'): asset for asset in release.get('assets', [])}
+            folder = Path(work) / version
+            folder.mkdir()
+            require(release.get('immutable') is True, f"release {release['tag_name']} is not immutable")
+            # publish-release never makes one, so a release flipped to prerelease must not silently leave Pages.
+            require(release.get('prerelease') is False, f"release {release['tag_name']} is marked a prerelease")
+            if version in retired:
+                # A retirement record must name the release it retires.
+                require('SHA256SUMS' in assets, f"retired release {release['tag_name']} has no SHA256SUMS")
+                digest = gh.download_asset(assets['SHA256SUMS'], folder / 'SHA256SUMS')
+                require(assets['SHA256SUMS'].get('digest') == 'sha256:' + digest and digest == retired[version],
+                        f'the retired entry for {version} does not match its release SHA256SUMS')
+                retired_found.add(version)
+                continue
+            require(set(assets) == set(release_assets(version)),
+                    f"release {release['tag_name']} does not carry exactly the release assets")
+            data = {}
+            for name, asset in assets.items():
+                digest = gh.download_asset(asset, folder / name)
+                require(asset.get('digest') == 'sha256:' + digest,
+                        f"the API digest of {release['tag_name']} {name} differs from its bytes")
+                data[name] = folder / name
+            try:
+                release_site.verify_signature(folder / 'SHA256SUMS.asc', folder / 'SHA256SUMS', key, fingerprint)
+            except release_site.SiteRefused as error:
+                raise PublishRefused(f'{version}: {error}') from None
+            files = unpack_release(data[release_assets(version)[0]], version, data['SHA256SUMS'].read_bytes(),
+                                   data['SHA256SUMS.asc'].read_bytes(), output)
+            tag_commit = gh.tag_commit(release['tag_name'])
+            require(tag_commit is not None, f"release {release['tag_name']} has no tag")
+            check_identity(output / version, version, f'{root_url}{version}/', fingerprint, tag_commit)
+            check_installer_signature(output / version, key, fingerprint, version)
+            require(canonical_sha(output / version) == release_site.sha(data[release_assets(version)[0]]),
+                    f'the {version} archive is not the canonical archive of its site')
+            # A release made or edited outside publish-release must still carry exactly what it would have set.
+            notes = rendered_notes(output / version, data[release_assets(version)[0]], version).decode()
+            require(release.get('name') == release_title(version) and release.get('body') == notes,
+                    f"release {release['tag_name']} does not carry its title and rendered notes")
+            check_standalone(data[release_assets(version)[0]], version, data)
+            versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
+                                 'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
+                                 'files': files, 'release_id': release.get('id')}
+    for entry in registry['published']:
+        require(entry['version'] in versions, f"published version {entry['version']} is missing; a deleted "
+                'release can be neither served nor retired, so its entry and its tag are removed by hand after review')
+        require(versions[entry['version']]['sha256sums_sha256'] == entry['sha256sums_sha256'],
+                f"published version {entry['version']} has another SHA256SUMS than recorded")
+    missing = sorted(set(retired) - retired_found)
+    require(not missing, 'retired versions without an immutable release: ' + ', '.join(missing))
+    return versions
+
+
+def check_recorded(gh, registry, version):
+    """Every vX.Y.Z tag but this run's version has a registry entry, so no version leaves Pages unnoticed.
+
+    Composing needs each release's tag, and GitHub keeps the tag of a deleted release, so a release that is not
+    recorded yet, or was deleted before it was recorded, is refused: the change that records a release lands before
+    the next one. Deleting both a release and its tag before it is recorded is the one removal this cannot see.
+    """
+    recorded = {entry['version'] for entry in registry['published'] + registry['retired']}
+    missing = sorted({name[1:] for name in gh.tags() if TAG.fullmatch(name)} - recorded - {version}, key=version_key)
+    require(not missing, 'tagged versions without an entry in published-versions.json: ' + ', '.join(missing))
+
+
+def check_live_sums(fetch, root_url, versions, undeployed=None):
+    """The live SHA256SUMS of every composed version but the undeployed one is its release's, past the CDN cache."""
+    for version, record in versions.items():
+        if version == undeployed:
+            continue
+        status, body = fetch(cache_busted(f'{root_url}{version}/SHA256SUMS'))
+        require(status == 200 and sha_bytes(body) == record['sha256sums_sha256'],
+                f'the live {version}/SHA256SUMS differs from its release (HTTP {status})')
+
+
+def served_state(gh, version):
+    """What the room check composed from, read from the listings alone: every other non-draft vX.Y.Z release and
+    the v tags. Equal snapshots mean no release it verified or skipped, and no tag it counted, changed since."""
+    tag = 'v' + version
+    releases = {release.get('id'): (release.get('tag_name'), release.get('immutable'), release.get('prerelease'),
+                                    release.get('name'), release.get('body'),
+                                    sorted((str(asset.get('name')), str(asset.get('digest')))
+                                           for asset in release.get('assets', [])))
+                for release in gh.releases()
+                if not release.get('draft') and TAG.fullmatch(release.get('tag_name') or '') and release.get('tag_name') != tag}
+    return releases, sorted(name for name in gh.tags() if name != tag)
+
+
+def check_pages_room(gh, values, key, registry_path, reserve, fetch=fetch_public):
+    """compose-pages without this version, run dry before anything irreversible; the bytes and versions it serves.
+
+    Every non-draft vX.Y.Z release but this version is composed into a temporary directory with every compose-pages
+    gate, including the live SHA256SUMS of each composed version and a registry entry for every other tagged
+    version. This version must be newer than every such release and not yet in the registry, and the composed site
+    plus the reserved bytes must fit the Pages budget.
+    """
+    version = values['version']
+    registry = load_registry(registry_path)
+    require(version not in {entry['version'] for entry in registry['published'] + registry['retired']},
+            f'published-versions.json already lists {version}')
+    root_url = site_root(values['base_url'])
+    with tempfile.TemporaryDirectory(prefix='pages-room-') as work:
+        site = Path(work) / '_site'
+        site.mkdir()
+        versions = compose_releases(gh, key, values['primary_fingerprint'], registry, root_url, site, pending=version)
+        check_recorded(gh, registry, version)
+        check_live_sums(fetch, root_url, versions)
+        total = site_bytes(site)
+    require(total + reserve <= MAX_SITE,
+            f'the Pages site would be {total + reserve} bytes with {version}, above the {MAX_SITE}-byte budget')
+    return total, versions
+
+
 def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_path, new_version=None,
                   fetch=fetch_public, limit=MAX_SITE):
     output, manifest_path = Path(output), Path(manifest_path)
     require(not output.exists() and not manifest_path.exists(), 'outputs are never overwritten')
+    # With the site not existing yet, a manifest inside it has no directory; one containing it is refused here.
+    require(manifest_path.parent.is_dir() and not output.resolve().is_relative_to(manifest_path.resolve()),
+            'the Pages manifest must be a new file in an existing directory, neither inside the site nor containing it')
+    require(new_version in {None, values['version']},
+            f"the new version {new_version} is not the committed version {values['version']}")
     registry = load_registry(registry_path)
-    retired = {entry['version']: entry['sha256sums_sha256'] for entry in registry['retired']}
-    host, prefix, _ = site_location(values['base_url'])
-    root_url = f'https://{host}{prefix}'
-    candidates = sorted((release for release in gh.releases()
-                         if not release.get('draft') and not release.get('prerelease')
-                         and TAG.fullmatch(release.get('tag_name') or '')),
-                        key=lambda release: tuple(int(p) for p in release['tag_name'][1:].split('.')))
-    versions = {}
+    root_url = site_root(values['base_url'])
     output.mkdir(parents=True)
+    written = False
     try:
-        with tempfile.TemporaryDirectory(prefix='compose-pages-') as work:
-            for release in candidates:
-                version = release['tag_name'][1:]
-                assets = {asset.get('name'): asset for asset in release.get('assets', [])}
-                folder = Path(work) / version
-                folder.mkdir()
-                require(release.get('immutable') is True, f"release {release['tag_name']} is not immutable")
-                if version in retired:
-                    # A retirement record must name the release it retires.
-                    require('SHA256SUMS' in assets, f"retired release {release['tag_name']} has no SHA256SUMS")
-                    digest = gh.download_asset(assets['SHA256SUMS'], folder / 'SHA256SUMS')
-                    require(assets['SHA256SUMS'].get('digest') == 'sha256:' + digest and digest == retired[version],
-                            f'the retired entry for {version} does not match its release SHA256SUMS')
-                    continue
-                require(set(assets) == set(release_assets(version)),
-                        f"release {release['tag_name']} does not carry exactly the release assets")
-                data = {}
-                for name, asset in assets.items():
-                    digest = gh.download_asset(asset, folder / name)
-                    require(asset.get('digest') == 'sha256:' + digest,
-                            f"the API digest of {release['tag_name']} {name} differs from its bytes")
-                    data[name] = folder / name
-                try:
-                    release_site.verify_signature(folder / 'SHA256SUMS.asc', folder / 'SHA256SUMS', key, fingerprint)
-                except release_site.SiteRefused as error:
-                    raise PublishRefused(f'{version}: {error}') from None
-                files = unpack_release(data[release_assets(version)[0]], version, data['SHA256SUMS'].read_bytes(),
-                                       data['SHA256SUMS.asc'].read_bytes(), output)
-                tag_commit = gh.tag_commit(release['tag_name'])
-                require(tag_commit is not None, f"release {release['tag_name']} has no tag")
-                check_identity(output / version, version, f'{root_url}{version}/', fingerprint, tag_commit)
-                check_installer_signature(output / version, key, fingerprint, version)
-                require(canonical_sha(output / version) == release_site.sha(data[release_assets(version)[0]]),
-                        f'the {version} archive is not the canonical archive of its site')
-                # A release made or edited outside publish-release must still carry exactly what it would have set.
-                notes = rendered_notes(output / version, data[release_assets(version)[0]], version).decode()
-                require(release.get('name') == release_title(version) and release.get('body') == notes,
-                        f"release {release['tag_name']} does not carry its title and rendered notes")
-                check_standalone(data[release_assets(version)[0]], version, data)
-                versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
-                                     'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
-                                     'files': files, 'release_id': release.get('id')}
-        for entry in registry['published']:
-            require(entry['version'] in versions, f"published version {entry['version']} is missing; retiring "
-                    'a version needs a reviewed retired entry')
-            require(versions[entry['version']]['sha256sums_sha256'] == entry['sha256sums_sha256'],
-                    f"published version {entry['version']} has another SHA256SUMS than recorded")
+        versions = compose_releases(gh, key, fingerprint, registry, root_url, output)
         require(new_version is None or new_version in versions, f'the new version {new_version} is not composed')
-        for version, record in versions.items():
-            if version == new_version:
-                continue
-            status, body = fetch(cache_busted(f'{root_url}{version}/SHA256SUMS'))
-            require(status == 200 and sha_bytes(body) == record['sha256sums_sha256'],
-                    f'the live {version}/SHA256SUMS differs from its release (HTTP {status})')
+        newest = max(versions, key=version_key, default=None)
+        # A re-run of an older run's pages-build must not serve what a later registry retired.
+        require(new_version in {None, newest}, f'the new version {new_version} is not the newest release {newest}')
+        check_recorded(gh, registry, new_version)
+        check_live_sums(fetch, root_url, versions, new_version)
         total = site_bytes(output)
         require(total <= limit, f'the Pages site is {total} bytes, above the {limit}-byte budget')
+        manifest = {'schema_version': 1, 'base_url': values['base_url'], 'versions': versions, 'total_bytes': total,
+                    'new_version': new_version}
+        with open(manifest_path, 'x') as stream:
+            written = True
+            stream.write(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
     except BaseException:
         shutil.rmtree(output, ignore_errors=True)
+        if written:
+            manifest_path.unlink(missing_ok=True)
         raise
-    manifest = {'schema_version': 1, 'base_url': values['base_url'], 'versions': versions, 'total_bytes': total,
-                'new_version': new_version}
-    with open(manifest_path, 'x') as stream:
-        stream.write(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
     return manifest
 
 
@@ -597,9 +781,22 @@ def site_location(base_url):
     return parts.hostname, '/' + '/'.join(segments[:-1]) + '/', segments[-1]
 
 
-def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=None, timeout=1200,
-                fetch=fetch_public, sleep=time.sleep, clock=time.monotonic, commit=None):
+def site_root(base_url):
+    """The Pages URL the version directories are served under."""
+    host, prefix, _ = site_location(base_url)
+    return f'https://{host}{prefix}'
+
+
+def verify_live(values, key, fingerprint, archive, pages_manifest, commit, fetched=None, timeout=1200,
+                fetch=fetch_public, sleep=time.sleep, clock=time.monotonic):
     version, base = values['version'], values['base_url']
+    require(isinstance(commit, str) and re.fullmatch(r'[0-9a-f]{40}', commit) is not None,
+            'verify-live needs the 40-hex release commit')
+    # The record pages-build wrote for this version names every other version the deployed site serves.
+    record = json.loads(Path(pages_manifest).read_text())
+    require(isinstance(record, dict) and record.get('schema_version') == 1 and record.get('base_url') == base
+            and record.get('new_version') == version and isinstance(record.get('versions'), dict),
+            f'the Pages manifest is not the record of composing {version}')
     expected = {}
     with open_archive(archive) as tar:
         for member in tar.getmembers():
@@ -609,10 +806,14 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
             expected[path] = hashlib.file_digest(tar.extractfile(member), 'sha256').hexdigest()
     deadline = clock() + timeout
     while True:
-        stale = [path for path in PLAIN if live_sha(fetch, base + path) != (200, expected.get(path))]
+        try:
+            stale = [path for path in PLAIN if live_sha(fetch, base + path) != (200, expected.get(path))]
+            problem = 'the live site still serves stale or missing files: ' + ', '.join(stale)
+        except NetworkRefused as error:  # right after a deployment, a network error only means not converged yet
+            stale, problem = [error], f'the live site could not be read before the timeout: {error}'
         if not stale:
             break
-        require(clock() < deadline, 'the live site still serves stale or missing files: ' + ', '.join(stale))
+        require(clock() < deadline, problem)
         sleep(30)
     with tempfile.TemporaryDirectory(prefix='verify-live-') as work:
         root = Path(fetched or work) / version
@@ -638,21 +839,20 @@ def verify_live(values, key, fingerprint, archive, pages_manifest=None, fetched=
             require(release_site.sha(root / path) == digest, f'the live {path} differs from the signed SHA256SUMS')
         check_identity(root, version, base, fingerprint, commit)
     others = {}
-    if pages_manifest is not None:
-        host, prefix, _ = site_location(base)
-        for other, record in json.loads(Path(pages_manifest).read_text())['versions'].items():
-            if other == version:
-                continue
-            status, body = fetch(cache_busted(f'https://{host}{prefix}{other}/SHA256SUMS'))
-            require(status == 200 and sha_bytes(body) == record['sha256sums_sha256'],
-                    f'the live {other}/SHA256SUMS changed (HTTP {status})')
-            others[other] = record['sha256sums_sha256']
+    for other, entry in record['versions'].items():
+        if other == version:
+            continue
+        status, body = fetch(cache_busted(f'{site_root(base)}{other}/SHA256SUMS'))
+        require(status == 200 and sha_bytes(body) == entry['sha256sums_sha256'],
+                f'the live {other}/SHA256SUMS changed (HTTP {status})')
+        others[other] = entry['sha256sums_sha256']
     return {'version': version, 'files': len(expected), 'archive_sha256': release_site.sha(archive),
             'other_versions': others, 'passed': True}
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     allow_abbrev=False)
     parser.add_argument('command', choices=['check-unpublished', 'publish-release', 'compose-pages', 'verify-live'])
     parser.add_argument('--repo', type=Path, default=REPO)
     parser.add_argument('--phase', choices=['preflight', 'publish'])
@@ -660,6 +860,7 @@ def main(argv=None):
     parser.add_argument('--notes', type=Path)
     parser.add_argument('--sha', default=os.environ.get('GITHUB_SHA'))
     parser.add_argument('--registry', type=Path)
+    parser.add_argument('--reserve-bytes', type=int)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--manifest', type=Path)
     parser.add_argument('--new-version')
@@ -675,21 +876,30 @@ def main(argv=None):
         if args.report is not None:
             require(not args.report.exists() and args.report.parent.is_dir(),
                     'the report must be a new file in an existing directory')
+        preflight = args.command == 'check-unpublished' and args.phase == 'preflight'
+        require(preflight or args.reserve_bytes is None,
+                'only check-unpublished --phase preflight takes --reserve-bytes')
         if args.command == 'verify-live':
             require(args.archive is not None, 'verify-live requires --archive')
+            require(args.pages_manifest is not None, 'verify-live requires --pages-manifest')
+            require(args.sha is not None, 'verify-live requires --sha (or GITHUB_SHA)')
+            require(re.fullmatch(r'[0-9a-f]{40}', args.sha) is not None, '--sha must name the 40-hex release commit')
             result = verify_live(values, key, values['primary_fingerprint'], args.archive, args.pages_manifest,
-                                 args.fetched, args.timeout, commit=args.sha)
+                                 args.sha, args.fetched, args.timeout)
         else:
             gh = GitHub(os.environ.get('GITHUB_API_URL', 'https://api.github.com'),
                         os.environ.get('GITHUB_REPOSITORY'), os.environ.get('GH_TOKEN'))
             if args.command == 'check-unpublished':
-                require(args.phase is not None, 'check-unpublished requires --phase')
+                require(None not in (args.phase, args.registry), 'check-unpublished requires --phase and --registry')
+                require(not preflight or args.reserve_bytes is not None, '--phase preflight requires --reserve-bytes')
+                require(preflight or args.assets is not None, '--phase publish requires --assets')
                 result = {'phase': args.phase,
-                          'state': check_unpublished(gh, values, args.phase, args.assets, args.sha, key)}
+                          'state': check_unpublished(gh, values, args.phase, args.registry, assets_dir=args.assets,
+                                                     commit=args.sha, key=key, reserve=args.reserve_bytes)}
             elif args.command == 'publish-release':
-                require(None not in (args.assets, args.notes, args.sha),
-                        'publish-release needs --assets, --notes and --sha')
-                result = publish_release(gh, values, args.assets, args.notes, args.sha, key)
+                require(None not in (args.assets, args.notes, args.sha, args.registry),
+                        'publish-release needs --assets, --notes, --sha and --registry')
+                result = publish_release(gh, values, args.assets, args.notes, args.sha, key, args.registry)
             else:
                 require(None not in (args.registry, args.output, args.manifest),
                         'compose-pages needs --registry, --output and --manifest')

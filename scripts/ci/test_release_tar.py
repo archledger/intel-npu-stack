@@ -25,8 +25,8 @@ def padded(data):
     return data + bytes(-len(data) % tarfile.BLOCKSIZE)
 
 
-def pax(kind=tarfile.XHDTYPE, **records):
-    """A pax header with these records ('_' in a key stands for '.'), each sized as tarfile sizes it."""
+def records(**records):
+    """pax records ('_' in a key stands for '.'), each sized as tarfile sizes it."""
     body = b''
     for key, value in records.items():
         text = f' {key.replace("_", ".")}={value}\n'
@@ -37,6 +37,12 @@ def pax(kind=tarfile.XHDTYPE, **records):
                 break
             previous = length
         body += (str(length) + text).encode()
+    return body
+
+
+def pax(kind=tarfile.XHDTYPE, **fields):
+    """A pax header with these records."""
+    body = records(**fields)
     return header('././@PaxHeader', kind, len(body)) + padded(body)
 
 
@@ -103,6 +109,58 @@ class Scan(unittest.TestCase):
         at_limit = header('././@LongLink', tarfile.GNUTYPE_LONGNAME, release_tar.MAX_EXTENSION)
         self.assertEqual(scan(at_limit + bytes(release_tar.MAX_EXTENSION) + member() + END), 2)
 
+    def test_extension_data_is_bounded_across_the_archive_before_it_is_read(self):
+        # Every long name stays within its own cap; together they reach the archive's budget exactly.
+        name = 'n' * (release_tar.MAX_EXTENSION - 1)
+        count = release_tar.MAX_EXTENSION_TOTAL // release_tar.MAX_EXTENSION
+        archive = b''.join(longname(f'{name[:-5]}{index:05}') + member(f'f{index}') for index in range(count))
+        self.assertEqual(scan(archive + END), 2 * count)
+        stream = CountingStream(archive + longname('x') + member('last') + END)
+        with self.assertRaisesRegex(release_tar.TarRefused, f'more than {release_tar.MAX_EXTENSION_TOTAL} bytes'):
+            release_tar.scan(stream, 1000, release_tar.INPUT_TYPES)
+        # Only the headers and the long names within the budget are read; member data is skipped.
+        skipped = count * tarfile.BLOCKSIZE
+        self.assertEqual((stream.tell(), stream.read_bytes),
+                         (len(archive) + tarfile.BLOCKSIZE, len(archive) - skipped + tarfile.BLOCKSIZE))
+
+    def test_global_pax_data_stays_small_because_every_later_member_copies_it(self):
+        commit = pax(tarfile.XGLTYPE, comment='0' * 40)  # the one global record git archive writes
+        self.assertEqual(scan(commit + member() + member('b') + END), 3)
+        body = records(comment='c' * (release_tar.MAX_GLOBAL - 14))
+        self.assertEqual(len(body), release_tar.MAX_GLOBAL)
+        full = header('././@PaxHeader', tarfile.XGLTYPE, len(body)) + padded(body)
+        self.assertEqual(scan(full + member() + END), 2)
+        stream = CountingStream(full + member() + commit + member('b') + END)
+        with self.assertRaisesRegex(release_tar.TarRefused, f'more than {release_tar.MAX_GLOBAL} bytes of global'):
+            release_tar.scan(stream, 100, release_tar.INPUT_TYPES)
+        # The second global header is refused from its declared size, before its data is read.
+        self.assertEqual((stream.tell(), stream.read_bytes),
+                         (len(full) + 3 * tarfile.BLOCKSIZE, len(full) + 2 * tarfile.BLOCKSIZE))
+        # Alternating global headers and members, each within every per-header cap, are refused too.
+        alternating = b''.join(pax(tarfile.XGLTYPE, **{f'k{index}': 'v' * 200}) + member(f'f{index}')
+                               for index in range(40))
+        self.refused('bytes of global pax data', alternating + END)
+
+    def test_the_extension_budget_admits_a_posix_archive_at_the_header_limit(self):
+        # GNU tar's posix format gives every member a 90-byte pax header: mtime, atime and ctime.
+        times = pax(mtime='1790355423.817946055', atime='1790355423.834162715', ctime='1790355423.834162715')
+        self.assertEqual(int(tarfile.TarInfo.frombuf(times[:tarfile.BLOCKSIZE], 'utf-8', 'strict').size), 90)
+        archive = b''.join(times + member(f'f{index:05}', b'') for index in range(10000)) + END
+        self.assertEqual(scan(archive, limit=20000), 20000)
+
+    def test_a_negative_declared_size_is_refused_before_any_seek_or_read(self):
+        stream = CountingStream(member('a') + header('b', size=-1536) + member('c') + END)
+        with self.assertRaisesRegex(release_tar.TarRefused, 'tar header 2 declares a negative size'):
+            release_tar.scan(stream, 100, release_tar.INPUT_TYPES, max_bytes=1 << 20)
+        self.assertEqual((stream.read_bytes, stream.tell()), (2 * tarfile.BLOCKSIZE, 3 * tarfile.BLOCKSIZE))
+        extension = header('././@LongLink', tarfile.GNUTYPE_LONGNAME, -tarfile.BLOCKSIZE) + padded(b'n\0') + member()
+        with tempfile.TemporaryDirectory() as work:
+            path = Path(work) / 'negative.tar.gz'
+            path.write_bytes(gzip.compress(extension + END))
+            with release_tar.open_stream(path) as stream:
+                with self.assertRaisesRegex(release_tar.TarRefused, 'tar header 1 declares a negative size'):
+                    release_tar.scan(stream, 100, release_tar.INPUT_TYPES)
+
     def test_an_archive_that_ends_inside_extension_data_is_refused(self):
         self.refused('ends inside a tar extension header', header('././@LongLink', tarfile.GNUTYPE_LONGNAME, 600))
 
@@ -125,6 +183,19 @@ class Scan(unittest.TestCase):
             with self.subTest(label):
                 self.refused('is not allowed', data + member() + END, types=types)
 
+    def test_a_regular_file_named_like_a_directory_is_refused(self):
+        # tarfile reads this old v7 directory form as a directory, but after an extension header as a regular file
+        # whose data it skips: a zero block there would end the scan before headers tarfile goes on to read.
+        directory = header('x/', tarfile.AREGTYPE, tarfile.BLOCKSIZE) + bytes(tarfile.BLOCKSIZE)
+        hidden = header('link', tarfile.SYMTYPE) + longname('n' * (release_tar.MAX_EXTENSION + 1)) + member()
+        for label, before in [('after a long name', longname('abc')), ('after a pax header', pax(path='abc')),
+                              ('after a global pax header', pax(tarfile.XGLTYPE, comment='0' * 40)),
+                              ('on its own', b'')]:
+            with self.subTest(label):
+                self.refused('tar header [0-9] is a regular file named like a directory',
+                             before + directory + hidden + END)
+        self.assertEqual(scan(longname('abc') + header('x', tarfile.AREGTYPE, 1) + padded(b'x') + END), 2)
+
     def test_pax_records_that_change_the_size_or_declare_sparse_files_are_refused(self):
         self.assertEqual(scan(pax(mtime='1.5', path='a') + member() + END), 2)
         for label, records in [('size', {'size': '0'}), ('sparse map', {'GNU_sparse_map': '0,1'}),
@@ -133,6 +204,19 @@ class Scan(unittest.TestCase):
                 self.refused('pax record', pax(**records) + member() + END)
         with self.subTest('global header size'):
             self.refused('pax record', pax(tarfile.XGLTYPE, size='0') + member() + END)
+
+    def test_pax_records_hidden_in_the_block_padding_are_refused(self):
+        # tarfile parses the whole padded block up to a NUL, so a record after the declared data would apply.
+        visible = records(path='abc')
+        for label, hidden in [('size', records(size=tarfile.BLOCKSIZE)),
+                              ('sparse', records(GNU_sparse_size=tarfile.BLOCKSIZE))]:
+            with self.subTest(label):
+                data = header('././@PaxHeader', tarfile.XHDTYPE, len(visible)) + padded(visible + hidden)
+                self.refused('pax header padding is not zero', data + header('abc') + bytes(tarfile.BLOCKSIZE)
+                             + header('link', tarfile.SYMTYPE) + END)
+        with self.subTest('global header'):
+            data = header('././@PaxHeader', tarfile.XGLTYPE, len(visible)) + padded(visible + b'\n')
+            self.refused('pax header padding is not zero', data + member() + END)
 
     def test_malformed_pax_records_are_refused(self):
         for label, body in [('bad length', b'99 mtime=1\n'), ('no newline', b'11 mtime=1x'),
