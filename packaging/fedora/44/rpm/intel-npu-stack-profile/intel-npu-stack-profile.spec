@@ -6,11 +6,11 @@
 # activation are shipped by this package.
 
 Name:           intel-npu-stack-profile
-Version:        0.1.0
+Version:        0.1.1
 Release:        1.intelnpu.fc44
 Summary:        Immutable Intel NPU stack platform profile for Fedora 44
 License:        Apache-2.0
-Source0:        intel-npu-stack-profile-0.1.0.tar
+Source0:        intel-npu-stack-profile-%{version}.tar
 BuildArch:      noarch
 AutoReqProv:    no
 BuildRequires:  python3 >= 3.11
@@ -23,7 +23,7 @@ data file under /usr/share/intel-npu-stack/profiles. It performs no
 activation, ships no services and requires no other packages.
 
 %prep
-%setup -q -n intel-npu-stack-profile-0.1.0
+%setup -q -n intel-npu-stack-profile-%{version}
 
 %build
 
@@ -41,5 +41,8 @@ python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('profiles/fedora
 %{_datadir}/intel-npu-stack/profiles/fedora-44-lunar-lake-x86_64.toml
 
 %changelog
+* Sat Sep 26 2026 Intel NPU Stack release assembly <release@example.invalid> - 0.1.1-1.intelnpu.fc44
+- Profile for release 0.1.1: the 0.1.0 provider set with the 0.1.1 qualification record.
+
 * Fri Sep 11 2026 Intel NPU Stack release assembly <release@example.invalid> - 0.1.0-1.intelnpu.fc44
 - Initial immutable candidate profile for Fedora 44 Lunar Lake x86_64.

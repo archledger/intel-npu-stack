@@ -753,6 +753,9 @@ def render_notes(site, archive_path):
         '```sh', command, '```', '',
         'The command downloads `install.sh`, checks its SHA-256 and runs it. `install.sh` checks the installer '
         'binary the same way, and the installer verifies `release.json` against the release key it carries.', '',
+        'The short form trusts the HTTPS download of `install.sh` instead of checking its SHA-256; everything '
+        'after it is checked the same way:', '',
+        '```sh', f'curl -fsSL {base}install.sh | sh', '```', '',
         '### Verify before running', '',
         f'1. Download [`install.sh`]({base}install.sh) and [`install.sh.asc`]({base}install.sh.asc).',
         '2. Run `gpg --status-fd 1 --verify install.sh.asc install.sh` with the release public key and check that '

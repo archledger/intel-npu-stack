@@ -65,6 +65,34 @@ sys.exit(int(os.environ['TEST_CURL_EXIT']))
         self.assertIn('--max-filesize', curl)
         self.assertEqual(curl[-2:], ['--', URL])
 
+    def test_a_download_cut_short_and_piped_into_sh_runs_nothing(self):
+        # `curl -fsSL .../install.sh | sh` hands sh whatever arrived. Every prefix of the script, however it is cut,
+        # must neither download nor execute; the whole script must pass the caller's arguments through unchanged.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bin_dir = root / 'bin'
+            bin_dir.mkdir()
+            (root / 'tmp').mkdir()
+            (root / 'payload').write_bytes(PAYLOAD)
+            (bin_dir / 'id').write_text('#!/bin/sh\nprintf "%s\\n" 1000\n')
+            (bin_dir / 'curl').write_text('#!/bin/sh\n: > "$TEST_CURL_ARGS"\n'
+                                          'while [ "$#" -gt 0 ]; do [ "$1" = --output ] && cp "$TEST_PAYLOAD" "$2"; '
+                                          'shift; done\n')
+            for tool in bin_dir.iterdir():
+                tool.chmod(0o700)
+            script = renderer.render_bootstrap('0.1.0', URL, hashlib.sha256(PAYLOAD).hexdigest()).encode()
+            env = dict(os.environ, PATH=str(bin_dir) + ':/usr/bin:/bin', TMPDIR=str(root / 'tmp'),
+                       TEST_ARGS=str(root / 'args'), TEST_CURL_ARGS=str(root / 'curl-args'),
+                       TEST_PAYLOAD=str(root / 'payload'))
+            for cut in range(len(script) - 1):  # the last prefix is the script without its final newline
+                subprocess.run(['/bin/sh', '-s', '--', '--dry-run'], input=script[:cut], env=env,
+                               capture_output=True)
+                self.assertFalse((root / 'curl-args').exists() or (root / 'args').exists(), cut)
+            for args in [['--yes'], ['--dry-run', '--channel', 'experimental', '--accept-experimental-risk']]:
+                result = subprocess.run(['/bin/sh', '-s', '--', *args], input=script, env=env, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual((root / 'args').read_text().splitlines(), args)
+
     def test_wrong_digest_never_executes(self):
         result, calls = self.run_bootstrap(expected='0' * 64)
         self.assertEqual(result.returncode, 20)

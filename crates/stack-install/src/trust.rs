@@ -11,9 +11,9 @@
 /// from this source therefore fails closed on the metadata digest instead
 /// of trusting downloaded metadata. Nothing here may be supplied through
 /// the environment.
-pub(crate) const VERSION: &str = "0.1.0";
+pub(crate) const VERSION: &str = "0.1.1";
 
-pub(crate) const BASE_URL: &str = "https://archledger.github.io/intel-npu-stack/0.1.0/";
+pub(crate) const BASE_URL: &str = "https://archledger.github.io/intel-npu-stack/0.1.1/";
 
 pub(crate) const METADATA_SHA256: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";

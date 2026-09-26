@@ -14,6 +14,9 @@ from urllib.parse import urlsplit
 SCRIPT = '''#!/bin/sh
 # SPDX-License-Identifier: Apache-2.0
 # Generated for the exact @VERSION@ installer asset.
+# Everything runs from main, called on the last line with an end marker after
+# the caller's arguments: a download cut short, even within that line, defines
+# functions at most or reaches main without the marker, and runs nothing.
 set -eu
 umask 077
 
@@ -21,18 +24,6 @@ fail() {
     printf 'error: %s\\n' "$2" >&2
     exit "$1"
 }
-
-if [ "$#" -eq 1 ]; then
-    case "$1" in
-        --version) printf 'intel-npu-stack-install %s\\n' '@VERSION@'; exit 0 ;;
-        --help)
-            printf '%s\\n' 'Usage: install.sh [--dry-run] [--yes] [--channel stable|experimental]' \\
-                '  [--accept-experimental-risk] [--with-python] [--with-devel]' \\
-                '  [--version] [--help]' \\
-                'Run as a normal user. Experimental requires explicit risk acknowledgement.'
-            exit 0 ;;
-    esac
-fi
 
 check_options() {
     bootstrap_channel=stable
@@ -55,6 +46,32 @@ check_options() {
         *) fail 2 'experimental requires --accept-experimental-risk; stable rejects that flag' ;;
     esac
 }
+
+main() {
+bootstrap_last=
+for bootstrap_arg in "$@"; do bootstrap_last=$bootstrap_arg; done
+if [ "$#" -eq 0 ] || [ "$bootstrap_last" != '--end-of-install-sh' ]; then
+    fail 20 'install.sh was not downloaded completely'
+fi
+bootstrap_count=$(($# - 1))
+bootstrap_index=0
+for bootstrap_arg in "$@"; do
+    if [ "$bootstrap_index" -eq 0 ]; then set --; fi
+    bootstrap_index=$((bootstrap_index + 1))
+    if [ "$bootstrap_index" -le "$bootstrap_count" ]; then set -- "$@" "$bootstrap_arg"; fi
+done
+
+if [ "$#" -eq 1 ]; then
+    case "$1" in
+        --version) printf 'intel-npu-stack-install %s\\n' '@VERSION@'; exit 0 ;;
+        --help)
+            printf '%s\\n' 'Usage: install.sh [--dry-run] [--yes] [--channel stable|experimental]' \\
+                '  [--accept-experimental-risk] [--with-python] [--with-devel]' \\
+                '  [--version] [--help]' \\
+                'Run as a normal user. Experimental requires explicit risk acknowledgement.'
+            exit 0 ;;
+    esac
+fi
 check_options "$@"
 
 bootstrap_uid=$(id -u) || fail 2 'cannot determine effective user ID'
@@ -83,6 +100,9 @@ if ! printf '%s  %s\\n' '@SHA256@' "$bootstrap_payload" | sha256sum --check --st
 fi
 chmod 700 "$bootstrap_payload" || fail 20 'cannot prepare the verified installer'
 "$bootstrap_payload" "$@"
+}
+
+main "$@" --end-of-install-sh
 '''
 
 

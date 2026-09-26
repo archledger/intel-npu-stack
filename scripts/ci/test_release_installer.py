@@ -14,7 +14,9 @@ import release_installer as installer
 import release_trust as trust
 
 REPO = Path(__file__).resolve().parents[2]
-BASE_URL = 'https://archledger.github.io/intel-npu-stack/0.1.0/'
+# The committed release identity: fixtures follow the trust seam instead of naming a version.
+COMMITTED = trust.parse_trust((REPO / 'crates/stack-install/src/trust.rs').read_text())
+VERSION, BASE_URL = COMMITTED['version'], COMMITTED['base_url']
 TOOLS = shutil.which('gpg') and shutil.which('gpgconf') and shutil.which('git')
 IMAGE = 'registry.fedoraproject.org/fedora@sha256:' + '2f' * 32
 BUILD_ENV = {'PATH': '/usr/bin:/bin', 'IMAGE_DIGEST': IMAGE}
@@ -36,14 +38,17 @@ def elf_header(machine=62):
 class FakeCargo:
     """Stands in for cargo/rustc: "builds" a binary from the pinned trust.rs it finds."""
 
-    def __init__(self, embed=True, version='intel-npu-stack-install 0.1.0', machine=62, toolchain_exit=0):
+    def __init__(self, embed=True, version=None, machine=62, toolchain_exit=0):
+        # --version reports the release of the trust.rs last built, unless a test fixes the output.
         self.embed, self.version, self.machine, self.calls = embed, version, machine, []
+        self.built = None
         self.toolchain_exit = toolchain_exit
 
     def __call__(self, argv, cwd, env):
         self.calls.append((list(argv), str(cwd), dict(env)))
         if argv[0] == 'cargo' and argv[1] == 'build':
             values = trust.parse_trust((Path(cwd) / 'crates/stack-install/src/trust.rs').read_text())
+            self.built = values['version']
             body = elf_header(self.machine)
             if self.embed:
                 body += '\n'.join([values['metadata_sha256'], values['base_url'],
@@ -57,7 +62,8 @@ class FakeCargo:
         if argv[:2] == ['cargo', 'fetch']:
             return subprocess.CompletedProcess(argv, 0, '', '')
         if argv[-1] == '--version':
-            return subprocess.CompletedProcess(argv, 0, self.version + '\n', '')
+            version = self.version or 'intel-npu-stack-install ' + str(self.built)
+            return subprocess.CompletedProcess(argv, 0, version + '\n', '')
         return subprocess.CompletedProcess(argv, self.toolchain_exit,
                                            '' if self.toolchain_exit else argv[0] + ' 1.85.0 (fake)\n', '')
 
@@ -176,7 +182,7 @@ class InstallerBuild(unittest.TestCase):
         git(self.repo, 'commit', '-q', '-m', 'scratch')
         self.commit = git(self.repo, 'rev-parse', 'HEAD')
         self.release = self.root / 'release-tree'
-        self.write_release({'schema_version': 1, 'stack_release': '0.1.0', 'test_only': False,
+        self.write_release({'schema_version': 1, 'stack_release': VERSION, 'test_only': False,
                             'repository': {'id': 'intel-npu-stack-0.1.0', 'base_url': BASE_URL}})
 
     def key(self, name):
@@ -283,7 +289,7 @@ class InstallerBuild(unittest.TestCase):
             self.build()
 
     def test_release_fields_must_match_the_trust_seam(self):
-        base = {'schema_version': 1, 'stack_release': '0.1.0', 'test_only': False,
+        base = {'schema_version': 1, 'stack_release': VERSION, 'test_only': False,
                 'repository': {'id': 'intel-npu-stack-0.1.0', 'base_url': BASE_URL}}
         for label, change in {'base_url': {'repository': {'id': 'x', 'base_url': BASE_URL + 'other/'}},
                               'stack_release': {'stack_release': '0.2.0'},

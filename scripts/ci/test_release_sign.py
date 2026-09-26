@@ -14,6 +14,7 @@ import unittest
 from unittest import mock
 
 import release_sign as signer
+import test_release_installer
 
 TOOLS = all(shutil.which(tool) for tool in ['gpg', 'gpgconf', 'rpmbuild', 'rpmsign', 'rpmkeys'])
 TOOLS_REASON = 'gpg, rpmbuild, rpmsign and rpmkeys are required (installed in the Fedora quality job)'
@@ -347,13 +348,23 @@ class ProfileRpm(unittest.TestCase):
         # so a relative _topdir resolved the second time against the first and the signing job failed.
         source = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory(prefix='profile-rpm-') as tmp, contextlib.chdir(tmp):
-            profile = b'id = "fedora-44-lunar-lake-x86_64"\n'
+            version = test_release_installer.VERSION
+            profile = f'id = "fedora-44-lunar-lake-x86_64"\nstack_release = "{version}"\n'.encode()
             rpm, builds = signer.build_profile_rpm(source, Path('work/release-work'), profile)
             self.assertTrue(rpm.is_absolute() and rpm.is_file())
             self.assertEqual(rpm.parent.parent.parent, (Path(tmp) / 'work/release-work/profile-build1').resolve())
             self.assertEqual(builds[0], builds[1])
-            self.assertEqual(subprocess.run(['rpm', '-qp', '--qf', '%{NAME}', str(rpm)], capture_output=True,
-                                            text=True, check=True).stdout, 'intel-npu-stack-profile')
+            query = subprocess.run(['rpm', '-qp', '--qf', '%{NAME}-%{VERSION}', str(rpm)], capture_output=True,
+                                   text=True, check=True).stdout
+            self.assertEqual(query, 'intel-npu-stack-profile-' + version)
+
+    def test_the_spec_version_must_be_the_release_profiles_stack_release(self):
+        source = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory(prefix='profile-rpm-') as tmp:
+            for release in ['0.0.9', 'x']:
+                profile = f'id = "fedora-44-lunar-lake-x86_64"\nstack_release = "{release}"\n'.encode()
+                with self.subTest(release), self.assertRaises(signer.SigningRefused):
+                    signer.build_profile_rpm(source, Path(tmp) / release, profile)
 
 
 @unittest.skipUnless(TOOLS, TOOLS_REASON)

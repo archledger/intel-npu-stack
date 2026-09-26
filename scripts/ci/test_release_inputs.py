@@ -251,7 +251,7 @@ class Inputs(unittest.TestCase):
 @unittest.skipUnless(shutil.which('gpg') and shutil.which('git'), 'gpg and git are required')
 class Dispatch(unittest.TestCase):
     SOURCE = Path(__file__).resolve().parents[2]
-    GOOD = {'ref': 'refs/heads/main', 'version': '0.1.0', 'url': URL, 'digest': 'a' * 64,
+    GOOD = {'ref': 'refs/heads/main', 'version': test_release_installer.VERSION, 'url': URL, 'digest': 'a' * 64,
             'profile': 'profiles/fedora/44/lunar-lake-x86_64.toml'}
 
     def setUp(self):
@@ -293,10 +293,10 @@ class Dispatch(unittest.TestCase):
     def test_a_well_formed_dispatch_from_main_passes(self):
         result = self.check()
         self.assertEqual((result['version'], result['base_url']),
-                         ('0.1.0', 'https://archledger.github.io/intel-npu-stack/0.1.0/'))
+                         (test_release_installer.VERSION, test_release_installer.BASE_URL))
         profile = tomllib.loads((self.repo / self.GOOD['profile']).read_text())
         self.assertEqual((result['support_notes'], result['tested_kernels']),
-                         ('release/0.1.0/support-notes.toml',
+                         (f'release/{test_release_installer.VERSION}/support-notes.toml',
                           [f"{profile['kernel']['min']}-200.fc{profile['platform']['version_id']}"]))
 
     def test_the_support_notes_are_checked_as_compose_checks_them_before_any_key(self):

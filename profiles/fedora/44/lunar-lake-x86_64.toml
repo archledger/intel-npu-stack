@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-# Promoted for release 0.1.0 from the generated candidate; the qualification record is at the end.
+# Promoted for release 0.1.1 (the 0.1.0 packages unchanged); the qualification record is at the end.
 # source_lock_sha256 = 54cfdc2e998b446ba123933476bd4c8fb57a638d970cc1db67e2bb2416876ab7
 schema_version = 1
 id = "fedora-44-lunar-lake-x86_64"
-stack_release = "0.1.0"
+stack_release = "0.1.1"
 status = "qualified"
 package_manager = "rpm"
 conflicts = []
@@ -173,8 +173,8 @@ redistribution = "allowed"
 evidence_sha256 = "53738a26dcfce52f2b07ca9f75b357f5efebb521da3063772b24a44c8869e7e4"
 
 [qualification]
-evidence_id = "fedora-44-lunar-lake-x86_64-0.1.0-q1"
-evidence_sha256 = "895c57f403c03c2e71d813d8448e5a68473722d205d58d35f06c417d194c5c50"
-qualified_at = "2026-09-26T03:44:28Z"
+evidence_id = "fedora-44-lunar-lake-x86_64-0.1.1-q1"
+evidence_sha256 = "dcf68c330d2d52aa270cc4f84df671c916d0a4d7c4beba076eb84cf7d52a3afa"
+qualified_at = "2026-09-26T15:03:07Z"
 hardware_class = "intel-lunar-lake-npu-8086-643e"
 test_suite_version = "frozen-collector-354eb85a"
