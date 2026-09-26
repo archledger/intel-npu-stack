@@ -39,7 +39,12 @@ impl ProcessRunner for Native {
         self.databases.lock().unwrap().push(db.into());
         let mut stdout = String::new();
         let mut code = 0;
-        if args.contains(&"--initdb") || args.contains(&"--import") {
+        // rpm --initdb runs /usr/bin/rpmdb, which SELinux keeps from writing under /tmp on Fedora.
+        assert!(
+            !args.contains(&"--initdb"),
+            "the private key database is created by rpmkeys --import"
+        );
+        if args.contains(&"--import") {
             if self.bad == "import" {
                 code = 1;
             }
