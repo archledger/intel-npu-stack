@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+schema_version = 1
+stack_release = "0.1.0"
+profile_id = "fedora-44-lunar-lake-x86_64"
+not_supported = [
+  "unbounded dynamic-batch models compiled without a batch layout on the NPU (issue #20)",
+]
+
+[[tested_kernels]]
+release = "7.2.5-200.fc44"
+tests = ["upgrade", "firmware activation and warm reboot", "doctor", "removal", "rollback", "restoration", "repeat installation"]
+
+[[tested_kernels]]
+release = "7.2.7-200.fc44"
+tests = ["doctor", "suspend/resume", "cold boot"]

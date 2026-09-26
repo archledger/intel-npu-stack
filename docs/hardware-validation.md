@@ -5,9 +5,9 @@ Status as of **2026-09-26**: the matched Fedora 44 Lunar Lake pilot passed
 upgrade, warm reboot, normal-user NPU diagnostics, removal, rollback,
 restoration and repeat installation on kernel **7.2.5-200.fc44.x86_64**, then
 suspend/resume and a user-confirmed cold boot on kernel
-**7.2.7-200.fc44.x86_64** with the same installed packages. The profile is
-still a candidate: this is candidate evidence rather than a supported public
-release.
+**7.2.7-200.fc44.x86_64** with the same installed packages. On this evidence
+the profile is qualified for release 0.1.0; it is supported once that release
+is published.
 
 ## Current matched-stack observations
 

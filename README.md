@@ -18,11 +18,11 @@ the matched 1.38.0 stack passed normal-user NPU inference, upgrade, warm
 reboot, removal, rollback, restoration and repeat installation on kernel 7.2.5,
 and suspend/resume and a user-confirmed cold boot on kernel 7.2.7.
 
-Candidate profiles remain unqualified. Profile promotion, the release
-repository settings and release publication remain separate work; publishing
-this source does not complete those gates.
+The Fedora 44 Lunar Lake profile is qualified for release 0.1.0 on kernels
+`[7.2.5, 7.3.0)`. Publishing the release through the protected workflow
+remains; publishing this source does not complete it.
 
-No stable platform profile is published yet. Fedora 44 x86_64 on allowlisted Lunar Lake hardware is the first planned qualification target, but remains unsupported until all VM, hardware, provenance, signing, rollback, and release gates pass.
+No stable platform profile is published yet. Fedora 44 x86_64 on allowlisted Lunar Lake hardware is the first qualified target and stays unsupported until release 0.1.0 is published.
 
 ## Documentation
 

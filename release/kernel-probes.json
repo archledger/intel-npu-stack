@@ -1,4 +1,23 @@
 {
   "schema_version": 1,
-  "probes": []
+  "probes": [
+    {
+      "kernel": "7.2.5-200.fc44",
+      "profile": "fedora-44-lunar-lake-x86_64",
+      "components_sha256": "3b3fb8ac13141c60b45178636be5accd09d56694ab58d0930954de5c966d0e2a",
+      "result": "pass",
+      "source": "qualification",
+      "evidence_sha256": "895c57f403c03c2e71d813d8448e5a68473722d205d58d35f06c417d194c5c50",
+      "recorded": "2026-09-26"
+    },
+    {
+      "kernel": "7.2.7-200.fc44",
+      "profile": "fedora-44-lunar-lake-x86_64",
+      "components_sha256": "3b3fb8ac13141c60b45178636be5accd09d56694ab58d0930954de5c966d0e2a",
+      "result": "pass",
+      "source": "qualification",
+      "evidence_sha256": "895c57f403c03c2e71d813d8448e5a68473722d205d58d35f06c417d194c5c50",
+      "recorded": "2026-09-26"
+    }
+  ]
 }

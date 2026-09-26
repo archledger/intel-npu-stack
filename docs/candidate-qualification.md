@@ -14,10 +14,15 @@ an exact kernel release and a new output path. It changes only `id`,
 Provider RPM hashes, installed-file hashes, licenses and source evidence
 comments remain intact. Existing output paths are refused.
 
-`profiles/fedora/44/lunar-lake-x86_64.toml` records the current matched provider
-set with accepted build digests. For a signed qualification pilot, first bind
-the signed RPM identities with `generate-release-profile.py`, then retarget the
-result to the exact observed kernel. Both operations preserve candidate status.
+`profiles/fedora/44/lunar-lake-x86_64.toml` is the qualified 0.1.0 profile, so
+`retarget-candidate` refuses it. A kernel inside its window `[7.2.5, 7.3.0)`
+needs only a recorded probe (see [kernel probes](kernel-probes.md)). A pilot for
+another kernel series or provider set starts from an unqualified candidate:
+regenerate one from the exact fourteen runtime RPMs with `cargo run -p xtask
+--locked -- generate-fedora-profile` (see
+[profiles/README.md](../profiles/README.md)), bind the signed RPM identities
+with `generate-release-profile.py`, then retarget the result to the exact
+observed kernel. Each step preserves candidate status.
 
 The September 19 hardware candidate covers `[7.2.5, 7.2.6)` and has SHA256
 `4cc29b602f6e7af6e6ff053a74c097f56e69609282031d6aaf4621f4b5ac437c`.

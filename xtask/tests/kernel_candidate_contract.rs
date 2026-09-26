@@ -3,7 +3,8 @@
 use stack_schema::{Profile, ProfileStatus};
 use xtask::kernel_candidate::retarget;
 
-const ORIGINAL: &str = include_str!("../../profiles/fedora/44/lunar-lake-x86_64.toml");
+// The generated candidate as it was before the 0.1.0 promotion; retargeting accepts only candidates.
+const ORIGINAL: &str = include_str!("fixtures/lunar-lake-x86_64-candidate.toml");
 
 #[test]
 fn new_kernel_candidate_preserves_all_provider_and_license_bindings() {

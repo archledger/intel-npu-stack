@@ -1,7 +1,11 @@
 # Production profiles
 
-This directory contains no installable profile. The Fedora 44 Lunar Lake
-candidate under `fedora/44/` records an unqualified package matrix.
+`fedora/44/lunar-lake-x86_64.toml` is qualified for release 0.1.0 on kernels
+`[7.2.5, 7.3.0)`. Its `qualification` table names the evidence record by
+SHA-256, and `release/kernel-probes.json` records the kernels that evidence
+covers. The stable channel admits it once release 0.1.0 is published.
+`fedora/44/lunar-lake-x86_64-kernel-7.2.4.toml` is an unqualified test
+candidate.
 
 A production profile requires independently reviewed source, license, package, disposable-VM lifecycle, real-hardware, suspend/resume, rollback, signature, and provenance evidence. Test fixtures are not qualification evidence. Never copy `fixture-only-not-hardware-evidence` or any other fixture identity into this directory.
 
@@ -14,12 +18,12 @@ evidence outside the project source archive to avoid a tools-RPM self-reference.
 
 Generation is deterministic, refuses an existing output and cannot emit a
 qualified profile. Both stable and experimental channels reject candidates,
-including when experimental risk is acknowledged. The initial numeric kernel
-window, `7.1.13 <= kernel < 7.1.14`, identifies the observed Fedora test target;
-it does not establish support for that kernel. The distro-owned Level Zero
-1.28.6 deviation remains unqualified.
+including when experimental risk is acknowledged. A generated candidate's
+single-kernel window identifies its test target, not a supported kernel range.
 
-Promotion requires the qualification workflow defined by the approved design.
-Repository presence alone does not imply support. Validate this nested directory
-explicitly with `validate-profiles profiles/fedora/44`; the general directory
-validator deliberately checks only direct TOML children.
+Promotion is a reviewed change that sets the kernel window, adds the
+qualification record and records the kernels the evidence covers (see [kernel
+probes](../docs/kernel-probes.md)). Repository presence alone does not imply
+support. Validate this nested directory explicitly with `validate-profiles
+profiles/fedora/44`; the general directory validator deliberately checks only
+direct TOML children.
