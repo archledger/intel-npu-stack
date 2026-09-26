@@ -87,7 +87,13 @@ def scratch_repo(root, key, profile):
     (root / trust.KEY_PATH).parent.mkdir(parents=True)
     shutil.copyfile(key.public, root / trust.KEY_PATH)
     source = root / trust.TRUST_PATH
-    source.write_text(source.read_text().replace('1085FBE578732D1CF0C50417A8FE2F718B8763D8', key.fingerprint))
+    text = source.read_text()
+    committed = trust.parse_trust(text)['version']
+    # The fixture is its own 0.1.0 release, whatever version this tree has committed.
+    text = text.replace(f'"{committed}"', '"0.1.0"').replace(f'/{committed}/', '/0.1.0/')
+    source.write_text(text.replace('1085FBE578732D1CF0C50417A8FE2F718B8763D8', key.fingerprint))
+    cargo = root / 'Cargo.toml'
+    cargo.write_text(cargo.read_text().replace(f'version = "{committed}"', 'version = "0.1.0"', 1))
     notes = root / 'release/0.1.0/support-notes.toml'
     notes.parent.mkdir(parents=True)
     notes.write_text(NOTES)
@@ -327,6 +333,7 @@ class Lifecycle(Case):
         self.assertIn('evidence/rollback/rollback-index.json', notes)
         # The version directory has no index page (GitHub Pages answers 404), so only its files are linked.
         self.assertNotRegex(notes, re.escape(BASE_URL) + r'(?![A-Za-z0-9`])')
+        self.assertIn(f"curl --proto '=https' --proto-redir '=https' -fsSL {BASE_URL}install.sh | sh", notes)
         for name in ['SHA256SUMS', 'SHA256SUMS.asc', 'install.sh', 'install.sh.asc', 'support-matrix.json']:
             self.assertIn(f'[`{name}`]({BASE_URL}{name})', notes)
 

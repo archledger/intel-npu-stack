@@ -75,6 +75,22 @@ download-verify-execute sequence as a standalone dispatcher and refuses to
 run as root; privilege is requested only later, for the approved native
 transaction.
 
+From 0.1.1 the release notes also give a short form:
+
+```sh
+curl --proto '=https' --proto-redir '=https' -fsSL \
+    https://archledger.github.io/intel-npu-stack/<version>/install.sh | sh
+```
+
+It trusts the HTTPS download of `install.sh` instead of checking its SHA-256;
+everything after it is checked the same way. It allows HTTPS only, redirects
+included. curl reports a failed download, but the pipeline exits with the
+status of `sh`, so scripts should use the pinned command. Pass installer flags
+after `sh -s --`, for example `| sh -s -- --dry-run`. `install.sh` runs
+nothing until its last line, which passes an end marker after the caller's
+arguments, so a download cut short cannot run part of it. The installer reads
+its confirmation from the terminal, so the pipe does not answer it.
+
 ## Installer operation
 
 `intel-npu-stack-install` runs as a normal user:

@@ -8,7 +8,9 @@
 Lunar Lake hardware, kernels `[7.2.5, 7.3.0)`:
 [GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0)
 and [support matrix](https://archledger.github.io/intel-npu-stack/0.1.0/support-matrix.json).
-No other platform is supported.
+No other platform is supported. The 0.1.0 installer fails on Fedora with
+SELinux enforcing, the default ([#53](https://github.com/archledger/intel-npu-stack/pull/53));
+release 0.1.1 ships the same packages with a fixed installer.
 
 Implemented components include strict platform profiles, bounded `status`
 discovery, crash-isolated `doctor` inference, an authenticated installer with

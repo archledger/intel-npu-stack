@@ -22,8 +22,8 @@ class CommittedTrust(unittest.TestCase):
     @unittest.skipUnless(shutil.which('gpg'), 'gpg is required')
     def test_committed_values_pass_every_rule(self):
         values = trust.check_committed(REPO)
-        self.assertEqual(values['version'], '0.1.0')
-        self.assertEqual(values['base_url'], 'https://archledger.github.io/intel-npu-stack/0.1.0/')
+        self.assertEqual(values['version'], '0.1.1')
+        self.assertEqual(values['base_url'], 'https://archledger.github.io/intel-npu-stack/0.1.1/')
         self.assertEqual(values['primary_fingerprint'], '1085FBE578732D1CF0C50417A8FE2F718B8763D8')
         self.assertEqual(values['metadata_sha256'], ZEROS)
 
@@ -46,7 +46,7 @@ class CommittedTrust(unittest.TestCase):
         result = subprocess.run(['python3', str(Path(trust.__file__)), 'read', '--repo', str(REPO),
                                  '--field', 'base-url'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, 'https://archledger.github.io/intel-npu-stack/0.1.0/\n')
+        self.assertEqual(result.stdout, 'https://archledger.github.io/intel-npu-stack/0.1.1/\n')
 
 
 class KeyInspection(unittest.TestCase):
@@ -121,7 +121,7 @@ class CommittedRules(unittest.TestCase):
             trust.check_committed(self.repo)
 
     def test_base_url_without_the_version_segment_is_refused(self):
-        self.edit('intel-npu-stack/0.1.0/', 'intel-npu-stack/latest/')
+        self.edit('intel-npu-stack/0.1.1/', 'intel-npu-stack/latest/')
         with self.assertRaisesRegex(trust.TrustRefused, 'BASE_URL'):
             trust.check_committed(self.repo)
 
@@ -132,7 +132,7 @@ class CommittedRules(unittest.TestCase):
 
     def test_version_must_match_the_workspace(self):
         cargo = self.repo / 'Cargo.toml'
-        cargo.write_text(cargo.read_text().replace('version = "0.1.0"', 'version = "0.2.0"', 1))
+        cargo.write_text(cargo.read_text().replace('version = "0.1.1"', 'version = "0.2.0"', 1))
         with self.assertRaisesRegex(trust.TrustRefused, 'VERSION'):
             trust.check_committed(self.repo)
 

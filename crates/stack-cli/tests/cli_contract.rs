@@ -294,7 +294,7 @@ fn version_prints_only_the_package_version() {
     let fixture = Fixture::new(None);
     let (code, stdout, stderr) = invoke(&fixture, &["intel-npu-stack", "version"]);
     assert_eq!(code, ExitCode::SUCCESS);
-    assert_eq!(stdout, "0.1.0\n");
+    assert_eq!(stdout, format!("{}\n", env!("CARGO_PKG_VERSION")));
     assert_eq!(stderr, "");
 }
 
@@ -339,7 +339,7 @@ fn status_success_emits_exact_version_one_json() {
         ]
     );
     assert_eq!(value["schema_version"], 1);
-    assert_eq!(value["tool_version"], "0.1.0");
+    assert_eq!(value["tool_version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(value["command"], "status");
     assert_eq!(value["overall"], "passed");
     assert_eq!(value["profile"]["id"], "testos-profile");

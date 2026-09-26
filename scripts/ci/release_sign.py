@@ -62,6 +62,7 @@ RUNTIME_PACKAGES = {
 }
 INPUT_ROLES = {'runtime', 'python', 'devel'}
 DIGEST = re.compile(r'[0-9a-f]{64}')
+RELEASE_VERSION = re.compile(r'(0|[1-9][0-9]{0,9})\.(0|[1-9][0-9]{0,9})\.(0|[1-9][0-9]{0,9})')
 SAFE_FILENAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+-]*')
 # popt parses the rpmsign extra-args macro without quoting, so the path is restricted.
 PASSPHRASE_PATH = re.compile(r'/[A-Za-z0-9._/-]+')
@@ -233,15 +234,21 @@ def build_profile_rpm(source, work, profile_bytes):
     work = Path(work).resolve()
     spec = source / 'packaging/fedora/44/rpm/intel-npu-stack-profile/' \
         'intel-npu-stack-profile.spec'
-    tar_files = {'intel-npu-stack-profile-0.1.0/LICENSE':
-                 (source / 'LICENSE').read_bytes(),
-                 f'intel-npu-stack-profile-0.1.0/profiles/{PROFILE_ID}.toml': profile_bytes}
+    # The profile package carries the release it belongs to: the spec's Version is the profile's stack_release.
+    version = tomllib.loads(profile_bytes.decode())['stack_release']
+    require(isinstance(version, str) and RELEASE_VERSION.fullmatch(version) is not None,
+            'the release profile names no valid stack_release')
+    require(re.search(r'^Version:\s+' + re.escape(version) + r'$', spec.read_text(), re.MULTILINE) is not None,
+            'the profile spec Version is not the release profile\'s stack_release ' + version)
+    top_name = 'intel-npu-stack-profile-' + version
+    tar_files = {f'{top_name}/LICENSE': (source / 'LICENSE').read_bytes(),
+                 f'{top_name}/profiles/{PROFILE_ID}.toml': profile_bytes}
     pair = []
     for build in ['build1', 'build2']:
         top = work / ('profile-' + build)
         for leaf in ['BUILD', 'SOURCES', 'SPECS', 'RPMS', 'SRPMS', 'tmp']:
             (top / leaf).mkdir(parents=True, exist_ok=True)
-        with tarfile.open(top / 'SOURCES/intel-npu-stack-profile-0.1.0.tar',
+        with tarfile.open(top / 'SOURCES' / (top_name + '.tar'),
                           'w', format=tarfile.GNU_FORMAT) as archive:
             for relative in sorted(tar_files):
                 data = tar_files[relative]
