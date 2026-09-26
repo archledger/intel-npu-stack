@@ -1,9 +1,9 @@
 # Production profiles
 
-`fedora/44/lunar-lake-x86_64.toml` is qualified for release 0.1.0 on kernels
+`fedora/44/lunar-lake-x86_64.toml` is qualified for release 0.1.1 on kernels
 `[7.2.5, 7.3.0)`. Its `qualification` table names the evidence record by
 SHA-256, and `release/kernel-probes.json` records the kernels that evidence
-covers. Release 0.1.0, published on 2026-09-26, serves it on the stable
+covers. Release 0.1.1, published on 2026-09-26, serves it on the stable
 channel.
 `fedora/44/lunar-lake-x86_64-kernel-7.2.4.toml` is an unqualified test
 candidate.

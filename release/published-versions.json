@@ -1,6 +1,11 @@
 {
   "schema_version": 1,
-  "published": [],
+  "published": [
+    {
+      "version": "0.1.1",
+      "sha256sums_sha256": "0e1f9479fed5c7636e8e4642d58971f7872539d159112e4155bfc18e75732291"
+    }
+  ],
   "retired": [
     {
       "version": "0.1.0",

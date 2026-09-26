@@ -2222,10 +2222,11 @@ class Sums(unittest.TestCase):
 
 class Registry(unittest.TestCase):
     def test_committed_registry_is_valid_and_records_the_published_releases(self):
-        # 0.1.0 is retired with the SHA-256 of the SHA256SUMS asset of the immutable v0.1.0 release: its installer
-        # fails on Fedora 44 with SELinux enforcing (#53).
+        # Each entry names the SHA-256 of the SHA256SUMS asset of its immutable release. 0.1.0 is retired: its
+        # installer fails on Fedora 44 with SELinux enforcing (#53).
         registry = publish.load_registry(Path(__file__).resolve().parents[2] / 'release/published-versions.json')
-        self.assertEqual(registry['published'], [])
+        self.assertEqual(registry['published'], [
+            {'version': '0.1.1', 'sha256sums_sha256': '0e1f9479fed5c7636e8e4642d58971f7872539d159112e4155bfc18e75732291'}])
         self.assertEqual([(entry['version'], entry['sha256sums_sha256']) for entry in registry['retired']],
                          [('0.1.0', 'c0d4192964a6020627006fc95a517800bbca96fb80292f06b320c03d4f929417')])
 
