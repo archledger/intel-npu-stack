@@ -53,10 +53,13 @@ int main(int argc, char* argv[]) {
     std::cout << "INPUT " << input->get_partial_shape()
               << " OUTPUT " << reshape->get_output_partial_shape(0) << std::endl;
     if (layout) {
+      // Copies: the name sets belong to the tensors, but output(0) returns a temporary handle.
+      const auto input_names = input->output(0).get_names();
+      const auto output_names = reshape->output(0).get_names();
       std::cout << "LAYOUT " << input->get_layout().to_string() << " INPUT_NAMES";
-      for (const auto& name : input->output(0).get_names()) std::cout << ' ' << name;
+      for (const auto& name : input_names) std::cout << ' ' << name;
       std::cout << " OUTPUT_NAMES";
-      for (const auto& name : reshape->output(0).get_names()) std::cout << ' ' << name;
+      for (const auto& name : output_names) std::cout << ' ' << name;
       std::cout << std::endl;
     }
     if (argc == 4) {
