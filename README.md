@@ -11,7 +11,7 @@ and [support matrix](https://archledger.github.io/intel-npu-stack/0.1.1/support-
 No other platform is supported. Install as a normal user with:
 
 ```sh
-curl --proto '=https' --proto-redir '=https' -fsSL \
+curl --disable --proto '=https' --proto-redir '=https' -fsSL \
     https://archledger.github.io/intel-npu-stack/0.1.1/install.sh | sh
 ```
 
@@ -20,7 +20,8 @@ command with `sh -s -- --dry-run` to see the plan only. The pinned command in
 the [install guide](docs/install-fedora.md) also checks the SHA-256 of
 `install.sh`. Release 0.1.0 is retired: its installer fails on Fedora with
 SELinux enforcing ([#53](https://github.com/archledger/intel-npu-stack/pull/53)),
-and 0.1.1 ships the same packages with a fixed installer.
+and 0.1.1 ships the same provider, tools and metapackage RPMs, a new profile
+RPM and a fixed installer.
 
 Implemented components include strict platform profiles, bounded `status`
 discovery, crash-isolated `doctor` inference, an authenticated installer with

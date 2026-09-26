@@ -756,7 +756,8 @@ def render_notes(site, archive_path):
         'The short form trusts the HTTPS download of `install.sh` instead of checking its SHA-256; everything '
         'after it is checked the same way. curl reports a failed download, but the pipeline exits with the '
         'status of `sh`, so scripts should use the command above:', '',
-        '```sh', f"curl --proto '=https' --proto-redir '=https' -fsSL {base}install.sh | sh", '```', '',
+        '```sh', f"curl --disable --proto '=https' --proto-redir '=https' -fsSL {base}install.sh | sh",
+        '```', '',
         '### Verify before running', '',
         f'1. Download [`install.sh`]({base}install.sh) and [`install.sh.asc`]({base}install.sh.asc).',
         '2. Run `gpg --status-fd 1 --verify install.sh.asc install.sh` with the release public key and check that '
