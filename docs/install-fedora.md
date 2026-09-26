@@ -6,8 +6,8 @@ describe the verified installer flow of release 0.1.0 as assembled and
 test-signed so far. The assembled release is bound to a disposable test key
 and a non-routable example endpoint; production signing and publication are
 separate, later gates. Nothing here installs anything on a public endpoint
-today, and the candidate profile remains excluded from stable and
-experimental admission until hardware qualification passes. Releases will be
+today. The Fedora 44 Lunar Lake profile is qualified for release 0.1.0, and the
+stable channel admits it once that release is published. Releases will be
 served from `https://archledger.github.io/intel-npu-stack/<version>/`, as
 described in [release-site.md](release-site.md). Every file is listed in the
 signed `SHA256SUMS` there. To verify before running, download `install.sh` and
