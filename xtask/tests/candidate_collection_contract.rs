@@ -14,7 +14,8 @@ use stack_runtime::{
 use stack_schema::{KernelVersion, PciId, Profile};
 use xtask::candidate_collection::{CollectionMode, collect};
 
-const PROFILE: &str = include_str!("../../profiles/fedora/44/lunar-lake-x86_64.toml");
+// The generated candidate as it was before the 0.1.0 promotion; collection accepts only candidates.
+const PROFILE: &str = include_str!("fixtures/lunar-lake-x86_64-candidate.toml");
 
 struct Boundaries {
     calls: Mutex<Vec<String>>,
@@ -219,8 +220,8 @@ fn missing_packages_or_pending_firmware_activation_prevent_probe_execution() {
 
 #[test]
 fn cli_requires_exact_profile_digest_and_explicit_hardware_acknowledgement() {
-    let profile =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../profiles/fedora/44/lunar-lake-x86_64.toml");
+    let profile = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/lunar-lake-x86_64-candidate.toml");
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["collect-candidate", "--profile"])
         .arg(&profile)
