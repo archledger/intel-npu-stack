@@ -154,9 +154,9 @@ with `upload-artifact` is sealed with `ARTIFACT-SHA256SUMS` and checked against
 the producing job's output. The Pages artifact is the exception: `deploy-pages`
 takes it straight from `upload-pages-artifact`, and `check-deploy` checks the
 sealed `pages-record` that describes it, not the tree. `pages-deploy` reads its
-checkout, the release and tag listings and the live `SHA256SUMS` of the other
-versions it composed, and deploys only while its run's composition is still
-current.
+checkout, the release and tag listings, the tag of each version it composed and
+the live `SHA256SUMS` of the other versions it composed, and deploys only while
+its run's composition is still current.
 
 `scripts/ci/test_release_workflow.py` enforces these rules, the action pins,
 the container image and the equality of the two installer legs. Every job runs
@@ -180,7 +180,8 @@ the keys of a run block or of an action. Every step runs in the workspace,
 where each tool and script path names the checkout's file, except the profile
 validation, which runs `cargo` in the checkout. A Destroy step run from the
 fetched inputs, for example, would run their keyring script while the key is
-present. Step names are unique within a job.
+present. Step names are unique within a job. Jobs that can run at the same time
+share four build jobs, so installer leg a builds with three and leg b with one.
 
 Each run block is one line of commands joined by `&&`, so it stops at the
 first command that fails. The shell does not check a tool whose output

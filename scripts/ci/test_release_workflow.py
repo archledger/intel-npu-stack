@@ -7,6 +7,7 @@ import argparse
 import contextlib
 import importlib
 import io
+import itertools
 import os
 from pathlib import Path
 import re
@@ -122,7 +123,7 @@ ENV = {
              'INPUTS_ARTIFACT': '${{ needs.preflight.outputs.inputs_artifact }}', 'PROFILE': PROFILE, **KEYRING},
     **{f'installer-{leg}': {'LEG': leg, 'LEG_UMASK': umask, 'TZ': zone, 'LANG': lang, 'CARGO_BUILD_JOBS': jobs, **RUST,
                             'IMAGE_DIGEST': CI_IMAGE, 'PROFILE': PROFILE, 'SIGNED_ARTIFACT': SIGNED}
-       for leg, umask, zone, lang, jobs in [('a', '0022', 'UTC', 'C.UTF-8', 4),
+       for leg, umask, zone, lang, jobs in [('a', '0022', 'UTC', 'C.UTF-8', 3),
                                             ('b', '0027', 'Pacific/Chatham', 'de_DE.UTF-8', 1)]},
     'verify': {'PROFILE': PROFILE, 'SIGNED_ARTIFACT': SIGNED,
                'LEG_A_ARTIFACT': '${{ needs.installer-a.outputs.installer_artifact }}',
@@ -640,6 +641,36 @@ class ReleaseWorkflow(unittest.TestCase):
             self.assertNotEqual(env_a[key], env_b[key], key)
         self.assertEqual((env_a['LEG'], env_b['LEG']), ('a', 'b'))
         self.assertLessEqual(int(env_b['CARGO_BUILD_JOBS']), 4)
+
+    def test_jobs_that_can_run_at_once_share_four_build_jobs(self):
+        # The repository allows four build jobs in total. Jobs that do not wait for each other can run at the same
+        # time, as the two installer legs do after sign, so every set of such jobs shares the four. A job that builds
+        # sets CARGO_BUILD_JOBS: cargo would otherwise use every CPU and the installer build its maximum of four.
+        needs = {name: {job['needs']} if isinstance(job.get('needs'), str) else set(job.get('needs', []))
+                 for name, job in self.jobs.items()}
+
+        def waits_for(name):
+            found, pending = set(), list(needs[name])
+            while pending:
+                other = pending.pop()
+                if other not in found:
+                    found.add(other)
+                    pending.extend(needs[other])
+            return found
+        before = {name: waits_for(name) for name in self.jobs}
+        builds = {}
+        for name, job in self.jobs.items():
+            text = ' '.join(run_text(job, step) for step in steps_of(job))
+            if re.search(r'\bcargo\s|release_installer\.py build', text):
+                self.assertIn('CARGO_BUILD_JOBS', job.get('env', {}), name)
+            builds[name] = int(job.get('env', {}).get('CARGO_BUILD_JOBS', 0))
+        builders = [name for name in self.jobs if builds[name]]
+        self.assertEqual(builders, ['preflight', 'installer-a', 'installer-b'])
+        for count in range(1, len(builders) + 1):
+            for group in itertools.combinations(builders, count):
+                if all(first not in before[second] and second not in before[first]
+                       for first, second in itertools.combinations(group, 2)):
+                    self.assertLessEqual(sum(builds[name] for name in group), 4, group)
 
     def test_artifacts_are_short_lived_and_every_download_is_checked(self):
         # A download is checked by the first step after it that downloads nothing, before any other step or action

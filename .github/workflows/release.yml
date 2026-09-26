@@ -206,7 +206,7 @@ jobs:
       LEG_UMASK: '0022'
       TZ: UTC
       LANG: C.UTF-8
-      CARGO_BUILD_JOBS: 4
+      CARGO_BUILD_JOBS: 3
       CARGO_HOME: /opt/ci-cargo
       RUSTUP_HOME: /opt/ci-rustup
       RUSTUP_TOOLCHAIN: 1.85.0

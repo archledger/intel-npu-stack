@@ -260,20 +260,24 @@ publish phase and `publish-release` reserve the new site's size.
   only when the next release's `pages-build` and `pages-deploy` run. The live
   `SHA256SUMS` of the other versions must be unchanged, and the site must stay
   within 950 MiB. The manifest records each composed version with the digests
-  of its archive and `SHA256SUMS`, and each retired version left out with the
-  files it could have served: those its `SHA256SUMS` lists and the two sums
-  files, or only the sums files when its `SHA256SUMS` does not parse, lists an
-  unsafe path or more than 20000 files, since such a release never passed
-  `compose-pages`. `--manifest` must be a new file in an existing directory,
-  neither inside the site nor containing it. This is checked before anything
-  is downloaded, and a refusal leaves neither the site nor the manifest behind.
+  of its archive and `SHA256SUMS`, its release id and the commit its tag names,
+  and each retired version left out with the files it could have served: those
+  its `SHA256SUMS` lists and the two sums files, or only the sums files when its
+  `SHA256SUMS` does not parse, lists an unsafe path or more than 20000 files,
+  since such a release never passed `compose-pages`. `--manifest` must be a new
+  file in an existing directory, neither inside the site nor containing it. This
+  is checked before anything is downloaded, and a refusal leaves neither the
+  site nor the manifest behind.
 - `check-deploy` runs in `pages-deploy` right before the deployment, because a
   re-run of an older run's `pages-deploy` would put that run's composition live
   again. `--pages-manifest` must be the record of composing the committed
   version, that version must be the newest non-draft `vX.Y.Z` release, retired
   ones included, and the composed versions must be exactly the non-draft
   `vX.Y.Z` releases that `--registry` does not retire, each with the
-  `SHA256SUMS` digest it was composed with. As in `compose-pages`, every other
+  `SHA256SUMS` digest and release id it was composed with and its tag still
+  naming the commit it named then. A release deleted and created again on its
+  tag, even with a copy of its `SHA256SUMS`, or a moved tag therefore stops it,
+  as it would stop `compose-pages`. As in `compose-pages`, every other
   `vX.Y.Z` tag must have an entry in `--registry`, so a newer release deleted
   while its tag remains still stops it, and the live `SHA256SUMS` of every
   composed version but the committed one must be the composed one, so a

@@ -976,6 +976,23 @@ class Publication(unittest.TestCase):
         self.assertEqual((output / '0.2.0/SHA256SUMS').read_bytes(), self.assets2['SHA256SUMS'])
         self.assertFalse((output / 'index.html').exists())
 
+    def test_the_manifest_binds_each_release_to_its_id_and_the_commit_its_tag_names(self):
+        # check-deploy compares both with the listings right before deploying. 0.1.0 was signed on another commit and
+        # its tag is annotated, so the manifest must hold the commit the tag names, not the tag object.
+        other = 'd' * 40
+        site, archive, assets = make_release(self.work / 'elsewhere', self.key, '0.1.0', source_commit=other)
+        older = self.fake.add_release('v0.1.0', assets=assets, commit=other)
+        older.update(name=publish.release_title('0.1.0'), body=release_site.render_notes(site, archive).decode(),
+                     target_commitish='main')  # GitHub keeps the branch a release was created from
+        self.fake.annotate('v0.1.0', 'e' * 40, other)
+        newer = self.published('0.2.0', self.assets2, self.site2, self.archive2)
+        self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = assets['SHA256SUMS']
+        self.recorded = [{'version': '0.1.0', 'sha256sums_sha256': sha(assets['SHA256SUMS'])}]
+        manifest, _ = self.compose()
+        bound = {version: (entry['release_id'], entry['commit']) for version, entry in manifest['versions'].items()}
+        self.assertEqual(bound, {'0.1.0': (older['id'], other), '0.2.0': (newer['id'], COMMIT)})
+        self.assertEqual(self.check_deploy(self.work / 'out/pages-manifest.json')['versions'], ['0.1.0', '0.2.0'])
+
     def test_retirement_must_name_the_release_it_retires(self):
         self.publish_both()
         registry = self.registry(retired=[{'version': '0.1.0', 'sha256sums_sha256': '0' * 64, 'reason': 'superseded'}])
@@ -1175,11 +1192,79 @@ class Publication(unittest.TestCase):
         self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = self.assets['SHA256SUMS']
         self.assertEqual(self.check_deploy(manifest)['versions'], ['0.1.0', '0.2.0'])
 
+    def test_a_composed_release_replaced_or_retargeted_on_its_tag_is_no_longer_current(self):
+        # A release deleted and created again on its tag with a copy of its SHA256SUMS keeps every digest the
+        # composition recorded, and its tag can then name another commit. compose-pages binds each release it composes
+        # to the commit its tag names, so it would no longer compose that pair: the deployment must stop too.
+        other = 'd' * 40
+
+        def release(version):
+            return next(r for r in self.fake.releases if r['tag_name'] == 'v' + version)
+
+        def replaced(version, commit=COMMIT):
+            def change():
+                old = release(version)
+                self.fake.releases.remove(old)
+                again = self.fake.add_release('v' + version, commit=commit)
+                again.update(name=old['name'], body=old['body'])
+                for asset in old['assets']:
+                    self.fake.add_asset(again, asset['name'], self.fake.blobs[asset['id']])
+            return change
+
+        def without_ids():  # GitHub always lists an id; a record without one must not match a release without one
+            del release('0.1.0')['id']
+            edit(lambda entry: entry.pop('release_id'))
+
+        def without_commit():  # a missing tag must not match a record without a commit
+            del self.fake.tags['v0.1.0']
+            edit(lambda entry: entry.pop('commit'))
+
+        def edit(change):
+            record = json.loads(manifest.read_text())
+            change(record['versions']['0.1.0'])
+            manifest.write_text(json.dumps(record))
+        stale = 'the composition of 0.2.0 is out of date: '
+        older_release, newer_release = ('release v0.1.0 is not the release it composed',
+                                        'release v0.2.0 is not the release it composed')
+        older_tag, newer_tag = ('tag v0.1.0 no longer names the commit it composed',
+                                'tag v0.2.0 no longer names the commit it composed')
+        cases = [
+            ('the older release replaced on its tag', replaced('0.1.0'), older_release),
+            ('the new release replaced on its tag', replaced('0.2.0'), newer_release),
+            ('the older release replaced on another commit', replaced('0.1.0', other), older_release),
+            ('a record whose release id is text',
+             lambda: edit(lambda entry: entry.update(release_id=str(entry['release_id']))), older_release),
+            ('neither the release nor the record with an id', without_ids, older_release),
+            ('the older tag moved to another commit', lambda: self.fake.tags.update({'v0.1.0': other}), older_tag),
+            ('the new tag moved to another commit', lambda: self.fake.tags.update({'v0.2.0': other}), newer_tag),
+            ('the older tag annotated on another commit', lambda: self.fake.annotate('v0.1.0', 'e' * 40, other),
+             older_tag),
+            ('the older tag deleted', lambda: self.fake.tags.pop('v0.1.0'), older_tag),
+            ('neither the tag nor the record with a commit', without_commit, older_tag),
+            ('a record of another commit', lambda: edit(lambda entry: entry.update(commit=other)), older_tag),
+        ]
+        for label, change, message in cases:
+            with self.subTest(label):
+                self.setUp()
+                self.publish_both()
+                self.compose()
+                manifest = self.work / 'out/pages-manifest.json'
+                self.assertEqual(self.check_deploy(manifest)['versions'], ['0.1.0', '0.2.0'])
+                change()
+                self.refused(stale + message, self.check_deploy, manifest)
+        # The binding is to the commit, so a tag re-made as an annotated tag of the same commit still deploys.
+        self.setUp()
+        self.publish_both()
+        self.compose()
+        self.fake.annotate('v0.1.0', 'e' * 40, COMMIT)
+        self.assertEqual(self.check_deploy(self.work / 'out/pages-manifest.json')['versions'], ['0.1.0', '0.2.0'])
+
     def test_the_deploy_check_orders_versions_by_number(self):
         composed = {}
         for version in ['0.9.0', '0.10.0']:
-            self.fake.add_release('v' + version, assets={'SHA256SUMS': f'{version} sums\n'.encode()})
-            composed[version] = {'sha256sums_sha256': sha(f'{version} sums\n'.encode())}
+            release = self.fake.add_release('v' + version, assets={'SHA256SUMS': f'{version} sums\n'.encode()})
+            composed[version] = {'sha256sums_sha256': sha(f'{version} sums\n'.encode()), 'release_id': release['id'],
+                                 'commit': COMMIT}
         self.live['/intel-npu-stack/0.9.0/SHA256SUMS'] = b'0.9.0 sums\n'
         registry = self.registry([{'version': '0.9.0', 'sha256sums_sha256': composed['0.9.0']['sha256sums_sha256']}])
         manifest = self.pages_record(base_url=BASE_URL.replace('0.1.0', '0.10.0'), new_version='0.10.0',
@@ -1215,7 +1300,7 @@ class Publication(unittest.TestCase):
         self.refused('published-versions.json must be schema 1', self.check_deploy, manifest, invalid)
 
     def test_the_deploy_check_first_requires_the_record_of_composing_this_version(self):
-        self.published('0.1.0', self.assets, self.site, self.archive)
+        release = self.published('0.1.0', self.assets, self.site, self.archive)
         self.fake.fail[('GET', f'/repos/{REPOSITORY}/releases')] = 500  # a listing before the record check fails
         malformed = self.work / 'pages-manifest-list.json'
         malformed.write_text('[]')
@@ -1235,7 +1320,8 @@ class Publication(unittest.TestCase):
                 self.refused('the Pages manifest is not the record of composing 0.1.0', self.check_deploy, record,
                              self.registry(), '0.1.0')
         self.fake.fail.clear()
-        self.assertEqual(self.check_deploy(self.pages_record(), self.registry(), '0.1.0'),
+        composed = {'0.1.0': {**self.pages_entry(), 'release_id': release['id'], 'commit': COMMIT}}
+        self.assertEqual(self.check_deploy(self.pages_record(versions=composed), self.registry(), '0.1.0'),
                          {'new_version': '0.1.0', 'versions': ['0.1.0']})
 
     def compose_into(self, output, manifest, fetch=None):

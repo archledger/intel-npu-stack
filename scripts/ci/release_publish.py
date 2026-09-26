@@ -88,27 +88,30 @@ must be the committed version and the newest composed version, so a re-run of
 an older run cannot serve again what a later registry retired. The live
 SHA256SUMS of every version other than --new-version must equal its release's,
 and the site must fit the size budget. The manifest records each composed
-version with the digests of its archive and SHA256SUMS, and each retired
-version left out with the files it could have served: those its SHA256SUMS
-lists and the two sums files, or only the sums files when its SHA256SUMS does
-not parse, lists an unsafe path or more than MAX_MEMBERS files, since such a
-release never passed compose-pages. It must be a new file in an existing
-directory, neither inside the site nor containing it; this is checked before
-anything is downloaded, and a refusal leaves neither the site nor the manifest.
+version with the digests of its archive and SHA256SUMS, its release id and the
+commit its tag names, and each retired version left out with the files it could
+have served: those its SHA256SUMS lists and the two sums files, or only the sums
+files when its SHA256SUMS does not parse, lists an unsafe path or more than
+MAX_MEMBERS files, since such a release never passed compose-pages. It must be a
+new file in an existing directory, neither inside the site nor containing it;
+this is checked before anything is downloaded, and a refusal leaves neither the
+site nor the manifest.
 
 check-deploy runs right before a Pages deployment, because a re-run of an older
 run's pages-deploy would put that run's composition live again. The Pages
 manifest must be the record of composing the committed version, that version
 must be the newest non-draft vX.Y.Z release, retired ones included, and the
 composed versions must be exactly the non-draft vX.Y.Z releases --registry does
-not retire, each with the SHA256SUMS digest it was composed with. As in
-compose-pages, every other vX.Y.Z tag must have an entry in --registry, so a
-newer release deleted with its tag kept still stops it, and the live SHA256SUMS
-of every composed version but the committed one must be the composed one, so a
-version a later deployment removed is not served again even once that release
-and its tag are deleted. Only the committed version is not checked live, since
-it is not served before its first deployment; such a re-run can therefore serve
-it again although the deleted release's registry retired it.
+not retire, each with the SHA256SUMS digest and release id it was composed with
+and its tag still naming the commit it named then, so a release deleted and
+created again on its tag, even with a copy of its SHA256SUMS, or a moved tag
+stops it. As in compose-pages, every other vX.Y.Z tag must have an entry in
+--registry, so a newer release deleted with its tag kept still stops it, and the
+live SHA256SUMS of every composed version but the committed one must be the
+composed one, so a version a later deployment removed is not served again even
+once that release and its tag are deleted. Only the committed version is not
+checked live, since it is not served before its first deployment; such a re-run
+can therefore serve it again although the deleted release's registry retired it.
 
 verify-live requires the Pages manifest compose-pages wrote with this version as
 --new-version, recording this archive and the archive's SHA256SUMS, and the
@@ -715,7 +718,7 @@ def compose_releases(gh, key, fingerprint, registry, root_url, output, pending=N
             check_standalone(data[release_assets(version)[0]], version, data)
             versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
                                  'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
-                                 'files': files, 'release_id': release.get('id')}
+                                 'files': files, 'release_id': release.get('id'), 'commit': tag_commit}
     for entry in registry['published']:
         require(entry['version'] in versions, f"published version {entry['version']} is missing; a deleted "
                 'release can be neither served nor retired, so its entry and its tag are removed by hand after review')
@@ -847,13 +850,15 @@ def check_deploy(gh, values, registry_path, pages_manifest, fetch=fetch_public):
     A job re-run reuses its run's artifacts, so a re-run of an older run's pages-deploy could otherwise put that
     run's composition live again after a newer release. The committed version must be the newest non-draft vX.Y.Z
     release, retired ones included, and the composed versions exactly the non-draft vX.Y.Z releases the run's
-    registry does not retire, each with the SHA256SUMS digest it was composed with. Every other vX.Y.Z tag must have
-    an entry in that registry, as compose-pages requires: GitHub keeps the tag of a deleted release, so a newer
-    release deleted after this composition still stops it. As in compose-pages, the live SHA256SUMS of every
-    composed version but the committed one must be the composed one, so a version a later deployment removed is not
-    served again even once that release and its tag are deleted. Only the committed version is not checked live,
-    since it is not served before its first deployment; such a re-run can therefore serve it again although the
-    deleted release's registry retired it. It reads the release and tag listings and those live files.
+    registry does not retire, each with the SHA256SUMS digest and release id it was composed with and its tag still
+    naming the commit it named then: compose-pages binds each release to that commit, so it would not compose a release
+    created again on its tag, even with a copy of its SHA256SUMS, or one whose tag moved. Every other vX.Y.Z tag must
+    have an entry in that registry, as compose-pages requires: GitHub keeps the tag of a deleted release, so a newer
+    release deleted after this composition still stops it. As in compose-pages, the live SHA256SUMS of every composed
+    version but the committed one must be the composed one, so a version a later deployment removed is not served again
+    even once that release and its tag are deleted. Only the committed version is not checked live, since it is not
+    served before its first deployment; such a re-run can therefore serve it again although the deleted release's
+    registry retired it. It reads the release and tag listings, the tag of each composed version and those live files.
     """
     version = values['version']
     record = pages_record(pages_manifest, values)
@@ -870,10 +875,17 @@ def check_deploy(gh, values, registry_path, pages_manifest, fetch=fetch_public):
     names = [release['tag_name'][1:] for release in served]
     require(names == composed, stale + f"compose-pages would serve {', '.join(names)}, not {', '.join(composed)}")
     for release in served:
-        entry = record['versions'][release['tag_name'][1:]]
+        tag = release['tag_name']
+        entry = record['versions'][tag[1:]]
         digests = [asset.get('digest') for asset in release.get('assets', []) if asset.get('name') == 'SHA256SUMS']
-        require(isinstance(entry, dict) and digests == ['sha256:' + str(entry.get('sha256sums_sha256'))],
-                stale + f"release {release['tag_name']} is not the release it composed")
+        # A release deleted and created again on its tag, even with a copy of its SHA256SUMS, has another id.
+        require(isinstance(entry, dict) and digests == ['sha256:' + str(entry.get('sha256sums_sha256'))]
+                and isinstance(release.get('id'), int) and release.get('id') == entry.get('release_id'),
+                stale + f'release {tag} is not the release it composed')
+        # compose-pages bound the release to the commit its tag named; a moved or deleted tag no longer does.
+        commit = entry.get('commit')
+        require(isinstance(commit, str) and gh.tag_commit(tag) == commit,
+                stale + f'tag {tag} no longer names the commit it composed')
     check_recorded(gh, registry, version)
     check_live_sums(fetch, site_root(values['base_url']), record['versions'], version)
     return {'new_version': version, 'versions': names}
