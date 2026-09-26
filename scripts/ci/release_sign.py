@@ -228,6 +228,9 @@ def verify_detached(signature, data, gnupghome, fingerprint):
 
 
 def build_profile_rpm(source, work, profile_bytes):
+    # rpm's %prep changes into its build directory more than once, so a relative _topdir (the workflow passes
+    # --work work/release-work) would resolve against the directory it has already entered.
+    work = Path(work).resolve()
     spec = source / 'packaging/fedora/44/rpm/intel-npu-stack-profile/' \
         'intel-npu-stack-profile.spec'
     tar_files = {'intel-npu-stack-profile-0.1.0/LICENSE':

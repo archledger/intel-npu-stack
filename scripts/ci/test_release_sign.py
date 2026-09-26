@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Contracts for the production signing path: rollback inputs, the keyless inputs
 check, passphrase handling and the signing payload-identity gate."""
+import contextlib
 import hashlib
 import json
 import os
@@ -337,6 +338,22 @@ class SignatureStatusPolicy(unittest.TestCase):
         for label, lines in cases.items():
             with self.subTest(label), self.assertRaises(signer.SigningRefused):
                 signer.check_signature_status(status(*lines), PRIMARY)
+
+
+@unittest.skipUnless(shutil.which('rpmbuild'), 'rpmbuild is required (installed in the Fedora quality job)')
+class ProfileRpm(unittest.TestCase):
+    def test_a_relative_work_directory_builds_the_reproducible_profile_pair(self):
+        # The release workflow passes --work work/release-work. rpm's %prep changes into its build directory twice,
+        # so a relative _topdir resolved the second time against the first and the signing job failed.
+        source = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory(prefix='profile-rpm-') as tmp, contextlib.chdir(tmp):
+            profile = b'id = "fedora-44-lunar-lake-x86_64"\n'
+            rpm, builds = signer.build_profile_rpm(source, Path('work/release-work'), profile)
+            self.assertTrue(rpm.is_absolute() and rpm.is_file())
+            self.assertEqual(rpm.parent.parent.parent, (Path(tmp) / 'work/release-work/profile-build1').resolve())
+            self.assertEqual(builds[0], builds[1])
+            self.assertEqual(subprocess.run(['rpm', '-qp', '--qf', '%{NAME}', str(rpm)], capture_output=True,
+                                            text=True, check=True).stdout, 'intel-npu-stack-profile')
 
 
 @unittest.skipUnless(TOOLS, TOOLS_REASON)

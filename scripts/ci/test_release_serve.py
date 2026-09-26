@@ -6,6 +6,7 @@ The real curl, installer and DNF run needs root in a disposable container; the
 release workflow's verify job and the rehearsal cover it.
 """
 import contextlib
+import hashlib
 import io
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import ssl
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 import release_serve as serve
 import release_site
@@ -142,6 +144,31 @@ class Classifiers(unittest.TestCase):
                   '--setopt=npu.gpgkey=file:///src/key.asc', '--repo=npu']
         self.assertEqual(makecache, common + ['makecache'])
         self.assertEqual(download, common + ['download', '--destdir=/w/out', 'a', 'b'])
+
+    def test_dnf_gets_absolute_paths_for_a_relative_work_directory(self):
+        # The release workflow passes --work work/serve. DNF gets its cache and download directories and HOME from
+        # the work directory, and those must not depend on the directory DNF itself runs in.
+        data = b'package bytes'
+        release = {'packages': [{'name': 'a', 'filename': 'a-1.rpm', 'sha256': hashlib.sha256(data).hexdigest()}]}
+        calls = []
+
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs['env']))
+            if 'download' in argv:
+                destination = next(arg for arg in argv if arg.startswith('--destdir=')).split('=', 1)[1]
+                Path(destination, 'a-1.rpm').write_bytes(data)
+            return subprocess.CompletedProcess(argv, 0, '', '')
+        with tempfile.TemporaryDirectory() as tmp, contextlib.chdir(tmp), \
+                mock.patch.object(serve.subprocess, 'run', fake_run), \
+                mock.patch.object(serve.check_release, 'verify_rpm_signatures', return_value=1):
+            serve.dnf_check(release, BASE_URL, Path('/src/key.asc'), 'F' * 40, Path('work/serve'))
+            work = Path(tmp).resolve() / 'work/serve'
+        self.assertEqual(len(calls), 2)
+        for argv, environment in calls:
+            options = dict(arg.split('=', 1) for arg in argv if arg.startswith(('--setopt=cachedir=', '--destdir=')))
+            self.assertEqual(options['--setopt'], 'cachedir=' + str(work / 'dnf-cache'))
+            self.assertEqual(environment['HOME'], str(work))
+        self.assertEqual(options['--destdir'], str(work / 'dnf-download/packages'))
 
     def test_serve_report_is_never_written_into_the_site(self):
         with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stderr(io.StringIO()) as errors, \
