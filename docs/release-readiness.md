@@ -4,8 +4,9 @@
 The first release targets Fedora 44 x86_64 on allowlisted Intel Lunar Lake
 hardware. The project provides diagnostics, verified installer/VM lifecycle
 machinery, candidate package recipes and hardware observation tooling.
-Release 0.1.0, published on 2026-09-26, is the first supported,
-production-signed installable release.
+Release 0.1.1, published on 2026-09-26, is the supported, production-signed
+installable release. 0.1.0, published earlier that day with the same packages,
+is retired because its installer fails on Fedora with SELinux enforcing.
 
 A usable release must let a normal user install a verified package set, confirm
 NPU operation, and remove or roll back that installation using documented
@@ -22,7 +23,7 @@ these properties.
 | Installation lifecycle | Clean Fedora VMs pass dry run, install, repeat install, failure, reboot-pending, removal, upgrade and rollback scenarios. | The fresh tools release 3 fixture passed all eleven scenarios against updated artifact digests, including exact rollback identity counts and cleanup verification. See [VM lifecycle evidence](fedora-vm-lifecycle.md); VM results do not qualify physical hardware. |
 | Automation | Pinned, least-privilege CI validates source, packages and lifecycle behavior; untrusted changes cannot publish or access qualification secrets. | Hosted source/native CI, CodeQL, DCO, dependency review, the issue-only upstream watcher and separately permissioned candidate preparation are active. The protected release workflow provides two approval gates, keyless preflight, signing and assembly, two byte-equal installer builds, a local install-path test, attestation, immutable GitHub release publication and a Pages site composed only from immutable releases ([release process](release-process.md)). Physical qualification and accepted artifact production remain independently evidenced gates. |
 | Hardware | The exact candidate passes normal-user discovery and inference, cold boot, reboot, suspend/resume, upgrade, removal and rollback on the target hardware. | On kernel 7.2.5, the matched 1.38.0 stack with tools release 3 passed normal-user NPU checks, warm reboot, removal, old-stack rollback, current-stack restoration and repeat installation. On kernel 7.2.7 the same packages passed three suspend/resume cycles with models resident on the NPU and a user-confirmed cold boot. The profile is qualified on this evidence for kernels `[7.2.5, 7.3.0)`; another kernel in that window needs a recorded probe ([kernel probes](kernel-probes.md)). [Issue #20](https://github.com/archledger/intel-npu-stack/issues/20): declaring a batch layout on the inputs, or fixing the batch, avoids the compiler crash for every tested graph ([compiler triage](npu-compiler-triage.md)); an unbounded graph compiled without a batch layout still crashes the compiler, an upstream defect. The older intermittent static BlazeFace observation remains unconfirmed independently of the faulty research harness. See [hardware validation](hardware-validation.md). |
-| Distribution | Signed artifacts, checksums, SBOMs, provenance, support matrix, installation/troubleshooting instructions and rollback resources refer to the exact qualified digests. | Production signing trust and the protected workflow are configured. The refreshed dry run verified 16 RPM signatures and the complete 12-package rollback set, using a disposable key and synthetic qualification fixture. The site tooling composes, verifies and signs the versioned Pages tree with the pinned installer, support matrix, archive and notes. The repository settings are in place, and release 0.1.0 was published on 2026-09-26 through the protected workflow: an immutable release with attested assets, the Pages site, and a live check of the install path. |
+| Distribution | Signed artifacts, checksums, SBOMs, provenance, support matrix, installation/troubleshooting instructions and rollback resources refer to the exact qualified digests. | Production signing trust and the protected workflow are configured. The refreshed dry run verified 16 RPM signatures and the complete 12-package rollback set, using a disposable key and synthetic qualification fixture. The site tooling composes, verifies and signs the versioned Pages tree with the pinned installer, support matrix, archive and notes. The repository settings are in place, and releases 0.1.0 and 0.1.1 were published on 2026-09-26 through the protected workflow: immutable releases with attested assets, the Pages site, and a live check of the install path. 0.1.0 is retired because its installer fails on Fedora with SELinux enforcing; the 0.1.1 install command completes a dry run on the qualified laptop. |
 
 ## Evidence reuse and interruption
 
@@ -52,5 +53,5 @@ Package recipes and evidence requirements are described in
 [Fedora provider strategy](fedora-44-provider-strategy.md),
 [build and audit](fedora-44-build-and-audit.md), and
 [candidate tools packaging](../packaging/fedora/44/rpm/intel-npu-stack/README.md).
-The [installer documentation](install-fedora.md) records the published 0.1.0
+The [installer documentation](install-fedora.md) records the published 0.1.1
 install command and the native transaction behavior.

@@ -1,17 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Installing on Fedora 44 (x86_64)
 
-Status: release **0.1.0** is published at
-`https://archledger.github.io/intel-npu-stack/0.1.0/`
-([GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0)).
+Status: release **0.1.1** is published at
+`https://archledger.github.io/intel-npu-stack/0.1.1/`
+([GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.1)).
 It supports Fedora 44 x86_64 on allowlisted Lunar Lake hardware (PCI
 `8086:643e`) with kernels `[7.2.5, 7.3.0)`, through the qualified Fedora 44
 Lunar Lake profile on the stable channel. Each release is served from
 `https://archledger.github.io/intel-npu-stack/<version>/`, as described in
 [release-site.md](release-site.md). The directory has no index page, so
 its URL alone returns 404; every other file in it is listed in the signed
-[`SHA256SUMS`](https://archledger.github.io/intel-npu-stack/0.1.0/SHA256SUMS).
-To verify before running, download `install.sh` and `install.sh.asc`, check
+[`SHA256SUMS`](https://archledger.github.io/intel-npu-stack/0.1.1/SHA256SUMS).
+Release 0.1.0 is retired: its installer fails on Fedora with SELinux
+enforcing (#53). To verify before running, download `install.sh` and `install.sh.asc`, check
 the signature against the release key, read the script, and then run it.
 
 ## What the release is made of
@@ -23,7 +24,7 @@ contains:
 - `release.json`: installer metadata including stack release, profile digest,
   repository id/URL, repomd digest, and every package with its exact NEVR,
   architecture, filename, SHA256 and role (`runtime`, `devel`, `profile`).
-- `packages/`: the exact signed RPM set (0.1.0: 16 packages).
+- `packages/`: the exact signed RPM set (0.1.1: 16 packages).
 - `repodata/`: signed repository metadata, including `repomd.xml.asc`.
 - `profile.toml`: the platform profile the installer authenticates against
   `release.json`. Candidate assembly preserves candidate status; the VM fixture
@@ -41,7 +42,7 @@ Installation starts from a version-pinned bootstrap that downloads the
 installer completely, verifies its exact SHA256, and only then executes it
 with the caller's arguments untouched. The command is generated per release
 from the actual asset by `install/render-bootstrap.py`; it is published
-beside the release, never invented by hand. For release 0.1.0 the published
+beside the release, never invented by hand. For release 0.1.1 the published
 command, `primary-command.txt` on the release site, is:
 
 ```sh
@@ -56,9 +57,9 @@ command, `primary-command.txt` on the release site, is:
     bootstrap_file=$bootstrap_directory/install.sh
     if ! curl --disable --fail --location --proto '=https' --proto-redir '=https' \
         --connect-timeout 15 --max-time 180 --max-filesize 1048576 \
-        --output "$bootstrap_file" -- https://archledger.github.io/intel-npu-stack/0.1.0/install.sh; then exit 20; fi
+        --output "$bootstrap_file" -- https://archledger.github.io/intel-npu-stack/0.1.1/install.sh; then exit 20; fi
     [ -f "$bootstrap_file" ] && [ ! -L "$bootstrap_file" ] || exit 20
-    if ! printf '%s  %s\n' '05c0f5ffeee515be12eba385fa000795c65e6dd70ccc6d84b4e0ba67d36e7d8e' "$bootstrap_file" | sha256sum --check --status; then exit 20; fi
+    if ! printf '%s  %s\n' '8b941589c92420f7719f0be2be9cb870ba6e7234a07f15949c57010e6b22f0fa' "$bootstrap_file" | sha256sum --check --status; then exit 20; fi
     /bin/sh "$bootstrap_file" "$@"
 )
 ```

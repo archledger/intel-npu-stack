@@ -4,13 +4,23 @@
 
 ## Current status
 
-**Release 0.1.0 is published** for Fedora 44 x86_64 on allowlisted Intel
+**Release 0.1.1 is published** for Fedora 44 x86_64 on allowlisted Intel
 Lunar Lake hardware, kernels `[7.2.5, 7.3.0)`:
-[GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0)
-and [support matrix](https://archledger.github.io/intel-npu-stack/0.1.0/support-matrix.json).
-No other platform is supported. The 0.1.0 installer fails on Fedora with
-SELinux enforcing, the default ([#53](https://github.com/archledger/intel-npu-stack/pull/53));
-release 0.1.1 ships the same packages with a fixed installer.
+[GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.1)
+and [support matrix](https://archledger.github.io/intel-npu-stack/0.1.1/support-matrix.json).
+No other platform is supported. Install as a normal user with:
+
+```sh
+curl --proto '=https' --proto-redir '=https' -fsSL \
+    https://archledger.github.io/intel-npu-stack/0.1.1/install.sh | sh
+```
+
+The installer shows its plan and asks before it changes anything; end the
+command with `sh -s -- --dry-run` to see the plan only. The pinned command in
+the [install guide](docs/install-fedora.md) also checks the SHA-256 of
+`install.sh`. Release 0.1.0 is retired: its installer fails on Fedora with
+SELinux enforcing ([#53](https://github.com/archledger/intel-npu-stack/pull/53)),
+and 0.1.1 ships the same packages with a fixed installer.
 
 Implemented components include strict platform profiles, bounded `status`
 discovery, crash-isolated `doctor` inference, an authenticated installer with
@@ -24,11 +34,10 @@ the matched 1.38.0 stack passed normal-user NPU inference, upgrade, warm
 reboot, removal, rollback, restoration and repeat installation on kernel 7.2.5,
 and suspend/resume and a user-confirmed cold boot on kernel 7.2.7.
 
-The Fedora 44 Lunar Lake profile is qualified for release 0.1.0 on kernels
-`[7.2.5, 7.3.0)`. The protected release workflow published 0.1.0 on
+The Fedora 44 Lunar Lake profile is qualified for release 0.1.1 on kernels
+`[7.2.5, 7.3.0)`. The protected release workflow published 0.1.1 on
 2026-09-26 as an immutable GitHub release, with build provenance and its
-Pages site. See [Fedora installer and bootstrap](docs/install-fedora.md) for
-the install command.
+Pages site.
 
 ## Documentation
 
