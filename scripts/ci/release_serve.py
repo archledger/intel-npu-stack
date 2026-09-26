@@ -340,7 +340,9 @@ def check_dnf_requests(log, prefix, version, release):
 
 def dnf_check(release, base_url, key, fingerprint, work):
     """Load the repository with signature checks and download every package; bytes and RPM signatures must match."""
-    work = Path(work)
+    # The workflow passes a relative --work; DNF's cache and download directories and HOME must not depend on the
+    # directory DNF runs in.
+    work = Path(os.path.abspath(work))
     root = work / 'dnf-download'
     (root / 'packages').mkdir(parents=True)
     names = sorted(entry['name'] for entry in release['packages'])
