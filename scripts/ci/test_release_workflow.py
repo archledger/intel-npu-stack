@@ -55,7 +55,7 @@ SIGNING_CALLS = {'sign': [('release_trust', 'read')] * 3 + [('release_sign', Non
                  'finalize': [('release_trust', 'read'), ('release_site', 'sign')]}
 LEG_PERTURBATIONS = {'LEG', 'LEG_UMASK', 'TZ', 'LANG', 'CARGO_BUILD_JOBS'}
 EXPRESSION = re.compile(r'\$\{\{\s*(.*?)\s*\}\}')
-ALLOWED = re.compile(r'inputs\.[a-z0-9_]+|secrets\.[A-Z0-9_]+|vars\.[A-Z0-9_]+|github\.token'
+ALLOWED = re.compile(r'inputs\.[a-z0-9_]+|secrets\.[A-Z0-9_]+|vars\.[A-Z0-9_]+|github\.token|github\.run_attempt'
                      r'|needs\.[a-z0-9-]+\.outputs\.[a-z0-9_]+|steps\.[a-z0-9-]+\.outputs\.[a-z0-9_]+')
 TOOL = re.compile(r'python3\s+(?:src/)?scripts/ci/(\w+)\.py')
 TOOL_MENTION = re.compile(r'scripts/ci/\w+\.py')
@@ -72,6 +72,13 @@ def upload(name, path):
 
 def download(name, path):
     return 'actions/download-artifact', {'name': name, 'path': path}
+
+
+# pages-build is re-run after it succeeded when its deployment never did, and GitHub keeps the artifacts of earlier
+# attempts, so its two artifacts are named per attempt and the later jobs take the names from its outputs.
+PAGES_ARTIFACT = 'github-pages-${{ github.run_attempt }}'
+PAGES_RECORD_NAME = 'pages-record-${{ github.run_attempt }}'
+PAGES_OUTPUTS = {'pages_artifact_name': PAGES_ARTIFACT, 'pages_record_name': PAGES_RECORD_NAME}
 
 
 # The actions each job runs, in order, with their inputs. Every checkout takes the run's commit into src and keeps no
@@ -92,11 +99,13 @@ ACTIONS = {
                ('actions/attest-build-provenance',
                 {'subject-path': ''.join(f'work/publication/assets/{name}\n' for name in publish.release_assets('*'))})],
     'publish-release': [CHECKOUT, download('publication', 'work/publication')],
-    'pages-build': [CHECKOUT, ('actions/upload-pages-artifact', {'path': 'work/pages/_site', 'retention-days': 7}),
-                    upload('pages-record', 'work/pages-record')],
-    'pages-deploy': [CHECKOUT, download('pages-record', 'work/pages-record'), ('actions/deploy-pages', None)],
+    'pages-build': [CHECKOUT, ('actions/upload-pages-artifact', {'name': PAGES_ARTIFACT, 'path': 'work/pages/_site',
+                                                                 'retention-days': 7}),
+                    upload(PAGES_RECORD_NAME, 'work/pages-record')],
+    'pages-deploy': [CHECKOUT, download('${{ needs.pages-build.outputs.pages_record_name }}', 'work/pages-record'),
+                     ('actions/deploy-pages', {'artifact_name': '${{ needs.pages-build.outputs.pages_artifact_name }}'})],
     'verify-live': [CHECKOUT, download('publication', 'work/publication'),
-                    download('pages-record', 'work/pages-record')],
+                    download('${{ needs.pages-build.outputs.pages_record_name }}', 'work/pages-record')],
 }
 REGISTRY = '--registry src/release/published-versions.json'
 SITE = 'work/unsigned/site/$VERSION'
@@ -687,6 +696,35 @@ class ReleaseWorkflow(unittest.TestCase):
                                       if not later.get('uses', '').startswith('actions/download-artifact@')), {})
                     self.assertIn(f'release_artifact.py check {path} ', run_text(job, following),
                                   f'{name} does not check {path} right after downloading it')
+
+    def test_artifacts_a_rerun_uploads_again_are_named_per_attempt(self):
+        # GitHub keeps the artifacts of earlier attempts and refuses a second artifact of the same name in a run, so a
+        # job re-run after an upload succeeded would stop at that upload. That happens when a later step of the job
+        # failed, or when the job itself is re-run after it succeeded, as pages-build is when its deployment never
+        # succeeded. Such artifacts carry the run attempt in their name; the jobs that read them take the name from
+        # the producing job's outputs, so a re-run of one of those jobs alone still finds the latest artifact.
+        uploads = ('actions/upload-artifact@', 'actions/upload-pages-artifact@')
+        per_attempt = {}
+        for name, job in self.jobs.items():
+            steps = steps_of(job)
+            for index, step in enumerate(steps):
+                if step.get('uses', '').startswith(uploads) and (index < len(steps) - 1 or name == 'pages-build'):
+                    per_attempt[(name, (step.get('with') or {}).get('name', 'the default name'))] = index
+        self.assertEqual(sorted(per_attempt), [('pages-build', PAGES_ARTIFACT), ('pages-build', PAGES_RECORD_NAME)])
+        self.assertTrue(all(artifact.endswith('-${{ github.run_attempt }}') for _, artifact in per_attempt))
+        outputs = self.jobs['pages-build']['outputs']
+        self.assertEqual({key: outputs[key] for key in PAGES_OUTPUTS}, PAGES_OUTPUTS)
+        readers = {}
+        for name, job in self.jobs.items():
+            for step in steps_of(job):
+                given = step.get('with') or {}
+                if step.get('uses', '').startswith('actions/download-artifact@') and 'pages-record' in given['path']:
+                    readers[name] = given['name']
+                if step.get('uses', '').startswith('actions/deploy-pages@'):
+                    readers[name + ' deploy'] = given.get('artifact_name')
+        self.assertEqual(readers, {'pages-deploy': '${{ needs.pages-build.outputs.pages_record_name }}',
+                                   'pages-deploy deploy': '${{ needs.pages-build.outputs.pages_artifact_name }}',
+                                   'verify-live': '${{ needs.pages-build.outputs.pages_record_name }}'})
 
     def test_every_uploaded_artifact_is_sealed_first(self):
         # The Pages artifact is the exception: upload-pages-artifact hands it straight to deploy-pages (ACTIONS pins

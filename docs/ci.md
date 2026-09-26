@@ -182,6 +182,9 @@ validation, which runs `cargo` in the checkout. A Destroy step run from the
 fetched inputs, for example, would run their keyring script while the key is
 present. Step names are unique within a job. Jobs that can run at the same time
 share four build jobs, so installer leg a builds with three and leg b with one.
+`pages-build` is the only job with a step after an upload, and the recovery
+path re-runs it after it succeeded. Its two artifacts are named after the run
+attempt, and the jobs that read them take the names from its outputs.
 
 Each run block is one line of commands joined by `&&`, so it stops at the
 first command that fails. The shell does not check a tool whose output

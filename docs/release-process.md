@@ -164,6 +164,10 @@ served, and the next dispatch refuses in the room check because that version's
 live `SHA256SUMS` is missing. Re-run that run's `pages-build` within GitHub's
 30-day re-run limit; `pages-deploy` and `verify-live` run again after it, and
 `verify-live` also needs the run's `publication` artifact, kept for 7 days.
+GitHub keeps the artifacts of the earlier attempt and refuses a second artifact
+of the same name in a run, so `pages-build` names its Pages artifact and
+`pages-record` after the run attempt, and the later jobs take both names from
+its outputs.
 
 A release published while immutable releases were off is refused by every
 re-run of `publish-release` and by every later composition, and retiring it
