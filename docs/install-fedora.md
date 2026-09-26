@@ -1,16 +1,15 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Installing on Fedora 44 (x86_64)
 
-Status: **no public release exists yet.** The commands and behaviors below
-describe the verified installer flow of release 0.1.0 as assembled and
-test-signed so far. The assembled release is bound to a disposable test key
-and a non-routable example endpoint; production signing and publication are
-separate, later gates. Nothing here installs anything on a public endpoint
-today. The Fedora 44 Lunar Lake profile is qualified for release 0.1.0, and the
-stable channel admits it once that release is published. Releases will be
-served from `https://archledger.github.io/intel-npu-stack/<version>/`, as
-described in [release-site.md](release-site.md). Every file is listed in the
-signed `SHA256SUMS` there. To verify before running, download `install.sh` and
+Status: release **0.1.0** is published at
+`https://archledger.github.io/intel-npu-stack/0.1.0/`
+([GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0)).
+It supports Fedora 44 x86_64 on allowlisted Lunar Lake hardware (PCI
+`8086:643e`) with kernels `[7.2.5, 7.3.0)`, through the qualified Fedora 44
+Lunar Lake profile on the stable channel. Each release is served from
+`https://archledger.github.io/intel-npu-stack/<version>/`, as described in
+[release-site.md](release-site.md). Every file is listed in the signed
+`SHA256SUMS` there. To verify before running, download `install.sh` and
 `install.sh.asc`, check the signature against the release key, read the script,
 and then run it.
 
@@ -23,7 +22,7 @@ contains:
 - `release.json`: installer metadata including stack release, profile digest,
   repository id/URL, repomd digest, and every package with its exact NEVR,
   architecture, filename, SHA256 and role (`runtime`, `devel`, `profile`).
-- `packages/`: the exact signed RPM set (0.1.0 test assembly: 16 packages).
+- `packages/`: the exact signed RPM set (0.1.0: 16 packages).
 - `repodata/`: signed repository metadata, including `repomd.xml.asc`.
 - `profile.toml`: the platform profile the installer authenticates against
   `release.json`. Candidate assembly preserves candidate status; the VM fixture
@@ -41,8 +40,8 @@ Installation starts from a version-pinned bootstrap that downloads the
 installer completely, verifies its exact SHA256, and only then executes it
 with the caller's arguments untouched. The command is generated per release
 from the actual asset by `install/render-bootstrap.py`; it is published
-beside the release, never invented by hand. For the September 19 tools release 3
-test fixture, the generated command is:
+beside the release, never invented by hand. For release 0.1.0 the published
+command, `primary-command.txt` on the release site, is:
 
 ```sh
 (
@@ -56,9 +55,9 @@ test fixture, the generated command is:
     bootstrap_file=$bootstrap_directory/install.sh
     if ! curl --disable --fail --location --proto '=https' --proto-redir '=https' \
         --connect-timeout 15 --max-time 180 --max-filesize 1048576 \
-        --output "$bootstrap_file" -- https://downloads.example.invalid/intel-npu-stack/0.1.0/fedora/44/x86_64/install.sh; then exit 20; fi
+        --output "$bootstrap_file" -- https://archledger.github.io/intel-npu-stack/0.1.0/install.sh; then exit 20; fi
     [ -f "$bootstrap_file" ] && [ ! -L "$bootstrap_file" ] || exit 20
-    if ! printf '%s  %s\n' '25d1219088d88249a2f95b6165eaf169d42127f7bdbd5307a442d6f577014941' "$bootstrap_file" | sha256sum --check --status; then exit 20; fi
+    if ! printf '%s  %s\n' '05c0f5ffeee515be12eba385fa000795c65e6dd70ccc6d84b4e0ba67d36e7d8e' "$bootstrap_file" | sha256sum --check --status; then exit 20; fi
     /bin/sh "$bootstrap_file" "$@"
 )
 ```
@@ -66,7 +65,9 @@ test fixture, the generated command is:
 The primary command's digest belongs to **`install.sh`**, not the installer
 binary. Generate the bootstrap first (`--kind bootstrap`, binary URL/digest),
 then the primary command (`--kind command`, bootstrap URL/digest). This exact
-two-stage chain was exercised in the disposable Fedora VM.
+two-stage chain was exercised in the disposable Fedora VM. The release
+workflow runs the published command with `--dry-run` against a local copy of
+the site before publication, and against the live site afterwards.
 
 `install/install.sh` (same generator, `--kind bootstrap`) embeds the same
 download-verify-execute sequence as a standalone dispatcher and refuses to

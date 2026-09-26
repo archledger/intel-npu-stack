@@ -4,7 +4,11 @@
 
 ## Current status
 
-**Source preview; no supported or production-signed public release yet.**
+**Release 0.1.0 is published** for Fedora 44 x86_64 on allowlisted Intel
+Lunar Lake hardware, kernels `[7.2.5, 7.3.0)`:
+[GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0)
+and [release site](https://archledger.github.io/intel-npu-stack/0.1.0/). No
+other platform is supported.
 
 Implemented components include strict platform profiles, bounded `status`
 discovery, crash-isolated `doctor` inference, an authenticated installer with
@@ -19,10 +23,10 @@ reboot, removal, rollback, restoration and repeat installation on kernel 7.2.5,
 and suspend/resume and a user-confirmed cold boot on kernel 7.2.7.
 
 The Fedora 44 Lunar Lake profile is qualified for release 0.1.0 on kernels
-`[7.2.5, 7.3.0)`. Publishing the release through the protected workflow
-remains; publishing this source does not complete it.
-
-No stable platform profile is published yet. Fedora 44 x86_64 on allowlisted Lunar Lake hardware is the first qualified target and stays unsupported until release 0.1.0 is published.
+`[7.2.5, 7.3.0)`. The protected release workflow published 0.1.0 on
+2026-09-26 as an immutable GitHub release, with build provenance and its
+Pages site. See [Fedora installer and bootstrap](docs/install-fedora.md) for
+the install command.
 
 ## Documentation
 

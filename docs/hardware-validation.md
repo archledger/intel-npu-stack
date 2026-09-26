@@ -6,8 +6,8 @@ upgrade, warm reboot, normal-user NPU diagnostics, removal, rollback,
 restoration and repeat installation on kernel **7.2.5-200.fc44.x86_64**, then
 suspend/resume and a user-confirmed cold boot on kernel
 **7.2.7-200.fc44.x86_64** with the same installed packages. On this evidence
-the profile is qualified for release 0.1.0; it is supported once that release
-is published.
+the profile is qualified for release 0.1.0, which was published on
+2026-09-26.
 
 ## Current matched-stack observations
 
