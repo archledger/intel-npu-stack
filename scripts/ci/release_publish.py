@@ -554,7 +554,10 @@ def publish_release(gh, values, assets_dir, notes, commit, key, registry, fetch=
             'draft': True, 'prerelease': False})
     if state in {'fresh', 'draft-resume'}:
         # A resumed draft may carry another title or stale notes; they are set while the release is still a draft.
-        gh.call('PATCH', f"/releases/{release['id']}", body={'name': title, 'body': body})
+        # GitHub drops a draft's tag when an update omits it (the draft becomes untagged-<hash>), so the update names
+        # the tag and the release commit again.
+        gh.call('PATCH', f"/releases/{release['id']}", body={'name': title, 'body': body, 'tag_name': tag,
+                                                              'target_commitish': commit})
         present = {asset.get('name') for asset in release.get('assets', [])}
         for name in release_assets(version):
             if name not in present:
