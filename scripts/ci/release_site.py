@@ -732,7 +732,8 @@ def render_notes(site, archive_path):
     check_archive_holds(archive_path, site)
     matrix = load_json(site / 'support-matrix.json')
     repository = matrix['repository']
-    slug = repository_slug(repository['base_url'], version)
+    base = repository['base_url']
+    slug = repository_slug(base, version)
     kernel = matrix['kernel']
     tested = '; '.join(f'{entry["release"]} ({", ".join(entry["tests"])})' for entry in kernel['tested'])
     hardware = ', '.join(f'{entry["vendor"]}:{entry["device"]}' for entry in matrix['hardware'])
@@ -743,15 +744,17 @@ def render_notes(site, archive_path):
             ('Qualification evidence', matrix['qualification']['evidence_sha256'])]
     lines = [
         f'# Intel NPU Stack {version}', '',
+        # The version directory has no index page, so the notes link its files and never the bare directory.
         f'Signed Fedora {platform["version_id"]} {platform["arch"]} packages for the Intel NPU on PCI {hardware}, '
-        f'served from {repository["base_url"]}.', '',
+        f'served from `{base}`. That directory has no index page; [`SHA256SUMS`]({base}SHA256SUMS) lists every '
+        'file in it.', '',
         '## Install', '',
         'Run as a normal user; the installer asks for privileges only when it applies the plan:', '',
         '```sh', command, '```', '',
         'The command downloads `install.sh`, checks its SHA-256 and runs it. `install.sh` checks the installer '
         'binary the same way, and the installer verifies `release.json` against the release key it carries.', '',
         '### Verify before running', '',
-        f'1. Download `install.sh` and `install.sh.asc` from {repository["base_url"]}.',
+        f'1. Download [`install.sh`]({base}install.sh) and [`install.sh.asc`]({base}install.sh.asc).',
         '2. Run `gpg --status-fd 1 --verify install.sh.asc install.sh` with the release public key and check that '
         f'`VALIDSIG` names the primary key `{repository["key_fingerprint"]}`.',
         '3. Read `install.sh`.',
@@ -763,7 +766,7 @@ def render_notes(site, archive_path):
         f'- Kernel: {kernel["min"]} up to, not including, {kernel["max_exclusive"]} (`{kernel["module"]}`). '
         f'Tested: {tested}. {kernel["policy"]}',
         '- Not supported: ' + '; '.join(matrix['not_supported']) + '.',
-        '- The full matrix is `support-matrix.json` in the release.', '',
+        f'- The full matrix is [`support-matrix.json`]({base}support-matrix.json).', '',
         '## Digests', '',
         '| File | SHA-256 |', '|---|---|',
         *[f'| {name} | `{digest}` |' for name, digest in rows], '',
