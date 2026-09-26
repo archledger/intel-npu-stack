@@ -414,7 +414,11 @@ class Report(unittest.TestCase):
                                       REPO_ROOT / 'release/kernel-probes.json', {})
         self.assertEqual(report['schema_version'], 1)
         self.assertEqual(report['observed_kernels'][0]['kernel'], '7.3.0-200.fc44')
-        self.assertEqual(report['stale_records'], [])
+        # The 0.1.1 requalification added records under its evidence; the 0.1.0 ones stay as stale history.
+        self.assertEqual(report['stale_records'],
+                         [{'kernel': kernel, 'profile': 'fedora-44-lunar-lake-x86_64',
+                           'reason': 'qualification evidence changed'}
+                          for kernel in ['7.2.5-200.fc44', '7.2.7-200.fc44']])
 
     def test_components_digest_command(self):
         with tempfile.TemporaryDirectory() as tmp:

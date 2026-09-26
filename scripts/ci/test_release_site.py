@@ -333,7 +333,7 @@ class Lifecycle(Case):
         self.assertIn('evidence/rollback/rollback-index.json', notes)
         # The version directory has no index page (GitHub Pages answers 404), so only its files are linked.
         self.assertNotRegex(notes, re.escape(BASE_URL) + r'(?![A-Za-z0-9`])')
-        self.assertIn(f'curl -fsSL {BASE_URL}install.sh | sh', notes)
+        self.assertIn(f"curl --proto '=https' --proto-redir '=https' -fsSL {BASE_URL}install.sh | sh", notes)
         for name in ['SHA256SUMS', 'SHA256SUMS.asc', 'install.sh', 'install.sh.asc', 'support-matrix.json']:
             self.assertIn(f'[`{name}`]({BASE_URL}{name})', notes)
 
