@@ -54,7 +54,8 @@ impl ProjectRpmTrust {
         fs::create_dir(trust.database()).map_err(|_| invalid())?;
         let file = trust.directory.path().join("public.asc");
         fs::write(&file, key).map_err(|_| invalid())?;
-        trust.run("/usr/bin/rpm", vec!["--initdb".into()], runner)?;
+        // rpmkeys creates the database. `rpm --initdb` would run /usr/bin/rpmdb, which SELinux confines to
+        // rpmdb_t on Fedora: that domain may not create files under /tmp, so the key could never be imported.
         trust.run(
             "/usr/bin/rpmkeys",
             vec!["--import".into(), file.into_os_string()],

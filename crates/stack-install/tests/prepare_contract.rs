@@ -115,7 +115,7 @@ impl ProcessRunner for PrepareRunner {
             assert!(request.args.iter().any(|a| a == "--noplugins"));
             if has("-qf") {
                 b"fedora-repos-44-1.noarch\nfedora-repos-44-1.noarch\n".to_vec()
-            } else if has("-Vf") || has("--initdb") {
+            } else if has("-Vf") {
                 Vec::new()
             } else if query().as_deref() == Some("%{VERSION}\n") {
                 if has("gpg-pubkey") {
