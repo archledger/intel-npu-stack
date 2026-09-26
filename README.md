@@ -12,14 +12,14 @@ reviewed native DNF replay, deterministic release assembly, and developer-only
 candidate qualification tooling.
 
 The Fedora 44 candidate has passed package, source/notice, dependency, SBOM and
-independent reproducibility review. All ten planned disposable-VM lifecycle
-scenarios passed, plus corrupted-RPM refusal/recovery. A controlled Lunar Lake
-hardware pilot on kernel 7.2.4 passed normal-user NPU inference after a
-user-confirmed cold boot and an explicitly tested warm reboot.
+independent reproducibility review. All planned disposable-VM lifecycle
+scenarios passed, plus corrupted-RPM refusal/recovery. On Lunar Lake hardware,
+the matched 1.38.0 stack passed normal-user NPU inference, upgrade, warm
+reboot, removal, rollback, restoration and repeat installation on kernel 7.2.5,
+and suspend/resume and a user-confirmed cold boot on kernel 7.2.7.
 
-**Hardware suspend/resume and final removal/restoration are deferred by the
-maintainer.** Candidate profiles remain unqualified. Hardware qualification,
-release-building automation, production signing and release publication remain separate work; publishing
+Candidate profiles remain unqualified. Profile promotion, the release
+repository settings and release publication remain separate work; publishing
 this source does not complete those gates.
 
 No stable platform profile is published yet. Fedora 44 x86_64 on allowlisted Lunar Lake hardware is the first planned qualification target, but remains unsupported until all VM, hardware, provenance, signing, rollback, and release gates pass.

@@ -4,18 +4,25 @@
 #include <openvino/opsets/opset13.hpp>
 #include <openvino/pass/serialize.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <iterator>
 #include <string>
 
 // Standalone, opt-in compiler reproducer. No application models or input data.
+// The -layout modes name the tensors and give the input a batch layout, so the NPU plugin can reshape the model to
+// batch 1 before compilation; they then run one inference with a batch of 3.
 int main(int argc, char* argv[]) {
   if (argc < 3 || argc > 4) {
-    std::cerr << "usage: npu-reshape-bounds static|bounded|unbounded CPU|NPU [output-prefix]\n";
+    std::cerr << "usage: npu-reshape-bounds static|bounded|unbounded|bounded-layout|unbounded-layout CPU|NPU "
+                 "[output-prefix]\n";
     return 64;
   }
-  const std::string mode = argv[1];
+  std::string mode = argv[1];
   const std::string device = argv[2];
+  const bool layout = mode == "bounded-layout" || mode == "unbounded-layout";
+  if (layout) mode.resize(mode.size() - std::string("-layout").size());
   if ((mode != "static" && mode != "bounded" && mode != "unbounded") ||
       (device != "CPU" && device != "NPU")) {
     return 64;
@@ -36,6 +43,12 @@ int main(int argc, char* argv[]) {
     const auto model = std::make_shared<ov::Model>(
         ov::ResultVector{std::make_shared<Result>(reshape)},
         ov::ParameterVector{input}, "reduce_reshape_bounds");
+    if (layout) {
+      // Imported models name their tensors; the plugin's batch handling needs the names.
+      input->output(0).set_names({"input"});
+      reshape->output(0).set_names({"output"});
+      input->set_layout(ov::Layout("N..."));
+    }
 
     std::cout << "INPUT " << input->get_partial_shape()
               << " OUTPUT " << reshape->get_output_partial_shape(0) << std::endl;
@@ -52,8 +65,20 @@ int main(int argc, char* argv[]) {
     }
 
     ov::Core core;
-    const auto compiled = core.compile_model(model, device);
+    auto compiled = core.compile_model(model, device);
     std::cout << "COMPILE_OK\n";
+    if (layout) {
+      ov::Tensor data(ov::element::f32, ov::Shape{3, 2});
+      const float values[] = {1, 3, -2, 2, 0.5f, 1.5f};
+      std::copy(std::begin(values), std::end(values), data.data<float>());
+      auto request = compiled.create_infer_request();
+      request.set_input_tensor(data);
+      request.infer();
+      const auto output = request.get_output_tensor();
+      std::cout << "INFER_OK " << output.get_shape();
+      for (size_t i = 0; i < output.get_size(); ++i) std::cout << ' ' << output.data<const float>()[i];
+      std::cout << '\n';
+    }
     return 0;
   } catch (const std::exception& error) {
     std::cerr << "EXCEPTION " << error.what() << '\n';

@@ -1,11 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Hardware validation progress
 
-Status as of **2026-09-19**: the matched Fedora 44 Lunar Lake pilot runs on
-kernel **7.2.5-200.fc44.x86_64**. Upgrade, warm reboot, normal-user NPU
-diagnostics, removal, rollback, restoration and repeat installation passed.
-Cold boot and suspend/resume remain incomplete, so this is candidate evidence
-rather than a supported public release.
+Status as of **2026-09-26**: the matched Fedora 44 Lunar Lake pilot passed
+upgrade, warm reboot, normal-user NPU diagnostics, removal, rollback,
+restoration and repeat installation on kernel **7.2.5-200.fc44.x86_64**, then
+suspend/resume and a user-confirmed cold boot on kernel
+**7.2.7-200.fc44.x86_64** with the same installed packages. The profile is
+still a candidate: this is candidate evidence rather than a supported public
+release.
 
 ## Current matched-stack observations
 
@@ -24,8 +26,8 @@ Its separately identified profile covers `[7.2.5, 7.2.6)` and stays a candidate.
 | Rollback and old-stack reboot | Restored all 14 old runtime packages, including the Fedora 1.28.6 loader, and the original current-kernel boot image. After reboot, all 15 collector checks and eight NPU-only iterations passed. |
 | Restoration and new-stack reboot | Reinstalled the 14-package matched set with tools release 3 and restored its verified boot image. The final reboot, 15 collector checks and eight NPU-only iterations passed. The complete non-key package identity set returned to its pre-removal state. |
 | Repeat installation | The actual native installation was a no-op; the complete inventory, installation times and boot image stayed unchanged. |
-| Cold boot | Not executed for this set. Firmware advertises AC and DC timer wake from S4 but neither from S5; a verified remote power-on method or physical assistance is required. Warm reboots are not relabeled as cold boots. |
-| Suspend/resume | Deferred while persistent sleep prevention is requested for remote access. |
+| Cold boot | Passed on kernel 7.2.7, see below. Firmware advertises timer wake from S4 but not from S5, so the power-on was a physical action by the maintainer. Warm reboots are not relabeled as cold boots. |
+| Suspend/resume | Passed on kernel 7.2.7 in three cycles, see below. |
 
 The collector was frozen from source `006d413`; the corrected native tools were
 built twice from `bdeecab` and merged as `6741714`. Every observation records its
@@ -37,7 +39,7 @@ The retained hardware archive `hardware-evidence-20260919.tar.gz` has SHA256
 `fcce8df6d2f0b6deb5e675a740f73d92856206c8e7858a44a84674496fc52010`.
 Original boot images and full host inventories remain in private recovery storage.
 
-### Compiler limitation remains open
+### Compiler crash and the batch-layout route
 
 The matched-stack retest of [issue #20](https://github.com/archledger/intel-npu-stack/issues/20#issuecomment-5743015085)
 used compile-only processes and public model weights. All seven CPU controls
@@ -55,10 +57,35 @@ six-node, 24-byte-constant graph and found a working static-batch compilation
 workaround for all four original crashers. It identified an ABI error in an
 earlier research harness and corrected the input-rank diagnosis: those four
 inputs have known rank 4 with dynamic batch,
-rather than unranked inputs that cannot be reshaped. The original unbounded
-graphs still crash; inference parity and application readiness are separate work.
+rather than unranked inputs that cannot be reshaped. Without a batch layout the
+original unbounded graphs still crash. On September 26 all four compiled and
+ran on NPU with a batch layout declared on their inputs, keeping a dynamic
+batch; the triage page records that route and its limits. Application
+readiness is separate work.
 The older intermittent static BlazeFace observation remains unconfirmed
 independently of that faulty research harness.
+
+## Suspend/resume and cold boot on kernel 7.2.7, September 26
+
+The same 14 packages stayed installed, with their installation times
+unchanged since September 19 and `rpm -V` clean. The kernel 7.2.7 boot image
+contains `intel_vpu` and the 1.38.0 firmware override byte-identical to the
+package, and the kernel loaded that firmware at boot. The frozen collector
+probed against a test profile retargeted from the signed candidate; it differs
+only in its identifier and the kernel window `[7.2.7, 7.2.8)`. Every probe
+below passed all 15 checks with NPU activity.
+
+| Case | Observed result |
+|---|---|
+| Activation on 7.2.7 | Passed on the running boot without a power transition: kernel, packages, boot images and loaded firmware matched the pinned target, and the probe passed. |
+| Suspend/resume | Passed three RTC-timed `s2idle` cycles of 32 to 35 seconds. Two statically reshaped public ONNX models, glintr100 and FLIR, stayed compiled and resident on the NPU across each cycle. Each cycle resumed in the same boot with one more successful suspend and no new failure in the kernel's suspend statistics, no NPU kernel errors, identical outputs before and after, and probes passing before and after. The first inference after resume took 7.7 to 9.6 ms for glintr100 and 1.8 to 2.3 ms for FLIR. |
+| Cold boot | Passed: the maintainer shut down from the menu, waited more than ten seconds and pressed the power button. The previous boot's journal ended in `poweroff.target` with no reboot. The new boot matched the pinned identity and the probe passed. |
+
+The retained archive `hardware-evidence-20260926-k727.tar.gz` has SHA256
+`91def96fb42e21dd9f5cab01f39cf13445245aa0ed3d9696b1f5cb90fc81b2fe` and extends
+the September 19 archive. Raw journal captures, which carry network
+identifiers, remain in private storage. The two qualification-only package
+keys were removed from the test host after these runs.
 
 ## Earlier 1.35.0 pilot, September 13
 

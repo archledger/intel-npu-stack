@@ -70,8 +70,8 @@ Rust1.85.0 toolchain, and an unprivileged workspace. Run provisioning only in
 a disposable build environment. The native check also requires its pinned
 SDK and an empty build directory as documented by `scripts/check-native.sh`.
 
-CI success does not complete the deferred hardware suspend/resume or
-removal/restoration cases, promote a candidate, or establish production trust.
+CI success does not replace the hardware cases, promote a candidate, or
+establish production trust.
 
 ## Upstream watcher
 
