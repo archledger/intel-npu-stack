@@ -747,7 +747,7 @@ def render_notes(site, archive_path):
         # The version directory has no index page, so the notes link its files and never the bare directory.
         f'Signed Fedora {platform["version_id"]} {platform["arch"]} packages for the Intel NPU on PCI {hardware}, '
         f'served from `{base}`. That directory has no index page; [`SHA256SUMS`]({base}SHA256SUMS) lists every '
-        'file in it.', '',
+        f'other file in it, and [`SHA256SUMS.asc`]({base}SHA256SUMS.asc) is its signature.', '',
         '## Install', '',
         'Run as a normal user; the installer asks for privileges only when it applies the plan:', '',
         '```sh', command, '```', '',

@@ -9,7 +9,7 @@ It supports Fedora 44 x86_64 on allowlisted Lunar Lake hardware (PCI
 Lunar Lake profile on the stable channel. Each release is served from
 `https://archledger.github.io/intel-npu-stack/<version>/`, as described in
 [release-site.md](release-site.md). The directory has no index page, so
-its URL alone returns 404; every file in it is listed in the signed
+its URL alone returns 404; every other file in it is listed in the signed
 [`SHA256SUMS`](https://archledger.github.io/intel-npu-stack/0.1.0/SHA256SUMS).
 To verify before running, download `install.sh` and `install.sh.asc`, check
 the signature against the release key, read the script, and then run it.
