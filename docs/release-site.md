@@ -222,22 +222,23 @@ publish phase and `publish-release` reserve the new site's size.
   before it creates or resumes anything, and the notes must be the
   `release_site.py notes` rendering of this site and archive. It streams the
   archive, `SHA256SUMS`, `SHA256SUMS.asc` and `publication-manifest.json` to a
-  draft. It sets the draft's title and notes to this publication's and streams
-  every asset back to disk without sending the token to the storage host. Right
-  before publishing it reads the draft again: it must still be a draft, not a
-  prerelease, of this tag and commit, with this title, notes and exactly these
-  assets, and the tag must be absent or name the release commit. The other
-  non-draft `vX.Y.Z` releases and the `v` tags, with the object each tag names
-  in the tag listing, must still be as the dry composition found them, both
-  when it ends and at that point, so an older tag force-moved after the dry
-  composition bound its release to a commit stops the publication too. The
-  live `SHA256SUMS` of every version it composed must still be served. It then
-  publishes the release as the latest, naming this tag, the release commit, the
-  title, the notes and a full release again in the same request so that no
-  later change to them takes effect, and requires it to be immutable, not a
-  prerelease and under this tag, with the same title and notes and its tag at
-  the release commit. GitHub keeps a tag pushed after the last read, so only
-  that final check can refuse one.
+  draft. It sets the draft's title and notes to this publication's, naming the
+  tag and the release commit again because GitHub drops a draft's tag when an
+  update omits it, and streams every asset back to disk without sending the
+  token to the storage host. Right before publishing it reads the draft again:
+  it must still be a draft, not a prerelease, of this tag and commit, with this
+  title, notes and exactly these assets, and the tag must be absent or name the
+  release commit. The other non-draft `vX.Y.Z` releases and the `v` tags, with
+  the object each tag names in the tag listing, must still be as the dry
+  composition found them, both when it ends and at that point, so an older tag
+  force-moved after the dry composition bound its release to a commit stops the
+  publication too. The live `SHA256SUMS` of every version it composed must
+  still be served. It then publishes the release as the latest, naming this
+  tag, the release commit, the title, the notes and a full release again in the
+  same request so that no later change to them takes effect, and requires it to
+  be immutable, not a prerelease and under this tag, with the same title and
+  notes and its tag at the release commit. GitHub keeps a tag pushed after the
+  last read, so only that final check can refuse one.
 - `compose-pages` builds the Pages tree from immutable, non-draft `vX.Y.Z`
   releases only. A `vX.Y.Z` release marked prerelease is refused rather than
   left out, since `publish-release` never makes one. Each archive must hold

@@ -173,6 +173,9 @@ class FakeGitHub:
                 return self.reply(404, {'message': 'Not Found'})
             if method == 'PATCH':
                 body = json.loads(data)
+                if release['draft'] and 'tag_name' not in body:
+                    # GitHub drops a draft's tag when an update omits it, as it did to the first 0.1.0 draft.
+                    release['tag_name'] = f"untagged-{release['id']:020x}"
                 if body.get('draft') is False:
                     self.fire('undraft', release)
                     self.undrafts.append(release['id'])
@@ -502,6 +505,18 @@ class Publication(unittest.TestCase):
         self.publish()
         self.assertEqual((draft['draft'], draft['name'], draft['body']),
                          (False, 'Intel NPU Stack 0.1.0', self.notes.read_text()))
+
+    def test_the_draft_keeps_its_tag_and_commit_while_its_title_and_notes_are_set(self):
+        # The first 0.1.0 run set them without naming the tag; GitHub untagged the draft and the undraft check stopped it.
+        for label, resumed in [('fresh', False), ('resumed', True)]:
+            with self.subTest(label):
+                self.setUp()
+                if resumed:
+                    self.fake.add_release('v0.1.0', draft=True, immutable=False,
+                                          assets={'SHA256SUMS': self.assets['SHA256SUMS']})
+                seen = []
+                self.publish(upload=lambda release: seen.append((release['tag_name'], release['target_commitish'])))
+                self.assertEqual(seen, [('v0.1.0', COMMIT)])
 
     def test_the_notes_must_be_the_rendering_of_this_release(self):
         for label, notes in [('stale', b'# Intel NPU Stack 0.1.0\n'),
