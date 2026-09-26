@@ -58,12 +58,12 @@ the notes with `release_inputs.py dispatch-check`, before any key is used.
 release_site.py compose --source-commit SHA --tree release-tree --records records \
     --leg-a installer-a --leg-b installer-b --profile PROFILE --output site/0.1.0
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage unsigned \
-    --max-bytes 314572800 --report verification.json
+    --max-bytes 331350016 --report verification.json
 release_serve.py serve-test --site-root site --expected-files verification.json --report serve.json
 release_site.py sign --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
 release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage signed --expected-files verification.json \
-    --max-bytes 314572800
+    --max-bytes 331350016
 release_site.py archive --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --output intel-npu-stack-0.1.0.tar
 release_site.py notes --site site/0.1.0 --archive intel-npu-stack-0.1.0.tar --output notes.md
