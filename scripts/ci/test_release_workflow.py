@@ -243,7 +243,7 @@ CALLS = {
                                  f'--expected-files {REPORT} --gpg-home {GNUPG} --fingerprint substituted '
                                  f'--passphrase-file {GNUPG}/passphrase --require-passphrase'),
         ('release_site', 'check', f'--source-commit $GITHUB_SHA --site {SITE} --profile src/$PROFILE '
-                                  f'--stage signed --expected-files {REPORT}'),
+                                  f'--stage signed --expected-files {REPORT} --max-bytes 314572800'),
         ('release_site', 'archive', f'--source-commit $GITHUB_SHA --site {SITE} --profile src/$PROFILE '
                                     f'--expected-files {REPORT} '
                                     '--output work/publication/assets/intel-npu-stack-$VERSION.tar'),
@@ -726,18 +726,22 @@ class ReleaseWorkflow(unittest.TestCase):
                 self.assertEqual(made[name], calls)
 
     def test_the_preflight_reserves_the_site_budget_verify_enforces(self):
-        # The room check reserves bytes for a site that is not built yet; verify refuses a larger unsigned site, and
-        # the publication steps repeat the room check with the signed site's real size.
-        def option(job, tool, subcommand, name):
+        # The room check reserves bytes for a site that is not built yet. verify refuses an unsigned site that would
+        # not fit them once signed, finalize holds the signed site to them, and the publication steps repeat the room
+        # check with the signed site's real size.
+        def option(job, tool, subcommand, name, stage=None):
             made = [argv for made_in, made_by, argv in tool_calls(self.workflow)
-                    if (made_in, made_by, argv[0]) == (job, tool, subcommand)]
+                    if (made_in, made_by, argv[0]) == (job, tool, subcommand)
+                    and (stage is None or argv[argv.index('--stage') + 1] == stage)]
             self.assertEqual(len(made), 1, f'{job} makes one {tool} {subcommand} call')
             self.assertIn(name, made[0], f'{job}: {tool} {subcommand}')
             return made[0][made[0].index(name) + 1]
         budget = self.workflow['env']['SITE_BUDGET_BYTES']
         self.assertTrue(type(budget) is int and 0 < budget <= publish.MAX_SITE)
         self.assertEqual((option('preflight', 'release_publish', 'check-unpublished', '--reserve-bytes'),
-                          option('verify', 'release_site', 'check', '--max-bytes')), (str(budget), str(budget)))
+                          option('verify', 'release_site', 'check', '--max-bytes'),
+                          option('finalize', 'release_site', 'check', '--max-bytes', stage='signed')),
+                         (str(budget), str(budget), str(budget)))
         self.assertFalse([name for name, job in self.jobs.items() if 'SITE_BUDGET_BYTES' in job.get('env', {})],
                          'the budget is defined once, for the whole workflow')
 

@@ -62,7 +62,8 @@ release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --
 release_serve.py serve-test --site-root site --expected-files verification.json --report serve.json
 release_site.py sign --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
-release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage signed --expected-files verification.json
+release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage signed --expected-files verification.json \
+    --max-bytes 314572800
 release_site.py archive --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --output intel-npu-stack-0.1.0.tar
 release_site.py notes --site site/0.1.0 --archive intel-npu-stack-0.1.0.tar --output notes.md
@@ -110,13 +111,18 @@ trust seam and release key are the only trust anchors.
   exact file set.
 - It records the bytes of the site's regular files as `total_bytes` in its
   result and `--report`. With `--max-bytes N` it refuses a site larger than N
-  bytes. The release workflow's `verify` passes `SITE_BUDGET_BYTES`, the bytes
-  its preflight reserves for the new version on Pages.
+  bytes. At the unsigned stage it also records `signed_bytes_at_most`: the
+  site plus the files `sign` adds, counting `SHA256SUMS` exactly and each of
+  the three signatures at 4096 bytes. That total must fit N instead, so a site
+  that fits only before signing is refused before anyone approves signing.
+  The release workflow's `verify` and `finalize` pass `SITE_BUDGET_BYTES`, the
+  bytes its preflight reserves for the new version on Pages.
 
 The signed stage additionally requires:
 
 - the unsigned files to equal the unsigned-stage report;
 - `SHA256SUMS` to be exact;
+- each signature to be at most 4096 bytes, as `sign` also requires;
 - all three signatures to satisfy the installer's strict release-key policy.
 
 `sign` refuses any fingerprint other than the committed `PRIMARY_FINGERPRINT`.

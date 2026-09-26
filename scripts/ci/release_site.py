@@ -18,11 +18,15 @@ by two independent legs, the build and signing records, a support matrix and a
 publication manifest. Everything except the tree, the installer binary and the
 signatures is a pure function of its inputs and is re-rendered by `check`.
 `check` records the bytes of the site's regular files as total_bytes in its
-result and --report, and with --max-bytes it refuses a site larger than N
-bytes; the release workflow's verify passes SITE_BUDGET_BYTES, the bytes its
-preflight reserves for the new version on Pages.
+result and --report, and with --max-bytes N it refuses a site larger than N
+bytes. At the unsigned stage it also records signed_bytes_at_most, the site
+plus what `sign` adds at most (SHA256SUMS exactly and three signatures of
+MAX_SIGNATURE_BYTES), and that must fit N instead: the release workflow's
+verify and finalize pass SITE_BUDGET_BYTES, the bytes its preflight reserves
+for the new version on Pages.
 `sign` adds exactly four files: the installer and install.sh signatures,
-SHA256SUMS over every other file, and its signature. `--repo` (default: this
+SHA256SUMS over every other file, and its signature. It and the signed stage
+refuse a signature larger than MAX_SIGNATURE_BYTES. `--repo` (default: this
 checkout) must be at --source-commit with unmodified tracked files; its
 committed trust seam and release key are the only trust anchors. Outputs are
 never overwritten.
@@ -59,6 +63,9 @@ SIGN_RECORDS = ['provider-identity.json', 'signed-identity.json', 'profile-gener
 DERIVED = ['support-matrix.json', 'publication-manifest.json', 'records/installer-build.json',
            'records/installer-trust.rs']
 FINALIZE_FILES = ['SHA256SUMS', 'SHA256SUMS.asc', BINARY + '.asc', 'install.sh.asc']
+# An armored detached signature by the committed Ed25519 release key is a few hundred bytes; sign and the signed stage
+# refuse a larger one, so the size budget can count the signatures before they exist.
+MAX_SIGNATURE_BYTES = 4096
 LEG_FILES = {*INSTALLER_SET, 'installer-trust.rs', 'installer-build.json'}
 LEG_BINDINGS = [('binary_sha256', BINARY), ('install_sh_sha256', 'install.sh'),
                 ('primary_command_sha256', 'primary-command.txt'), ('pinned_trust_sha256', 'installer-trust.rs')]
@@ -321,6 +328,17 @@ def render_sha256sums(site):
     return ''.join(f'{sha(Path(site) / f)}  {f}\n' for f in files).encode()
 
 
+def signing_bytes(files):
+    """The most bytes sign adds to an unsigned site of these files: SHA256SUMS exactly, with a line for each file and
+    for the two signatures it lists, and three signatures of at most MAX_SIGNATURE_BYTES each."""
+    listed = [*files, BINARY + '.asc', 'install.sh.asc']
+    return sum(len(f'{"0" * 64}  {name}\n'.encode()) for name in listed) + 3 * MAX_SIGNATURE_BYTES
+
+
+def check_signature_size(path):
+    require(path.stat().st_size <= MAX_SIGNATURE_BYTES, f'{path.name} is larger than {MAX_SIGNATURE_BYTES} bytes')
+
+
 def check_leg_record(record, name):
     """An installer build record with every provenance field present and well formed."""
     invalid = f'installer leg {name} record '
@@ -549,6 +567,8 @@ def verify_site(site, repo, commit, profile, notes_path, stage, expected_files=N
     if stage == 'signed':
         require(expected_files is not None, 'the signed stage needs the unsigned verification report')
         require(digests(site, unsigned) == expected_files, 'unsigned files changed after verification')
+        for signature in (BINARY + '.asc', 'install.sh.asc', 'SHA256SUMS.asc'):
+            check_signature_size(site / signature)
         require((site / 'SHA256SUMS').read_bytes() == render_sha256sums(site), 'SHA256SUMS differs from the site')
         for signature, data in ((BINARY + '.asc', BINARY), ('install.sh.asc', 'install.sh'),
                                 ('SHA256SUMS.asc', 'SHA256SUMS')):
@@ -621,12 +641,14 @@ def sign(site, gnupghome, fingerprint, repo, commit, profile, notes_path, expect
             signature = site / (name + '.asc')
             written.append(signature)
             release_sign.detach_sign(site / name, signature, gnupghome, fingerprint, passphrase_file)
+            check_signature_size(signature)
             release_sign.verify_detached(signature, site / name, gnupghome, fingerprint)
         sums = site / 'SHA256SUMS'
         written.append(sums)
         write_new(sums, render_sha256sums(site))
         written.append(site / 'SHA256SUMS.asc')
         release_sign.detach_sign(sums, site / 'SHA256SUMS.asc', gnupghome, fingerprint, passphrase_file)
+        check_signature_size(site / 'SHA256SUMS.asc')
         release_sign.verify_detached(site / 'SHA256SUMS.asc', sums, gnupghome, fingerprint)
     except BaseException:
         for path in written:
@@ -837,9 +859,15 @@ def main(argv=None):
                 expected = unsigned_report(args.expected_files)
             result = verify_site(args.site, args.repo, args.source_commit, args.profile, notes_path, args.stage,
                                  expected)
-            result['total_bytes'] = sum((args.site / name).stat().st_size for name in site_files(args.site))
-            require(args.max_bytes is None or result['total_bytes'] <= args.max_bytes,
-                    f"the site is {result['total_bytes']} bytes, above the {args.max_bytes}-byte size budget")
+            files = site_files(args.site)
+            result['total_bytes'] = budgeted = sum((args.site / name).stat().st_size for name in files)
+            size = f'the site is {budgeted} bytes'
+            if args.stage == 'unsigned':
+                # The budget is the preflight's reserve for the site as Pages serves it, so what sign adds counts.
+                budgeted = result['signed_bytes_at_most'] = budgeted + signing_bytes(files)
+                size += f' and at most {budgeted} once signed'
+            require(args.max_bytes is None or budgeted <= args.max_bytes,
+                    f'{size}, above the {args.max_bytes}-byte size budget')
         elif args.command == 'sign':
             passphrase = (release_sign.check_passphrase_file(args.passphrase_file)
                           if args.passphrase_file else None)

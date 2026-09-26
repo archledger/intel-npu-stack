@@ -13,6 +13,7 @@ import tarfile
 import tempfile
 import tomllib
 import unittest
+from unittest import mock
 
 import release_installer as installer
 import release_sign
@@ -463,18 +464,60 @@ class Refusals(Case):
                             handle.addfile(info, data)
                 self.refused('archive', site_tool.render_notes, self.f.signed, tar)
 
-    def test_site_size_budget_is_enforced_before_signing(self):
-        common = ['check', '--repo', str(self.f.repo), '--source-commit', self.f.commit, '--site', str(self.f.site),
-                  '--profile', str(self.f.profile), '--stage', 'unsigned']
+    def test_the_size_budget_leaves_room_for_the_files_signing_adds(self):
+        # The preflight reserves the budget for the site as Pages serves it, so the unsigned site must fit it together
+        # with SHA256SUMS, whose size is known before signing, and three signatures of at most MAX_SIGNATURE_BYTES.
+        common = ['check', '--repo', str(self.f.repo), '--source-commit', self.f.commit,
+                  '--profile', str(self.f.profile)]
+        unsigned = common + ['--site', str(self.f.site), '--stage', 'unsigned']
         size = sum(path.stat().st_size for path in self.f.site.rglob('*') if path.is_file())
+        listed = [*site_tool.site_files(self.f.site), site_tool.BINARY + '.asc', 'install.sh.asc']
+        sums = sum(len(f'{"0" * 64}  {name}\n'.encode()) for name in listed)
+        most = size + sums + 3 * site_tool.MAX_SIGNATURE_BYTES
         report = self.work / 'verification-report.json'
-        # A site of exactly the budget passes, and the report records its size for the approver.
+        # A site that fits exactly once signed passes, and the report records both sizes for the approver.
         with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(site_tool.main(common + ['--max-bytes', str(size), '--report', str(report)]), 0)
-        self.assertEqual(json.loads(report.read_text())['total_bytes'], size)
+            self.assertEqual(site_tool.main(unsigned + ['--max-bytes', str(most), '--report', str(report)]), 0)
+        recorded = json.loads(report.read_text())
+        self.assertEqual((recorded['total_bytes'], recorded['signed_bytes_at_most']), (size, most))
+        for budget in [most - 1, size]:  # a site that fits only before signing is refused before anyone signs
+            with self.subTest(budget=budget):
+                with contextlib.redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit):
+                    site_tool.main(unsigned + ['--max-bytes', str(budget)])
+                self.assertIn(f'the site is {size} bytes and at most {most} once signed, above the {budget}-byte '
+                              'size budget', errors.getvalue())
+        # Signing the same site stays within that bound, and SHA256SUMS is exactly the size counted for it.
+        signed_size = sum(path.stat().st_size for path in self.f.signed.rglob('*') if path.is_file())
+        self.assertLessEqual(signed_size, most)
+        self.assertEqual((self.f.signed / 'SHA256SUMS').stat().st_size, sums)
+        # The signed stage holds the site as it is to the budget.
+        signed = common + ['--site', str(self.f.signed), '--stage', 'signed', '--expected-files', str(report)]
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(site_tool.main(signed + ['--max-bytes', str(signed_size)]), 0)
         with contextlib.redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit):
-            site_tool.main(common + ['--max-bytes', str(size - 1)])
-        self.assertIn(f'the site is {size} bytes, above the {size - 1}-byte size budget', errors.getvalue())
+            site_tool.main(signed + ['--max-bytes', str(signed_size - 1)])
+        self.assertIn(f'the site is {signed_size} bytes, above the {signed_size - 1}-byte size budget',
+                      errors.getvalue())
+
+    def test_every_signature_stays_within_the_size_counted_for_it(self):
+        limit = site_tool.MAX_SIGNATURE_BYTES
+        real = release_sign.detach_sign
+        for name in [site_tool.BINARY + '.asc', 'install.sh.asc', 'SHA256SUMS.asc']:
+            with self.subTest(name):
+                def oversized(data, output, *args):
+                    real(data, output, *args)
+                    if Path(output).name == name:
+                        Path(output).write_bytes(Path(output).read_bytes() + b' ' * limit)
+                site = self.copy(self.f.site)
+                with mock.patch.object(release_sign, 'detach_sign', oversized):
+                    self.refused(f'{name} is larger than {limit} bytes', self.f.sign, site)
+                self.assertFalse(any((site / file).exists() for file in site_tool.FINALIZE_FILES))
+                shutil.rmtree(site.parent)
+                signed = self.copy(self.f.signed)
+                (signed / name).write_bytes((signed / name).read_bytes() + b' ' * limit)
+                (signed / 'SHA256SUMS').write_bytes(site_tool.render_sha256sums(signed))
+                self.refused(f'{name} is larger than {limit} bytes', self.f.verify, signed, 'signed')
+                shutil.rmtree(signed.parent)
 
     def test_signing_uses_only_the_committed_release_key(self):
         site = self.copy(self.f.site)

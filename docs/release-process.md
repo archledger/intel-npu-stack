@@ -83,15 +83,16 @@ existing release, retired ones included, and must not be in the registry yet.
 That site plus a reserve for the new version must fit the 950 MiB budget. The
 new site is not built yet, so the preflight reserves `SITE_BUDGET_BYTES`
 (300 MiB), the per-version limit that `verify` then enforces on the unsigned
-site it composes. A dispatch therefore needs the versions that stay served to
-take at most 650 MiB. A retired version that Pages still serves is neither
-counted nor checked live, since the site this run deploys leaves it out.
-Signing adds only the three signatures and `SHA256SUMS`, and the
-`Classify the release state` step and `publish-release` repeat the room check
-with the real size of the signed site before anything is created. Right before
-publishing, `publish-release` also requires the other published `vX.Y.Z`
-releases and the `v` tags to be unchanged, and the versions that stay served
-to be still live.
+site it composes together with the files signing will add: `SHA256SUMS`,
+counted exactly, and three signatures of at most 4096 bytes each. `finalize`
+holds the signed site to the same limit. A dispatch therefore needs the
+versions that stay served to take at most 650 MiB. A retired version that Pages
+still serves is neither counted nor checked live, since the site this run
+deploys leaves it out. The `Classify the release state` step and
+`publish-release` repeat the room check with the real size of the signed site
+before anything is created. Right before publishing, `publish-release` also
+requires the other published `vX.Y.Z` releases and the `v` tags to be
+unchanged, and the versions that stay served to be still live.
 
 ## Approvals
 

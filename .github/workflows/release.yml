@@ -446,6 +446,7 @@ jobs:
         run: >-
           python3 src/scripts/ci/release_site.py check --source-commit "$GITHUB_SHA" --site "work/unsigned/site/$VERSION"
           --profile "src/$PROFILE" --stage signed --expected-files work/unsigned/verification/verification-report.json
+          --max-bytes "$SITE_BUDGET_BYTES"
       - name: Archive the site and write the release notes
         run: >-
           mkdir -p work/publication/assets && python3 src/scripts/ci/release_site.py archive --source-commit "$GITHUB_SHA"
