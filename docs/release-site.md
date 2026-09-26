@@ -133,7 +133,12 @@ check before writing, and it refuses an output path inside the site. `notes`
 requires the archive to be byte for byte the canonical archive of the site. Report and notes paths must not exist yet and are
 checked before anything runs. The
 release notes are linted against tool and product names that public release
-text must not carry.
+text must not carry. They link the site's files, never the bare version
+directory, which has no index page. `compose-pages` renders the notes of every
+served release with its own `release_site.py` and requires each release to
+carry them, so a change to the rendering needs the notes of every published
+release updated to the new rendering before the next release. GitHub keeps the
+title and notes of an immutable release editable.
 
 `serve-test` runs as root in a disposable container in which the Pages host
 resolves only to 127.0.0.1. It performs these checks:
