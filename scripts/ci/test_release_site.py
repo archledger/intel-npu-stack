@@ -395,6 +395,8 @@ class Lifecycle(Case):
         command = (self.f.signed / 'primary-command.txt').read_text().rstrip('\n')
         short = f"curl --disable --proto '=https' --proto-redir '=https' -fsSL {BASE_URL}install.sh | sh"
         self.assertEqual(parser.code_blocks, [command, short])
+        # The dry run is shown in a form that runs: flags reach install.sh through sh -s --.
+        self.assertIn('<code>| sh -s -- --dry-run</code>', page)
         relative = [link for link in parser.links if not link.startswith('https://')]
         self.assertTrue(relative)
         for link in relative:

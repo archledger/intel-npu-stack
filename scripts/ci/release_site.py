@@ -750,8 +750,8 @@ def render_index(matrix_bytes, command, version):
         f'<p>Signed Fedora {e(platform["version_id"])} {e(platform["arch"])} packages for the Intel NPU on PCI '
         f'{e(hardware)}, profile <code>{e(matrix["profile"]["id"])}</code> ({e(matrix["profile"]["status"])}).</p>',
         '<h2>Install</h2>',
-        '<p>Run as a normal user. The installer shows its plan and asks before it changes anything; add '
-        '<code>--dry-run</code> to see the plan only.</p>',
+        '<p>Run as a normal user. The installer shows its plan and asks before it changes anything. To see the '
+        'plan only, end the short form below with <code>| sh -s -- --dry-run</code>.</p>',
         f'<pre><code>{e(command.rstrip(chr(10)))}</code></pre>',
         '<p>The short form trusts the HTTPS download of <code>install.sh</code> instead of checking its SHA-256; '
         'everything after it is checked the same way. The pipeline exits with the status of <code>sh</code>, so '
