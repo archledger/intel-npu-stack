@@ -6,6 +6,7 @@
   release_publish.py check-unpublished --phase publish --registry FILE --assets DIR --sha COMMIT
   release_publish.py publish-release --registry FILE --assets DIR --notes FILE --sha COMMIT
   release_publish.py compose-pages --registry FILE --output _site --manifest FILE [--new-version V]
+  release_publish.py check-deploy --registry FILE --pages-manifest FILE
   release_publish.py verify-live --archive FILE --pages-manifest FILE --sha COMMIT [--fetched DIR]
                                  [--timeout SECONDS]
 
@@ -16,7 +17,7 @@ to GITHUB_SHA, and options must be spelled in full. The version, base URL and
 release key come from the committed trust seam of --repo.
 
 Versions are published in increasing order, and the gates compose-pages applies
-to the versions already served run before anything irreversible. Both
+to the other versions run before anything irreversible. Both
 check-unpublished phases and publish-release also run compose-pages dry into a
 temporary directory over every non-draft vX.Y.Z release but this version (the
 room check) before they classify or create anything: the preflight after its
@@ -31,18 +32,21 @@ this version's bytes must fit the Pages budget. The preflight reserves
 publish-release reserve the size of the new site.
 
 check-unpublished preflight refuses unless GitHub Pages is served by GitHub
-Actions at the committed base URL, no tag or release (draft or published)
-exists for the version, the live release.json returns 404 and the room check
-passes. The publish phase first checks the publication itself: SHA256SUMS.asc
-must pass the release-key policy, the archive must hold exactly the files
-SHA256SUMS lists, its signed publication-manifest.json must name this version,
-base URL, release key and commit, install.sh.asc must pass the release-key
-policy, the archive must be the canonical archive of its site, and the site
-must fit the Pages budget. After the room check it classifies the state as
-fresh, draft-resume (a draft whose assets are a byte-identical subset of this
-publication, targeting the release commit, with no tag at another commit) or
-published-resume (an immutable release with exactly these assets whose tag is
-the release commit), and refuses anything else.
+Actions at the committed base URL, no tag or release exists for the version,
+the live release.json returns 404 and the room check passes. GitHub lists
+drafts only to a token that can push, and the release workflow's preflight
+token can only read, so a draft an aborted run left is not seen there: the
+publish phase finds it and refuses one it cannot resume. The publish phase
+first checks the publication itself: SHA256SUMS.asc must pass the release-key
+policy, the archive must hold exactly the files SHA256SUMS lists, its signed
+publication-manifest.json must name this version, base URL, release key and
+commit, install.sh.asc must pass the release-key policy, the archive must be
+the canonical archive of its site, and the site must fit the Pages budget.
+After the room check it classifies the state as fresh, draft-resume (a draft
+whose assets are a byte-identical subset of this publication, targeting the
+release commit, with no tag at another commit) or published-resume (an
+immutable release with exactly these assets whose tag is the release commit),
+and refuses anything else.
 
 publish-release runs the same publication checks and the room check, requires
 the notes to be the release_site rendering of this site and archive, creates or
@@ -84,13 +88,30 @@ must be the committed version and the newest composed version, so a re-run of
 an older run cannot serve again what a later registry retired. The live
 SHA256SUMS of every version other than --new-version must equal its release's,
 and the site must fit the size budget. The manifest records each composed
-version with the digests of its archive and SHA256SUMS, and each retired
-version left out with the files it could have served: those its SHA256SUMS
-lists and the two sums files, or only the sums files when its SHA256SUMS does
-not parse, lists an unsafe path or more than MAX_MEMBERS files, since such a
-release never passed compose-pages. It must be a new file in an existing
-directory, neither inside the site nor containing it; this is checked before
-anything is downloaded, and a refusal leaves neither the site nor the manifest.
+version with the digests of its archive and SHA256SUMS, its release id and the
+commit its tag names, and each retired version left out with the files it could
+have served: those its SHA256SUMS lists and the two sums files, or only the sums
+files when its SHA256SUMS does not parse, lists an unsafe path or more than
+MAX_MEMBERS files, since such a release never passed compose-pages. It must be a
+new file in an existing directory, neither inside the site nor containing it;
+this is checked before anything is downloaded, and a refusal leaves neither the
+site nor the manifest.
+
+check-deploy runs right before a Pages deployment, because a re-run of an older
+run's pages-deploy would put that run's composition live again. The Pages
+manifest must be the record of composing the committed version, that version
+must be the newest non-draft vX.Y.Z release, retired ones included, and the
+composed versions must be exactly the non-draft vX.Y.Z releases --registry does
+not retire, each with the SHA256SUMS digest and release id it was composed with
+and its tag still naming the commit it named then, so a release deleted and
+created again on its tag, even with a copy of its SHA256SUMS, or a moved tag
+stops it. As in compose-pages, every other vX.Y.Z tag must have an entry in
+--registry, so a newer release deleted with its tag kept still stops it, and the
+live SHA256SUMS of every composed version but the committed one must be the
+composed one, so a version a later deployment removed is not served again even
+once that release and its tag are deleted. Only the committed version is not
+checked live, since it is not served before its first deployment; such a re-run
+can therefore serve it again although the deleted release's registry retired it.
 
 verify-live requires the Pages manifest compose-pages wrote with this version as
 --new-version, recording this archive and the archive's SHA256SUMS, and the
@@ -697,7 +718,7 @@ def compose_releases(gh, key, fingerprint, registry, root_url, output, pending=N
             check_standalone(data[release_assets(version)[0]], version, data)
             versions[version] = {'sha256sums_sha256': release_site.sha(data['SHA256SUMS']),
                                  'archive_sha256': release_site.sha(data[release_assets(version)[0]]),
-                                 'files': files, 'release_id': release.get('id')}
+                                 'files': files, 'release_id': release.get('id'), 'commit': tag_commit}
     for entry in registry['published']:
         require(entry['version'] in versions, f"published version {entry['version']} is missing; a deleted "
                 'release can be neither served nor retired, so its entry and its tag are removed by hand after review')
@@ -808,6 +829,68 @@ def compose_pages(gh, values, key, fingerprint, registry_path, output, manifest_
     return manifest
 
 
+def pages_record(path, values):
+    """The Pages manifest compose-pages wrote with the committed version as --new-version."""
+    version = values['version']
+    record = json.loads(Path(path).read_text())
+    retired = record.get('retired') if isinstance(record, dict) else None
+    require(isinstance(record, dict) and record.get('schema_version') == 1
+            and record.get('base_url') == values['base_url'] and record.get('new_version') == version
+            and isinstance(record.get('versions'), dict) and isinstance(retired, dict)
+            and all(TAG.fullmatch('v' + old) and isinstance(paths, list)
+                    and all(isinstance(path, str) and plain_path(path) for path in paths)
+                    for old, paths in retired.items()),
+            f'the Pages manifest is not the record of composing {version}')
+    return record
+
+
+def check_deploy(gh, values, registry_path, pages_manifest, fetch=fetch_public):
+    """Right before a deployment: the recorded composition is still the one compose-pages would serve.
+
+    A job re-run reuses its run's artifacts, so a re-run of an older run's pages-deploy could otherwise put that
+    run's composition live again after a newer release. The committed version must be the newest non-draft vX.Y.Z
+    release, retired ones included, and the composed versions exactly the non-draft vX.Y.Z releases the run's
+    registry does not retire, each with the SHA256SUMS digest and release id it was composed with and its tag still
+    naming the commit it named then: compose-pages binds each release to that commit, so it would not compose a release
+    created again on its tag, even with a copy of its SHA256SUMS, or one whose tag moved. Every other vX.Y.Z tag must
+    have an entry in that registry, as compose-pages requires: GitHub keeps the tag of a deleted release, so a newer
+    release deleted after this composition still stops it. As in compose-pages, the live SHA256SUMS of every composed
+    version but the committed one must be the composed one, so a version a later deployment removed is not served again
+    even once that release and its tag are deleted. Only the committed version is not checked live, since it is not
+    served before its first deployment; such a re-run can therefore serve it again although the deleted release's
+    registry retired it. It reads the release and tag listings, the tag of each composed version and those live files.
+    """
+    version = values['version']
+    record = pages_record(pages_manifest, values)
+    registry = load_registry(registry_path)
+    retired = {entry['version'] for entry in registry['retired']}
+    releases = sorted((release for release in gh.releases()
+                       if not release.get('draft') and TAG.fullmatch(release.get('tag_name') or '')),
+                      key=lambda release: version_key(release['tag_name'][1:]))
+    stale = f'the composition of {version} is out of date: '
+    newest = releases[-1]['tag_name'][1:] if releases else None
+    require(newest == version, stale + f'the newest release is {newest}')
+    served = [release for release in releases if release['tag_name'][1:] not in retired]
+    composed = sorted(record['versions'], key=version_key)
+    names = [release['tag_name'][1:] for release in served]
+    require(names == composed, stale + f"compose-pages would serve {', '.join(names)}, not {', '.join(composed)}")
+    for release in served:
+        tag = release['tag_name']
+        entry = record['versions'][tag[1:]]
+        digests = [asset.get('digest') for asset in release.get('assets', []) if asset.get('name') == 'SHA256SUMS']
+        # A release deleted and created again on its tag, even with a copy of its SHA256SUMS, has another id.
+        require(isinstance(entry, dict) and digests == ['sha256:' + str(entry.get('sha256sums_sha256'))]
+                and isinstance(release.get('id'), int) and release.get('id') == entry.get('release_id'),
+                stale + f'release {tag} is not the release it composed')
+        # compose-pages bound the release to the commit its tag named; a moved or deleted tag no longer does.
+        commit = entry.get('commit')
+        require(isinstance(commit, str) and gh.tag_commit(tag) == commit,
+                stale + f'tag {tag} no longer names the commit it composed')
+    check_recorded(gh, registry, version)
+    check_live_sums(fetch, site_root(values['base_url']), record['versions'], version)
+    return {'new_version': version, 'versions': names}
+
+
 def site_location(base_url):
     parts = urllib.parse.urlsplit(base_url)
     segments = parts.path.strip('/').split('/')
@@ -827,16 +910,9 @@ def verify_live(values, key, fingerprint, archive, pages_manifest, commit, fetch
     require(isinstance(commit, str) and re.fullmatch(r'[0-9a-f]{40}', commit) is not None,
             'verify-live needs the 40-hex release commit')
     # The record pages-build wrote for this version names every other version the deployed site serves, and each
-    # retired version it left out with the files that version served.
-    record = json.loads(Path(pages_manifest).read_text())
-    retired = record.get('retired') if isinstance(record, dict) else None
-    require(isinstance(record, dict) and record.get('schema_version') == 1 and record.get('base_url') == base
-            and record.get('new_version') == version and isinstance(record.get('versions'), dict)
-            and isinstance(retired, dict)
-            and all(TAG.fullmatch('v' + old) and isinstance(paths, list)
-                    and all(isinstance(path, str) and plain_path(path) for path in paths)
-                    for old, paths in retired.items()),
-            f'the Pages manifest is not the record of composing {version}')
+    # retired version it left out with the files that version could have served.
+    record = pages_record(pages_manifest, values)
+    retired = record['retired']
     expected = {}
     with open_archive(archive) as tar:
         for member in tar.getmembers():
@@ -908,7 +984,8 @@ def verify_live(values, key, fingerprint, archive, pages_manifest, commit, fetch
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
                                      allow_abbrev=False)
-    parser.add_argument('command', choices=['check-unpublished', 'publish-release', 'compose-pages', 'verify-live'])
+    parser.add_argument('command', choices=['check-unpublished', 'publish-release', 'compose-pages', 'check-deploy',
+                                            'verify-live'])
     parser.add_argument('--repo', type=Path, default=REPO)
     parser.add_argument('--phase', choices=['preflight', 'publish'])
     parser.add_argument('--assets', type=Path)
@@ -955,6 +1032,10 @@ def main(argv=None):
                 require(None not in (args.assets, args.notes, args.sha, args.registry),
                         'publish-release needs --assets, --notes, --sha and --registry')
                 result = publish_release(gh, values, args.assets, args.notes, args.sha, key, args.registry)
+            elif args.command == 'check-deploy':
+                require(None not in (args.registry, args.pages_manifest),
+                        'check-deploy needs --registry and --pages-manifest')
+                result = check_deploy(gh, values, args.registry, args.pages_manifest)
             else:
                 require(None not in (args.registry, args.output, args.manifest),
                         'compose-pages needs --registry, --output and --manifest')

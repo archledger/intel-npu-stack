@@ -7,12 +7,15 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import re
 import shutil
 import tarfile
 import tempfile
+import tomllib
 import unittest
 
 import release_inputs as inputs_tool
+import test_release_installer
 import test_release_sign
 import test_release_tar as tar_fixtures
 
@@ -243,6 +246,108 @@ class Inputs(unittest.TestCase):
                                      '--output', str(self.work / 'cli'), '--report', str(report)])
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(report.read_text())['archive_sha256'], sha(self.archive))
+
+
+@unittest.skipUnless(shutil.which('gpg') and shutil.which('git'), 'gpg and git are required')
+class Dispatch(unittest.TestCase):
+    SOURCE = Path(__file__).resolve().parents[2]
+    GOOD = {'ref': 'refs/heads/main', 'version': '0.1.0', 'url': URL, 'digest': 'a' * 64,
+            'profile': 'profiles/fedora/44/lunar-lake-x86_64.toml'}
+
+    def setUp(self):
+        # A committed scratch checkout with the trust seam, the profile and its support notes, whatever this tree's
+        # checkout is. Its profile has another kernel window than this tree's copy at the same path, so the notes
+        # must be checked against the profile of the checkout given, not a file read from the working directory.
+        self.repo = Path(tempfile.mkdtemp(prefix='dispatch-'))
+        self.addCleanup(shutil.rmtree, self.repo, True)
+        for relative in ['Cargo.toml', 'crates/stack-install/src/trust.rs',
+                         'crates/stack-install/src/trust/release-public.asc',
+                         'packaging/fedora/44/repository/assemble.py', 'profiles/README.md', self.GOOD['profile']]:
+            (self.repo / relative).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(self.SOURCE / relative, self.repo / relative)
+        profile = self.repo / self.GOOD['profile']
+        text = profile.read_text()
+        for key, value in [('min', '99.0.0'), ('max_exclusive', '99.0.1')]:
+            text, count = re.subn(f'(?m)^{key} = "[0-9.]+"$', f'{key} = "{value}"', text)
+            self.assertEqual(count, 1, key)
+        profile.write_text(text)
+        self.notes = self.repo / 'release' / self.GOOD['version'] / 'support-notes.toml'
+        self.write_notes()
+        test_release_installer.git(self.repo, 'init', '-q')
+        test_release_installer.git(self.repo, 'add', '-A')
+        test_release_installer.git(self.repo, 'commit', '-q', '-m', 'scratch')
+
+    def write_notes(self, **changes):
+        """Support notes for this release and profile, testing the lowest kernel of the profile's window."""
+        profile = tomllib.loads((self.repo / self.GOOD['profile']).read_text())
+        fields = {'stack_release': self.GOOD['version'], 'profile_id': profile['id'],
+                  'kernel': f"{profile['kernel']['min']}-200.fc{profile['platform']['version_id']}", **changes}
+        self.notes.parent.mkdir(parents=True, exist_ok=True)
+        self.notes.write_text(f'schema_version = 1\nstack_release = "{fields["stack_release"]}"\n'
+                              f'profile_id = "{fields["profile_id"]}"\nnot_supported = []\n\n'
+                              f'[[tested_kernels]]\nrelease = "{fields["kernel"]}"\ntests = ["install lifecycle"]\n')
+
+    def check(self, **changes):
+        return inputs_tool.dispatch_check(self.repo, **{**self.GOOD, **changes})
+
+    def test_a_well_formed_dispatch_from_main_passes(self):
+        result = self.check()
+        self.assertEqual((result['version'], result['base_url']),
+                         ('0.1.0', 'https://archledger.github.io/intel-npu-stack/0.1.0/'))
+        profile = tomllib.loads((self.repo / self.GOOD['profile']).read_text())
+        self.assertEqual((result['support_notes'], result['tested_kernels']),
+                         ('release/0.1.0/support-notes.toml',
+                          [f"{profile['kernel']['min']}-200.fc{profile['platform']['version_id']}"]))
+
+    def test_the_support_notes_are_checked_as_compose_checks_them_before_any_key(self):
+        # verify renders them into the support matrix after approval 1 has signed; a bad file must stop the dispatch.
+        cases = [('support notes name another profile', {'profile_id': 'fedora-44-other'}),
+                 ('support notes name another release', {'stack_release': '0.0.9'}),
+                 ('lies outside the profile kernel window', {'kernel': '9.9.9-200.fc44'}),
+                 ('invalid kernel version', {'kernel': '7.2.5-200.fc43'})]
+        for message, changes in cases:
+            with self.subTest(message):
+                self.write_notes(**changes)
+                with self.assertRaisesRegex(inputs_tool.InputsRefused, message):
+                    self.check()
+        with self.subTest('unreadable'):
+            self.notes.write_text('schema_version = \n')
+            with self.assertRaisesRegex(inputs_tool.InputsRefused, 'support-notes.toml is not readable TOML'):
+                self.check()
+        with self.subTest('untracked'):
+            self.write_notes()
+            test_release_installer.git(self.repo, 'rm', '-q', '--cached', self.notes.relative_to(self.repo).as_posix())
+            with self.assertRaisesRegex(inputs_tool.InputsRefused, 'the support notes must be a tracked file'):
+                self.check()
+        with self.subTest('missing'):
+            self.notes.unlink()
+            with self.assertRaisesRegex(inputs_tool.InputsRefused, 'the support notes must be a tracked file'):
+                self.check()
+
+    def test_the_support_notes_are_checked_against_the_profile_of_the_given_checkout(self):
+        # The preflight runs from outside its checkout. Notes that fit this tree's copy of the profile must fail
+        # against the checkout's, whose kernel window is another.
+        tree = tomllib.loads((self.SOURCE / self.GOOD['profile']).read_text())
+        self.write_notes(kernel=f"{tree['kernel']['min']}-200.fc{tree['platform']['version_id']}")
+        with self.assertRaisesRegex(inputs_tool.InputsRefused, 'lies outside the profile kernel window'):
+            self.check()
+
+    def test_dispatch_refusals(self):
+        # Present in the checkout but never committed: only the tracked-file check refuses it.
+        shutil.copyfile(self.repo / self.GOOD['profile'], self.repo / 'profiles/fedora/44/untracked.toml')
+        cases = [('tracked file', {'profile': 'profiles/fedora/44/untracked.toml'}),
+                 ('refs/heads/main', {'ref': 'refs/heads/feature'}), ('VERSION', {'version': '0.2.0'}),
+                 ('HTTPS', {'url': 'http://example.org/x.tar.gz'}), ('SHA-256', {'digest': 'A' * 64}),
+                 ('tracked file', {'profile': 'profiles/fedora/44/missing.toml'}),
+                 ('under profiles/', {'profile': 'Cargo.toml'}),
+                 ('under profiles/', {'profile': '../outside/profile.toml'}),
+                 # Each of these names a tracked file of the checkout, so only the shape of the path refuses it.
+                 ('under profiles/', {'profile': 'profiles/../profiles/fedora/44/lunar-lake-x86_64.toml'}),
+                 ('under profiles/', {'profile': 'profiles/README.md'}),
+                 ('under profiles/', {'profile': str(self.repo / self.GOOD['profile'])})]
+        for message, changes in cases:
+            with self.subTest(changes), self.assertRaisesRegex(Exception, message):
+                self.check(**changes)
 
 
 if __name__ == '__main__':
