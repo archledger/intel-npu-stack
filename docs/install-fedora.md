@@ -8,8 +8,9 @@ It supports Fedora 44 x86_64 on allowlisted Lunar Lake hardware (PCI
 `8086:643e`) with kernels `[7.2.5, 7.3.0)`, through the qualified Fedora 44
 Lunar Lake profile on the stable channel. Each release is served from
 `https://archledger.github.io/intel-npu-stack/<version>/`, as described in
-[release-site.md](release-site.md). The directory has no index page, so
-its URL alone returns 404; every other file in it is listed in the signed
+[release-site.md](release-site.md). The 0.1.1 directory has no index page,
+so its URL alone returns 404 (later releases have one); every other file in it
+is listed in the signed
 [`SHA256SUMS`](https://archledger.github.io/intel-npu-stack/0.1.1/SHA256SUMS).
 Release 0.1.0 is retired: its installer fails on Fedora with SELinux
 enforcing (#53). To verify before running, download `install.sh` and `install.sh.asc`, check
