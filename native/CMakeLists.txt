@@ -171,6 +171,19 @@ if(BUILD_TESTING)
         "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_OPENVINO_RUNTIME_DIR}"
   )
 
+  # The issue #20 reproducer, run on CPU; its NPU cases are hardware qualification.
+  add_executable(npu_reshape_bounds "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/reproducers/npu-reshape-bounds.cpp")
+  target_link_libraries(npu_reshape_bounds PRIVATE openvino::runtime)
+  intel_npu_harden_target(npu_reshape_bounds)
+  add_test(NAME npu_reshape_bounds COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/reproducer_test.py" "$<TARGET_FILE:npu_reshape_bounds>")
+  set_tests_properties(
+    npu_reshape_bounds
+    PROPERTIES
+      ENVIRONMENT_MODIFICATION
+        "LD_LIBRARY_PATH=path_list_prepend:${INTEL_NPU_OPENVINO_RUNTIME_DIR}"
+  )
+
   add_executable(level_zero_mapping_test tests/level_zero_mapping_test.cpp)
   target_link_libraries(level_zero_mapping_test PRIVATE intel_npu_level_zero)
   intel_npu_harden_target(level_zero_mapping_test)

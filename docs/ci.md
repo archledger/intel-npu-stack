@@ -11,7 +11,7 @@ or device power transition is part of this workflow.
 | Check | Scope |
 |---|---|
 | Fedora quality | Digest-pinned Fedora 44 x86_64 container, pinned Rust1.85.0 with rustfmt/Clippy, the unchanged locked project quality gate, and Python packaging/bootstrap/VM-runner/CI contract suites. Test execution is unprivileged, with four build jobs and two Rust test threads. |
-| Native SDK and C++ CodeQL | Hash-pinned OpenVINO2026.2.0 C++ wheel assets and LevelZero1.28.6 source, native helper build/CTest/ELF hardening checks, and manually traced C++ analysis. No NPU is accessed. |
+| Native SDK and C++ CodeQL | Hash-pinned OpenVINO2026.2.0 C++ wheel assets and LevelZero1.28.6 source, native helper build/CTest/ELF hardening checks, the issue #20 reproducer's CPU cases, and manually traced C++ analysis. No NPU is accessed. |
 | CodeQL (actions/python/rust) | Default CodeQL queries with no-build analysis. Copied third-party licensing/source excerpts are excluded from project-source analysis; maintained code and tests remain in scope. |
 | DCO sign-off | Author-matching `Signed-off-by` trailers from actual Git trailer parsing, checked across the immutable contribution range. Also runs hash-pinned actionlint for workflow syntax. |
 | Dependency review | Pull-request dependency changes are checked for high/critical known vulnerabilities. It does not comment on PRs or publish packages. |
@@ -70,8 +70,8 @@ Rust1.85.0 toolchain, and an unprivileged workspace. Run provisioning only in
 a disposable build environment. The native check also requires its pinned
 SDK and an empty build directory as documented by `scripts/check-native.sh`.
 
-CI success does not complete the deferred hardware suspend/resume or
-removal/restoration cases, promote a candidate, or establish production trust.
+CI success does not replace the hardware cases, promote a candidate, or
+establish production trust.
 
 ## Upstream watcher
 
