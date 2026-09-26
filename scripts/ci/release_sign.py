@@ -22,6 +22,10 @@ Inputs directory contract:
   index.json, unsigned-rpms/, candidate.toml, package-index.json,
   spdx-index.json, source-policy.json, notices/, evidence/spdx/,
   rollback-index.json, rollback-rpms/
+
+package-index.json maps each runtime package to its regular_files, a map from
+each canonical absolute payload path to its sha256 and size, as the aggregate
+writes it and assemble.py reads it.
 """
 import argparse
 import hashlib
@@ -382,11 +386,15 @@ def validate_inputs(inputs, profile, allow_candidate=False):
     owned = {}
     for name, record in sorted(package_index.items()):
         require(name in runtime, 'package index names a package that is not a runtime input: ' + name)
-        require(isinstance(record, dict) and isinstance(record.get('regular_files'), list),
-                'package index record lacks regular_files: ' + name)
-        for path in record['regular_files']:
-            require(isinstance(path, str) and path.startswith('/') and str(PurePosixPath(path)) == path,
-                    'noncanonical payload path in the package index: ' + str(path))
+        files = record.get('regular_files') if isinstance(record, dict) else None
+        require(isinstance(files, dict), 'package index record lacks regular_files: ' + name)
+        for path, payload in sorted(files.items()):
+            require(path.startswith('/') and str(PurePosixPath(path)) == path,
+                    'noncanonical payload path in the package index: ' + path)
+            require(isinstance(payload, dict) and isinstance(payload.get('sha256'), str)
+                    and DIGEST.fullmatch(payload['sha256']) is not None
+                    and type(payload.get('size')) is int and payload['size'] >= 0,
+                    'malformed payload record in the package index: ' + path)
             require(path not in owned, 'conflicting payload ownership in the package index: ' + path)
             owned[path] = name
 

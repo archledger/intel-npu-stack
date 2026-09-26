@@ -103,8 +103,10 @@ class InputsContract(unittest.TestCase):
         self.profile = Path(self.tmp.name) / 'profile.toml'
         self.profile.write_text(QUALIFIED_PROFILE)
         shutil.copyfile(self.profile, self.inputs / 'candidate.toml')
+        # As the aggregate writes it and assemble.py reads it: each regular file with its digest and size.
         (self.inputs / 'package-index.json').write_text(json.dumps(
-            {'openvino': {'component': 'openvino', 'regular_files': ['/usr/lib64/libopenvino.so.2620']}}))
+            {'openvino': {'component': 'openvino', 'declared_license': 'Apache-2.0',
+                          'regular_files': {'/usr/lib64/libopenvino.so.2620': {'sha256': 'f' * 64, 'size': 7}}}}))
         (self.inputs / 'source-policy.json').write_text(json.dumps(
             [{'name': 'openvino', 'license_files': ['openvino/LICENSE']}]))
         write(self.inputs / 'notices/openvino/LICENSE', b'Apache-2.0\n')
@@ -187,12 +189,19 @@ class InputsContract(unittest.TestCase):
             signer.validate_inputs(self.inputs, self.profile)
 
     def test_package_index_records_are_validated_before_any_key(self):
+        payload = {'sha256': 'f' * 64, 'size': 7}
         cases = {
             'regular_files': {'openvino': {'component': 'openvino'}},
-            'noncanonical': {'openvino': {'regular_files': ['usr/lib64/relative.so']}},
-            'runtime': {'openvino-devel': {'regular_files': ['/usr/include/x.h']}},
-            'ownership': {'openvino': {'regular_files': ['/usr/lib64/a.so']},
-                          'openvino-plugins': {'regular_files': ['/usr/lib64/a.so']}},
+            'lacks regular_files': {'openvino': {'regular_files': ['/usr/lib64/libopenvino.so.2620']}},
+            'noncanonical': {'openvino': {'regular_files': {'usr/lib64/relative.so': payload}}},
+            'runtime': {'openvino-devel': {'regular_files': {'/usr/include/x.h': payload}}},
+            'ownership': {'openvino': {'regular_files': {'/usr/lib64/a.so': payload}},
+                          'openvino-plugins': {'regular_files': {'/usr/lib64/a.so': payload}}},
+            'malformed payload': {'openvino': {'regular_files': {'/usr/lib64/a.so': {'sha256': 'F' * 64, 'size': 7}}}},
+            'malformed payload record': {'openvino': {'regular_files': {'/usr/lib64/a.so': {'sha256': 'f' * 64,
+                                                                                          'size': -1}}}},
+            'malformed payload record in': {'openvino': {'regular_files': {'/usr/lib64/a.so': {'sha256': 'f' * 64,
+                                                                                             'size': True}}}},
             'package index': ['not-an-object'],
         }
         for label, index in cases.items():
