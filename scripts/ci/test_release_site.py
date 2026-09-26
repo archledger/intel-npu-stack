@@ -3,6 +3,7 @@
 """Contract for composing, checking, signing, archiving and describing the versioned release site."""
 import contextlib
 import hashlib
+import html.parser
 import io
 import json
 import os
@@ -56,6 +57,39 @@ tests = ["install lifecycle", "doctor"]
 release = "7.2.6-200.fc44"
 tests = ["suspend and resume", "cold boot"]
 '''
+
+
+class PageParser(html.parser.HTMLParser):
+    """The landing page's title, <pre><code> blocks and links; an element closed out of order is an error."""
+
+    VOID = {'meta'}
+
+    def __init__(self):
+        super().__init__()
+        self.open_tags, self.links, self.code_blocks, self.title, self.text = [], [], [], None, None
+
+    def handle_starttag(self, tag, attrs):
+        if tag not in self.VOID:
+            self.open_tags.append(tag)
+        if tag == 'a':
+            self.links.append(dict(attrs)['href'])
+        if tag in {'title', 'code'}:
+            self.text = ''
+
+    def handle_endtag(self, tag):
+        if not self.open_tags or self.open_tags[-1] != tag:
+            raise AssertionError(f'unbalanced </{tag}>')
+        self.open_tags.pop()
+        if tag == 'title':
+            self.title = self.text
+        elif tag == 'code' and self.open_tags[-1:] == ['pre']:
+            self.code_blocks.append(self.text)
+        if tag in {'title', 'code'}:
+            self.text = None
+
+    def handle_data(self, data):
+        if self.text is not None:
+            self.text += data
 
 
 def sha_bytes(data):
@@ -245,6 +279,7 @@ class Lifecycle(Case):
         tree = set(site_tool.site_files(self.f.tree))
         self.assertTrue(tree <= files)
         self.assertEqual(files - tree, {BINARY, 'install.sh', 'primary-command.txt', 'support-matrix.json',
+                                        'index.html',
                                         'publication-manifest.json', 'records/installer-build.json',
                                         'records/installer-trust.rs',
                                         *('records/' + name for name in site_tool.SIGN_RECORDS)})
@@ -331,12 +366,42 @@ class Lifecycle(Case):
         self.assertIn(fixtures.sha(self.f.signed / 'SHA256SUMS'), notes)
         self.assertIn('gh attestation verify intel-npu-stack-0.1.0.tar -R archledger/intel-npu-stack', notes)
         self.assertIn('evidence/rollback/rollback-index.json', notes)
-        # The version directory has no index page (GitHub Pages answers 404), so only its files are linked.
-        self.assertNotRegex(notes, re.escape(BASE_URL) + r'(?![A-Za-z0-9`])')
+        # The site has a landing page, so the directory itself is linked.
+        self.assertIn(f'served from {BASE_URL}, whose page lists the install commands and files', notes)
         self.assertIn(f"curl --disable --proto '=https' --proto-redir '=https' -fsSL {BASE_URL}install.sh | sh",
                       notes)
         for name in ['SHA256SUMS', 'SHA256SUMS.asc', 'install.sh', 'install.sh.asc', 'support-matrix.json']:
             self.assertIn(f'[`{name}`]({BASE_URL}{name})', notes)
+
+    def test_notes_of_a_site_without_a_landing_page_link_only_files(self):
+        # Sites published before the landing page existed (0.1.1) must keep rendering the notes they carry.
+        site = self.copy(self.f.signed)
+        (site / 'index.html').unlink()
+        tar = self.work / 'plain' / 'intel-npu-stack-0.1.0.tar'
+        tar.parent.mkdir()
+        with tar.open('wb') as handle:
+            site_tool.write_archive(site, handle)
+        notes = site_tool.render_notes(site, tar).decode()
+        self.assertIn(f'served from `{BASE_URL}`. That directory has no index page;', notes)
+        self.assertNotRegex(notes, re.escape(BASE_URL) + r'(?![A-Za-z0-9`])')
+
+    def test_landing_page_carries_both_commands_and_links_the_site_files(self):
+        page = (self.f.signed / 'index.html').read_text()
+        parser = PageParser()
+        parser.feed(page)
+        parser.close()
+        self.assertEqual(parser.open_tags, [], 'every element is closed')
+        self.assertEqual(parser.title, 'Intel NPU Stack 0.1.0')
+        command = (self.f.signed / 'primary-command.txt').read_text().rstrip('\n')
+        short = f"curl --disable --proto '=https' --proto-redir '=https' -fsSL {BASE_URL}install.sh | sh"
+        self.assertEqual(parser.code_blocks, [command, short])
+        # The dry run is shown in a form that runs: flags reach install.sh through sh -s --.
+        self.assertIn('<code>| sh -s -- --dry-run</code>', page)
+        relative = [link for link in parser.links if not link.startswith('https://')]
+        self.assertTrue(relative)
+        for link in relative:
+            self.assertTrue((self.f.signed / link).is_file(), link)
+        self.assertIn('https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0', parser.links)
 
     def test_command_line_checks_the_signed_stage_against_the_report(self):
         report = self.work / 'unsigned-report.json'
@@ -759,6 +824,11 @@ class Refusals(Case):
         self.refused('primary-command.txt differs from its rendering', self.f.verify, site)
 
     def test_derived_files_must_equal_their_rendering(self):
+        site = self.copy(self.f.site)
+        with (site / 'index.html').open('a') as page:
+            page.write('<p>changed</p>\n')
+        self.refused('index.html differs from its rendering', self.f.verify, site)
+        shutil.rmtree(site.parent)
         for name in ['support-matrix.json', 'publication-manifest.json']:
             with self.subTest(name):
                 site = self.copy(self.f.site)

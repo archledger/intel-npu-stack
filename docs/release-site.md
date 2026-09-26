@@ -2,11 +2,14 @@
 
 A release is published as one immutable directory per version under the
 committed `BASE_URL` in `crates/stack-install/src/trust.rs`, for example
-`https://archledger.github.io/intel-npu-stack/0.1.0/`. The site root has no
-index and no `latest` alias. `scripts/ci/release_site.py` composes, checks,
-signs and archives that directory. `scripts/ci/release_serve.py` serves it
-locally as the Pages host and runs the published install path against it. The
-release workflow runs them as described in [release-process.md](release-process.md).
+`https://archledger.github.io/intel-npu-stack/0.1.0/`. From 0.1.2 each version
+directory holds `index.html`, a landing page rendered from the support matrix
+and the primary command, which GitHub Pages serves at the directory URL; 0.1.1
+and earlier have none. The site root has no index and no `latest` alias.
+`scripts/ci/release_site.py` composes, checks, signs and archives that
+directory. `scripts/ci/release_serve.py` serves it locally as the Pages host
+and runs the published install path against it. The release workflow runs them
+as described in [release-process.md](release-process.md).
 
 ## Layout
 
@@ -16,7 +19,7 @@ release workflow runs them as described in [release-process.md](release-process.
 | `intel-npu-stack-install`, `install.sh`, `primary-command.txt` | The pinned installer build; legs a and b must be byte-equal |
 | `records/provider-identity.json`, `records/signed-identity.json`, `records/profile-generation.json`, `records/profile-rpm-build.json` | The signing job's records |
 | `records/installer-build.json`, `records/installer-trust.rs` | Both leg records and the pinned trust seam |
-| `support-matrix.json`, `publication-manifest.json` | Rendered by `compose`, re-rendered by `check` |
+| `support-matrix.json`, `index.html` (from 0.1.2), `publication-manifest.json` | Rendered by `compose`, re-rendered by `check` |
 | `intel-npu-stack-install.asc`, `install.sh.asc`, `SHA256SUMS`, `SHA256SUMS.asc` | Added by `sign` |
 
 Names must be plain segments of `[A-Za-z0-9][A-Za-z0-9._+-]*`, so dotfiles,
@@ -106,9 +109,9 @@ trust seam and release key are the only trust anchors.
   profile, the signed identity's unsigned digest and a reproducible build pair.
   `assembly-manifest.json` is not signed, so its input digests are only a
   consistency check. Every record is validated against signed data.
-- It re-renders `install.sh`, `primary-command.txt`, `support-matrix.json` and
-  `publication-manifest.json` and requires byte equality, and it requires the
-  exact file set.
+- It re-renders `install.sh`, `primary-command.txt`, `support-matrix.json`,
+  `index.html` and `publication-manifest.json` and requires byte equality, and
+  it requires the exact file set.
 - It records the bytes of the site's regular files as `total_bytes` in its
   result and `--report`. With `--max-bytes N` it refuses a site larger than N
   bytes. At the unsigned stage it also records `signed_bytes_at_most`: the
@@ -133,12 +136,13 @@ check before writing, and it refuses an output path inside the site. `notes`
 requires the archive to be byte for byte the canonical archive of the site. Report and notes paths must not exist yet and are
 checked before anything runs. The
 release notes are linted against tool and product names that public release
-text must not carry. They link the site's files, never the bare version
-directory, which has no index page. `compose-pages` renders the notes of every
-served release with its own `release_site.py` and requires each release to
-carry them, so a change to the rendering needs the notes of every published
-release updated to the new rendering before the next release. GitHub keeps the
-title and notes of an immutable release editable.
+text must not carry. They link the site's files, and the version directory
+itself only when the site has `index.html`; 0.1.1 and earlier have none.
+`compose-pages` renders the notes of every served release with its own
+`release_site.py` and requires each release to carry them, so a change to the
+rendering needs the notes of every published release updated to the new
+rendering before the next release. GitHub keeps the title and notes of an
+immutable release editable.
 
 `serve-test` runs as root in a disposable container in which the Pages host
 resolves only to 127.0.0.1. It performs these checks:

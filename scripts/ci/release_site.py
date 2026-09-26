@@ -33,6 +33,7 @@ never overwritten.
 """
 import argparse
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -60,7 +61,7 @@ TREE_EXTRA = ['checksums.sha256', 'checksums.sha256.sig', 'assembly-manifest.jso
 INSTALLER_SET = [BINARY, 'install.sh', 'primary-command.txt']
 EXECUTABLES = {BINARY, 'install.sh'}
 SIGN_RECORDS = ['provider-identity.json', 'signed-identity.json', 'profile-generation.json', 'profile-rpm-build.json']
-DERIVED = ['support-matrix.json', 'publication-manifest.json', 'records/installer-build.json',
+DERIVED = ['support-matrix.json', 'index.html', 'publication-manifest.json', 'records/installer-build.json',
            'records/installer-trust.rs']
 FINALIZE_FILES = ['SHA256SUMS', 'SHA256SUMS.asc', BINARY + '.asc', 'install.sh.asc']
 # An armored detached signature by the committed Ed25519 release key is a few hundred bytes; sign and the signed stage
@@ -560,6 +561,9 @@ def verify_site(site, repo, commit, profile, notes_path, stage, expected_files=N
     matrix = render_support_matrix(load_toml(site / 'profile.toml'), release, load_toml(notes_path), values,
                                    values['primary_fingerprint'], metadata)
     require((site / 'support-matrix.json').read_bytes() == matrix, 'support-matrix.json differs from its rendering')
+    require((site / 'index.html').read_bytes() == render_index(matrix, (site / 'primary-command.txt').read_text(),
+                                                                values['version']),
+            'index.html differs from its rendering')
     manifest = render_publication_manifest(result, site, legs, values, metadata, commit, unsigned)
     require((site / 'publication-manifest.json').read_bytes() == manifest,
             'publication-manifest.json differs from its rendering')
@@ -612,9 +616,11 @@ def compose(repo, commit, tree, records, leg_a, leg_b, profile, notes_path, outp
             write_new(output / 'records' / name, (records / name).read_bytes())
         write_new(output / 'records/installer-trust.rs', (Path(leg_a) / 'installer-trust.rs').read_bytes())
         write_new(output / 'records/installer-build.json', canonical({'schema_version': 1, 'legs': legs}))
-        write_new(output / 'support-matrix.json',
-                  render_support_matrix(load_toml(tree / 'profile.toml'), release, load_toml(notes_path), values,
-                                        values['primary_fingerprint'], metadata))
+        matrix = render_support_matrix(load_toml(tree / 'profile.toml'), release, load_toml(notes_path), values,
+                                       values['primary_fingerprint'], metadata)
+        write_new(output / 'support-matrix.json', matrix)
+        write_new(output / 'index.html',
+                  render_index(matrix, (output / 'primary-command.txt').read_text(), values['version']))
         unsigned = sorted([*tree_files, *INSTALLER_SET, *('records/' + n for n in SIGN_RECORDS), *DERIVED],
                           key=str.encode)
         write_new(output / 'publication-manifest.json',
@@ -708,6 +714,61 @@ def repository_slug(base_url, version):
     return match.group(1) + '/' + match.group(2)
 
 
+def short_command(base):
+    """The one-line install: HTTPS only, redirects included, and no ~/.curlrc."""
+    return f"curl --disable --proto '=https' --proto-redir '=https' -fsSL {base}install.sh | sh"
+
+
+def render_index(matrix_bytes, command, version):
+    """The version directory's landing page, from the support matrix and the primary command alone.
+
+    GitHub Pages answers the directory URL with it. It carries no digest of its own: SHA256SUMS covers it like
+    every other file, and the release notes carry the archive's.
+    """
+    matrix = json.loads(matrix_bytes)
+    base = matrix['repository']['base_url']
+    release_page = f'https://github.com/{repository_slug(base, version)}/releases/tag/v{version}'
+    platform, kernel = matrix['platform'], matrix['kernel']
+    hardware = ', '.join(f'{entry["vendor"]}:{entry["device"]}' for entry in matrix['hardware'])
+    tested = '; '.join(f'{entry["release"]} ({", ".join(entry["tests"])})' for entry in kernel['tested'])
+    def e(text):
+        return html.escape(text, quote=False)
+
+    files = [('SHA256SUMS', 'lists every other file of this release'),
+             ('SHA256SUMS.asc', 'the signature of SHA256SUMS by the release key'),
+             ('support-matrix.json', 'the supported platform, hardware and kernels'),
+             ('install.sh', 'the bootstrap both commands run'),
+             ('install.sh.asc', 'its signature'),
+             ('release.json', 'the signed list of packages'),
+             ('profile.toml', 'the qualified platform profile'),
+             ('publication-manifest.json', 'what this site holds and the commit it was built from')]
+    lines = [
+        '<!DOCTYPE html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        f'<title>Intel NPU Stack {e(version)}</title>', '</head>', '<body>',
+        f'<h1>Intel NPU Stack {e(version)}</h1>',
+        f'<p>Signed Fedora {e(platform["version_id"])} {e(platform["arch"])} packages for the Intel NPU on PCI '
+        f'{e(hardware)}, profile <code>{e(matrix["profile"]["id"])}</code> ({e(matrix["profile"]["status"])}).</p>',
+        '<h2>Install</h2>',
+        '<p>Run as a normal user. The installer shows its plan and asks before it changes anything. To see the '
+        'plan only, end the short form below with <code>| sh -s -- --dry-run</code>.</p>',
+        f'<pre><code>{e(command.rstrip(chr(10)))}</code></pre>',
+        '<p>The short form trusts the HTTPS download of <code>install.sh</code> instead of checking its SHA-256; '
+        'everything after it is checked the same way. The pipeline exits with the status of <code>sh</code>, so '
+        'scripts should use the command above.</p>',
+        f'<pre><code>{e(short_command(base))}</code></pre>',
+        '<h2>Support</h2>', '<ul>',
+        f'<li>Kernel {e(kernel["min"])} up to, not including, {e(kernel["max_exclusive"])} '
+        f'(<code>{e(kernel["module"])}</code>). Tested: {e(tested)}.</li>',
+        f'<li>Not supported: {e("; ".join(matrix["not_supported"]))}.</li>', '</ul>',
+        '<h2>Files</h2>', '<ul>',
+        *[f'<li><a href="{html.escape(name)}">{e(name)}</a>: {e(text)}</li>' for name, text in files], '</ul>',
+        f'<p>Release notes, build provenance and the archive: '
+        f'<a href="{html.escape(release_page)}">v{e(version)} on GitHub</a>.</p>',
+        '</body>', '</html>', '']
+    return lint_public_text('\n'.join(lines)).encode()
+
+
 def lint_public_text(text):
     found = FORBIDDEN_TEXT.search(text)
     require(found is None, 'public release text names a tool or product it must not: ' + repr(found and found.group(0)))
@@ -742,12 +803,15 @@ def render_notes(site, archive_path):
     rows = [('release.json', sha(site / 'release.json')), (archive_path.name, sha(archive_path)),
             ('SHA256SUMS', sha(site / 'SHA256SUMS')),
             ('Qualification evidence', matrix['qualification']['evidence_sha256'])]
+    # A site with a landing page is linked as a directory. Earlier sites have none, so their notes link only files
+    # and keep the text they were published with.
+    where = (f'served from {base}, whose page lists the install commands and files' if (site / 'index.html').is_file()
+             else f'served from `{base}`. That directory has no index page')
     lines = [
         f'# Intel NPU Stack {version}', '',
-        # The version directory has no index page, so the notes link its files and never the bare directory.
         f'Signed Fedora {platform["version_id"]} {platform["arch"]} packages for the Intel NPU on PCI {hardware}, '
-        f'served from `{base}`. That directory has no index page; [`SHA256SUMS`]({base}SHA256SUMS) lists every '
-        f'other file in it, and [`SHA256SUMS.asc`]({base}SHA256SUMS.asc) is its signature.', '',
+        f'{where}; [`SHA256SUMS`]({base}SHA256SUMS) lists every other file in it, and '
+        f'[`SHA256SUMS.asc`]({base}SHA256SUMS.asc) is its signature.', '',
         '## Install', '',
         'Run as a normal user; the installer asks for privileges only when it applies the plan:', '',
         '```sh', command, '```', '',
@@ -756,8 +820,7 @@ def render_notes(site, archive_path):
         'The short form trusts the HTTPS download of `install.sh` instead of checking its SHA-256; everything '
         'after it is checked the same way. curl reports a failed download, but the pipeline exits with the '
         'status of `sh`, so scripts should use the command above:', '',
-        '```sh', f"curl --disable --proto '=https' --proto-redir '=https' -fsSL {base}install.sh | sh",
-        '```', '',
+        '```sh', short_command(base), '```', '',
         '### Verify before running', '',
         f'1. Download [`install.sh`]({base}install.sh) and [`install.sh.asc`]({base}install.sh.asc).',
         '2. Run `gpg --status-fd 1 --verify install.sh.asc install.sh` with the release public key and check that '
