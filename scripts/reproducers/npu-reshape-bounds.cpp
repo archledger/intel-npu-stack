@@ -52,6 +52,13 @@ int main(int argc, char* argv[]) {
 
     std::cout << "INPUT " << input->get_partial_shape()
               << " OUTPUT " << reshape->get_output_partial_shape(0) << std::endl;
+    if (layout) {
+      std::cout << "LAYOUT " << input->get_layout().to_string() << " INPUT_NAMES";
+      for (const auto& name : input->output(0).get_names()) std::cout << ' ' << name;
+      std::cout << " OUTPUT_NAMES";
+      for (const auto& name : reshape->output(0).get_names()) std::cout << ' ' << name;
+      std::cout << std::endl;
+    }
     if (argc == 4) {
       const std::string prefix = argv[3];
       const auto exists = [](const std::string& path) {

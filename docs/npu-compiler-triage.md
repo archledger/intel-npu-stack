@@ -101,7 +101,9 @@ only dynamic dimension of every input and output and the tensors have names
 from ONNX or TFLite have names. Without a batch layout, `ov::get_batch` fails,
 the plugin leaves batching to the compiler, and the unbounded graph reaches
 the importer above. The reproducer's `-layout` modes name the tensors, set the
-`N...` layout and run one inference with a batch of 3.
+`N...` layout, print both and run one inference with a batch of 3. The native
+CI job builds the reproducer against its pinned SDK and runs every mode on CPU
+(`native/tests/reproducer_test.py`); the NPU cases remain hardware runs.
 
 Observed on the same packages on kernel 7.2.7, September 26, with
 deterministic synthetic inputs:
