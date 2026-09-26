@@ -50,8 +50,9 @@ concurrency:
 env:
   # The Pages bytes one version may take: verify refuses a larger unsigned site, and the preflight reserves this much
   # for the new version when it checks that the site still fits beside every version that stays served. A version the
-  # dispatch commit's registry retires is not counted, since the site this run deploys leaves it out.
-  SITE_BUDGET_BYTES: 314572800
+  # dispatch commit's registry retires is not counted, since the site this run deploys leaves it out. 316 MiB is a third
+  # of the 950 MiB Pages budget, so three versions of this size can stay served together.
+  SITE_BUDGET_BYTES: 331350016
 
 defaults:
   run:

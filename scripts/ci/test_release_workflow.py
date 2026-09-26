@@ -124,7 +124,7 @@ PUBLICATION = '${{ needs.finalize.outputs.publication_artifact }}'
 PAGES_RECORD = '${{ needs.pages-build.outputs.pages_record_artifact }}'
 SIGNED = '${{ needs.sign.outputs.signed_artifact }}'
 ENV = {
-    'workflow': {'SITE_BUDGET_BYTES': 314572800},
+    'workflow': {'SITE_BUDGET_BYTES': 331350016},
     'preflight': {**RUST, 'CARGO_BUILD_JOBS': 4, 'GH_TOKEN': TOKEN, 'INPUTS_URL': '${{ inputs.inputs_url }}',
                   'INPUTS_SHA256': '${{ inputs.inputs_sha256 }}', 'RELEASE_VERSION': '${{ inputs.release_version }}',
                   'PROFILE': PROFILE},
@@ -200,7 +200,7 @@ CALLS = {
         ('release_inputs', 'fetch-check', '--url $INPUTS_URL --sha256 $INPUTS_SHA256 --profile src/$PROFILE '
                                           '--archive work/release-inputs/release-inputs.tar.gz '
                                           '--output work/inputs-check'),
-        ('release_publish', 'check-unpublished', f'--phase preflight {REGISTRY} --reserve-bytes 314572800'),
+        ('release_publish', 'check-unpublished', f'--phase preflight {REGISTRY} --reserve-bytes 331350016'),
         ('release_artifact', 'seal', 'work/release-inputs'),
     ],
     'sign': [
@@ -237,7 +237,7 @@ CALLS = {
                                     '--records work/signed-release/records --leg-a work/installer-a/leg '
                                     f'--leg-b work/installer-b/leg --profile src/$PROFILE --output {SITE}'),
         ('release_site', 'check', f'--source-commit $GITHUB_SHA --site {SITE} --profile src/$PROFILE '
-                                  f'--stage unsigned --max-bytes 314572800 --report {REPORT}'),
+                                  f'--stage unsigned --max-bytes 331350016 --report {REPORT}'),
         ('release_serve', 'serve-test', f'--site-root work/unsigned/site --expected-files {REPORT} '
                                         '--report work/unsigned/verification/serve-report.json --work work/serve'),
         ('release_artifact', 'seal', 'work/unsigned'),
@@ -252,7 +252,7 @@ CALLS = {
                                  f'--expected-files {REPORT} --gpg-home {GNUPG} --fingerprint substituted '
                                  f'--passphrase-file {GNUPG}/passphrase --require-passphrase'),
         ('release_site', 'check', f'--source-commit $GITHUB_SHA --site {SITE} --profile src/$PROFILE '
-                                  f'--stage signed --expected-files {REPORT} --max-bytes 314572800'),
+                                  f'--stage signed --expected-files {REPORT} --max-bytes 331350016'),
         ('release_site', 'archive', f'--source-commit $GITHUB_SHA --site {SITE} --profile src/$PROFILE '
                                     f'--expected-files {REPORT} '
                                     '--output work/publication/assets/intel-npu-stack-$VERSION.tar'),
@@ -775,7 +775,8 @@ class ReleaseWorkflow(unittest.TestCase):
             self.assertIn(name, made[0], f'{job}: {tool} {subcommand}')
             return made[0][made[0].index(name) + 1]
         budget = self.workflow['env']['SITE_BUDGET_BYTES']
-        self.assertTrue(type(budget) is int and 0 < budget <= publish.MAX_SITE)
+        # A third of the Pages budget: the new version fits beside two served versions of the same size.
+        self.assertTrue(type(budget) is int and 0 < budget and 3 * budget <= publish.MAX_SITE)
         self.assertEqual((option('preflight', 'release_publish', 'check-unpublished', '--reserve-bytes'),
                           option('verify', 'release_site', 'check', '--max-bytes'),
                           option('finalize', 'release_site', 'check', '--max-bytes', stage='signed')),
