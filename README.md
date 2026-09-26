@@ -7,8 +7,8 @@
 **Release 0.1.0 is published** for Fedora 44 x86_64 on allowlisted Intel
 Lunar Lake hardware, kernels `[7.2.5, 7.3.0)`:
 [GitHub release](https://github.com/archledger/intel-npu-stack/releases/tag/v0.1.0)
-and [release site](https://archledger.github.io/intel-npu-stack/0.1.0/). No
-other platform is supported.
+and [support matrix](https://archledger.github.io/intel-npu-stack/0.1.0/support-matrix.json).
+No other platform is supported.
 
 Implemented components include strict platform profiles, bounded `status`
 discovery, crash-isolated `doctor` inference, an authenticated installer with
