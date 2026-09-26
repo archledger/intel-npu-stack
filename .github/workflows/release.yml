@@ -1,10 +1,28 @@
 name: Release
 
-# Protected publication (design section 11): consumes previously built and
-# qualified artifact digests, signs and composes the exact release tree with
-# the production key from the protected `release` environment, verifies every
-# gate, and publishes the release assets. It never rebuilds provider packages
-# and cannot run without a maintainer approval on the protected environment.
+# Protected publication of one version as an immutable GitHub release and a
+# GitHub Pages tree at the BASE_URL committed in crates/stack-install/src/trust.rs.
+#
+#   preflight        keyless: dispatch, support notes, profile, inputs, nothing published yet, room on Pages
+#   sign             approval 1 (release environment): sign the RPMs and assemble the tree
+#   installer-a/-b   two independent builds of the pinned installer, compared in verify
+#   verify           compose and check the site; run the published install path against a local copy
+#   finalize         approval 2, go-live (release environment): sign the site, archive, notes
+#   attest           build provenance for every served file and every release asset
+#   publish-release  draft, upload, read back, publish; immutable, tag at this commit
+#   pages-build      the Pages tree composed only from immutable releases
+#   pages-deploy     deploy it while it is still current (github-pages environment)
+#   verify-live      the live site equals the release; the live install path works
+#
+# Only the Import steps of sign and finalize see secrets. No job that holds the
+# key has a write token, and no job with a write token sees the key. Every
+# artifact passed between jobs with upload-artifact is sealed with
+# ARTIFACT-SHA256SUMS and checked against the producing job's output. The Pages
+# artifact is the exception: deploy-pages takes it straight from
+# upload-pages-artifact, and check-deploy checks the sealed pages-record that
+# describes it. A failed job is re-run on its own; nothing is re-signed after
+# attest. docs/release-process.md describes the approvals, resumption and the
+# cleanup of an aborted run.
 
 on:
   workflow_dispatch:
@@ -16,130 +34,631 @@ on:
         description: 'SHA-256 of that tarball'
         required: true
       release_version:
-        description: 'Release version (numeric triple)'
+        description: 'Release version; must equal VERSION in trust.rs'
         required: true
       profile:
         description: 'Qualified profile path in this repository'
         required: true
         default: 'profiles/fedora/44/lunar-lake-x86_64.toml'
 
-permissions:
-  contents: write
+permissions: {}
 
 concurrency:
-  group: release-${{ inputs.release_version }}
+  group: release-publication
   cancel-in-progress: false
 
+env:
+  # The Pages bytes one version may take: verify refuses a larger unsigned site, and the preflight reserves this much
+  # for the new version when it checks that the site still fits beside every version that stays served. A version the
+  # dispatch commit's registry retires is not counted, since the site this run deploys leaves it out.
+  SITE_BUDGET_BYTES: 314572800
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  publish:
-    name: Sign, verify and publish
+  preflight:
+    name: Preflight without any key
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    environment: release
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pages: read
     container:
       image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
       options: --cpus 4
     env:
-      RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
-      RELEASE_GNUPGHOME: /dev/shm/intel-npu-release-gnupg
+      CARGO_HOME: /opt/ci-cargo
+      RUSTUP_HOME: /opt/ci-rustup
+      RUSTUP_TOOLCHAIN: 1.85.0
+      CARGO_BUILD_JOBS: 4
       GH_TOKEN: ${{ github.token }}
       INPUTS_URL: ${{ inputs.inputs_url }}
       INPUTS_SHA256: ${{ inputs.inputs_sha256 }}
       RELEASE_VERSION: ${{ inputs.release_version }}
       PROFILE: ${{ inputs.profile }}
+    outputs:
+      inputs_artifact: ${{ steps.seal.outputs.digest }}
     steps:
-      # The base URL committed in the installer trust seam is a GitHub Pages tree that this
-      # workflow does not deploy yet; publishing release assets alone would produce a release
-      # the pinned installer cannot fetch. Remove this guard with the Pages publication change.
-      - name: Refuse publication until the Pages deployment lands
-        run: |
-          echo "Release publication is disabled until the GitHub Pages deployment for the pinned base URL is implemented." >&2
-          exit 1
       - name: Bootstrap Git for a real repository checkout
         run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install signing and repository tools
-        run: |
-          set -euo pipefail
-          bash scripts/ci/install-fedora-tools.sh
-          dnf5 --assumeyes --setopt=install_weak_deps=False install createrepo_c
-      - name: Read the pinned release location from the trust seam
-        run: |
-          set -euo pipefail
-          python3 scripts/ci/release_trust.py check >/dev/null
-          version=$(python3 scripts/ci/release_trust.py read --field version)
-          [ "$version" = "$RELEASE_VERSION" ] || { echo "release_version must equal the committed trust VERSION $version" >&2; exit 2; }
-          printf 'BASE_URL=%s\n' "$(python3 scripts/ci/release_trust.py read --field base-url)" >> "$GITHUB_ENV"
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - name: Check the dispatch against the committed trust seam
+        run: >-
+          python3 src/scripts/ci/release_inputs.py dispatch-check --repo src --ref "$GITHUB_REF"
+          --version "$RELEASE_VERSION" --url "$INPUTS_URL" --sha256 "$INPUTS_SHA256" --profile "$PROFILE"
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
         with:
           toolchain: 1.85.0
-      - name: Validate the qualified profile with the canonical schema validator
-        run: |
-          set -euo pipefail
-          cargo fetch --locked
-          cargo run --locked -p xtask -- validate-profiles "$(dirname "$PROFILE")" 
-      - name: Verify the release version and inputs digest shape
-        run: |
-          set -euo pipefail
-          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "release version must be a numeric triple" >&2; exit 2; }
-          [[ "$INPUTS_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "inputs digest must be lowercase SHA256" >&2; exit 2; }
-          [[ "$INPUTS_URL" == https://* ]] || { echo "inputs URL must be HTTPS" >&2; exit 2; }
-          [[ "$BASE_URL" == https://* ]] || { echo "base URL must be HTTPS" >&2; exit 2; }
-          [[ "$RELEASE_SIGNING_FINGERPRINT" =~ ^[0-9A-F]{40}$ ]] || { echo "RELEASE_SIGNING_FINGERPRINT repository variable is required" >&2; exit 2; }
-      - name: Download and verify the prepared release inputs
-        run: |
-          set -euo pipefail
-          curl --disable --fail --location --proto '=https' --proto-redir '=https' \
-            --connect-timeout 30 --max-time 600 --max-filesize 4294967296 \
-            --output release-inputs.tar.gz -- "$INPUTS_URL"
-          printf '%s  %s\n' "$INPUTS_SHA256" release-inputs.tar.gz | sha256sum --check --status
-          mkdir release-inputs
-          tar -xzf release-inputs.tar.gz -C release-inputs
-      - name: Check the release inputs against the profile without any key
-        run: python3 scripts/ci/release_sign.py --check-inputs --inputs release-inputs --profile "$PROFILE"
-      # The only step that sees the secrets: a tmpfs keyring plus an owner-only passphrase file.
-      - name: Import the production signing key
+      - name: Validate the profiles with the canonical schema validator
+        working-directory: src
+        run: cargo fetch --locked && cargo run --locked -p xtask -- validate-profiles "$(dirname "$PROFILE")"
+      - name: Fetch and check the release inputs without any key
+        run: >-
+          mkdir -p work/release-inputs && python3 src/scripts/ci/release_inputs.py fetch-check --url "$INPUTS_URL"
+          --sha256 "$INPUTS_SHA256" --profile "src/$PROFILE" --archive work/release-inputs/release-inputs.tar.gz
+          --output work/inputs-check
+      - name: Refuse unless nothing is published for this version and Pages has room for it
+        run: >-
+          python3 src/scripts/ci/release_publish.py check-unpublished --phase preflight
+          --registry src/release/published-versions.json --reserve-bytes "$SITE_BUDGET_BYTES"
+      - name: Seal the inputs archive
+        id: seal
+        run: python3 src/scripts/ci/release_artifact.py seal work/release-inputs >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-inputs
+          path: work/release-inputs
+          if-no-files-found: error
+          retention-days: 7
+
+  sign:
+    name: Sign the release tree (approval 1)
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      INPUTS_SHA256: ${{ inputs.inputs_sha256 }}
+      INPUTS_ARTIFACT: ${{ needs.preflight.outputs.inputs_artifact }}
+      PROFILE: ${{ inputs.profile }}
+      RELEASE_GNUPGHOME: /dev/shm/intel-npu-release-gnupg
+      RELEASE_PUBLIC_KEY: src/crates/stack-install/src/trust/release-public.asc
+    outputs:
+      signed_artifact: ${{ steps.seal.outputs.digest }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh && dnf5 --assumeyes --setopt=install_weak_deps=False install createrepo_c
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-inputs
+          path: work/release-inputs
+      - name: Check the inputs handoff and contents without any key
+        run: >-
+          python3 src/scripts/ci/release_artifact.py check work/release-inputs --digest "$INPUTS_ARTIFACT" &&
+          python3 src/scripts/ci/release_inputs.py extract-check --archive work/release-inputs/release-inputs.tar.gz
+          --sha256 "$INPUTS_SHA256" --expected "$INPUTS_SHA256" --profile "src/$PROFILE" --output work/inputs
+      # The only step of this job that sees secrets: a tmpfs keyring and an owner-only passphrase file.
+      - name: Import the signing key
         env:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
           RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
-        run: bash scripts/ci/release-keyring.sh import
-      - name: Sign and compose the production release tree
-        run: |
-          set -euo pipefail
-          python3 scripts/ci/release_sign.py \
-            --inputs release-inputs \
-            --profile "$PROFILE" \
-            --source "$PWD" \
-            --output release-out \
-            --work release-work \
-            --fingerprint "$RELEASE_SIGNING_FINGERPRINT" \
-            --gpg-home "$RELEASE_GNUPGHOME" \
-            --passphrase-file "$RELEASE_GNUPGHOME/passphrase" \
-            --require-passphrase \
-            --base-url "$BASE_URL" \
-            --release-version "$RELEASE_VERSION"
+          RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
+        run: bash src/scripts/ci/release-keyring.sh import
+      - name: Sign and assemble the production release tree
+        run: >-
+          python3 src/scripts/ci/release_sign.py --inputs work/inputs --profile "src/$PROFILE" --source src
+          --output work/release-out --work work/release-work
+          --fingerprint "$(python3 src/scripts/ci/release_trust.py read --repo src --field primary-fingerprint)"
+          --gpg-home "$RELEASE_GNUPGHOME" --passphrase-file "$RELEASE_GNUPGHOME/passphrase" --require-passphrase
+          --base-url "$(python3 src/scripts/ci/release_trust.py read --repo src --field base-url)"
+          --release-version "$(python3 src/scripts/ci/release_trust.py read --repo src --field version)"
       - name: Destroy the signing keyring
         if: always()
-        run: bash scripts/ci/release-keyring.sh destroy
-      - name: Verify every publication gate
-        run: |
-          set -euo pipefail
-          python3 scripts/ci/check_release.py \
-            --release-tree release-out/release-tree \
-            --profile "$PROFILE" \
-            --output release-out/publication-manifest.json
-      - name: Publish the release assets
-        run: |
-          set -euo pipefail
-          tar -C release-out/release-tree -czf release-tree.tar.gz .
-          gh release create "v$RELEASE_VERSION" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Intel NPU Stack $RELEASE_VERSION" \
-            --notes "Signed release tree for Fedora 44 x86_64; see publication-manifest.json for the verified digests and qualification evidence." \
-            release-tree.tar.gz \
-            release-out/publication-manifest.json \
-            release-out/release-tree/checksums.sha256 \
-            release-out/release-tree/release.json \
-            release-out/release-tree/release.json.sig
+        run: bash src/scripts/ci/release-keyring.sh destroy
+      - name: Verify every publication gate of the tree
+        run: >-
+          python3 src/scripts/ci/check_release.py --release-tree work/release-out/release-tree
+          --profile "src/$PROFILE" --output work/tree-check.json
+      - name: Stage and seal the signed release
+        id: seal
+        run: >-
+          mkdir -p work/signed-release/records && cp -a work/release-out/release-tree work/signed-release/ &&
+          cp work/release-out/provider-identity.json work/release-out/signed-identity.json
+          work/release-out/profile-generation.json work/release-out/profile-rpm-build.json work/signed-release/records/ &&
+          python3 src/scripts/ci/release_artifact.py seal work/signed-release >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-release
+          path: work/signed-release
+          if-no-files-found: error
+          retention-days: 7
+
+  installer-a:
+    name: Build the pinned installer (leg a)
+    needs: sign
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      LEG: a
+      LEG_UMASK: '0022'
+      TZ: UTC
+      LANG: C.UTF-8
+      CARGO_BUILD_JOBS: 4
+      CARGO_HOME: /opt/ci-cargo
+      RUSTUP_HOME: /opt/ci-rustup
+      RUSTUP_TOOLCHAIN: 1.85.0
+      IMAGE_DIGEST: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461
+      PROFILE: ${{ inputs.profile }}
+      SIGNED_ARTIFACT: ${{ needs.sign.outputs.signed_artifact }}
+    outputs:
+      installer_artifact: ${{ steps.seal.outputs.digest }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: 1.85.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: signed-release
+          path: work/signed-release
+      - name: Check the signed release handoff and its gates
+        run: >-
+          python3 src/scripts/ci/release_artifact.py check work/signed-release --digest "$SIGNED_ARTIFACT" &&
+          python3 src/scripts/ci/check_release.py --release-tree work/signed-release/release-tree
+          --profile "src/$PROFILE" --output work/tree-check.json
+      - name: Build the installer and render the bootstrap pair
+        run: >-
+          mkdir -p "work/installer-$LEG" && umask "$LEG_UMASK" &&
+          python3 src/scripts/ci/release_installer.py build --repo src --source-commit "$GITHUB_SHA"
+          --release-tree work/signed-release/release-tree --leg "$LEG" --output "work/installer-$LEG/leg"
+      - name: Seal the installer leg
+        id: seal
+        run: python3 src/scripts/ci/release_artifact.py seal "work/installer-$LEG" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-a
+          path: work/installer-a
+          if-no-files-found: error
+          retention-days: 7
+
+  installer-b:
+    name: Build the pinned installer (leg b)
+    needs: sign
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      LEG: b
+      LEG_UMASK: '0027'
+      TZ: Pacific/Chatham
+      LANG: de_DE.UTF-8
+      CARGO_BUILD_JOBS: 1
+      CARGO_HOME: /opt/ci-cargo
+      RUSTUP_HOME: /opt/ci-rustup
+      RUSTUP_TOOLCHAIN: 1.85.0
+      IMAGE_DIGEST: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461
+      PROFILE: ${{ inputs.profile }}
+      SIGNED_ARTIFACT: ${{ needs.sign.outputs.signed_artifact }}
+    outputs:
+      installer_artifact: ${{ steps.seal.outputs.digest }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: 1.85.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: signed-release
+          path: work/signed-release
+      - name: Check the signed release handoff and its gates
+        run: >-
+          python3 src/scripts/ci/release_artifact.py check work/signed-release --digest "$SIGNED_ARTIFACT" &&
+          python3 src/scripts/ci/check_release.py --release-tree work/signed-release/release-tree
+          --profile "src/$PROFILE" --output work/tree-check.json
+      - name: Build the installer and render the bootstrap pair
+        run: >-
+          mkdir -p "work/installer-$LEG" && umask "$LEG_UMASK" &&
+          python3 src/scripts/ci/release_installer.py build --repo src --source-commit "$GITHUB_SHA"
+          --release-tree work/signed-release/release-tree --leg "$LEG" --output "work/installer-$LEG/leg"
+      - name: Seal the installer leg
+        id: seal
+        run: python3 src/scripts/ci/release_artifact.py seal "work/installer-$LEG" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-b
+          path: work/installer-b
+          if-no-files-found: error
+          retention-days: 7
+
+  verify:
+    name: Compose and verify the site
+    needs: [sign, installer-a, installer-b]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      # The Pages host resolves only to the local fixture, so the serve test never reaches the real site.
+      options: --cpus 4 --add-host archledger.github.io:127.0.0.1
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SIGNED_ARTIFACT: ${{ needs.sign.outputs.signed_artifact }}
+      LEG_A_ARTIFACT: ${{ needs.installer-a.outputs.installer_artifact }}
+      LEG_B_ARTIFACT: ${{ needs.installer-b.outputs.installer_artifact }}
+    outputs:
+      unsigned_artifact: ${{ steps.seal.outputs.digest }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: signed-release
+          path: work/signed-release
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: installer-a
+          path: work/installer-a
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: installer-b
+          path: work/installer-b
+      - name: Check the handoffs
+        run: >-
+          python3 src/scripts/ci/release_artifact.py check work/signed-release --digest "$SIGNED_ARTIFACT" &&
+          python3 src/scripts/ci/release_artifact.py check work/installer-a --digest "$LEG_A_ARTIFACT" &&
+          python3 src/scripts/ci/release_artifact.py check work/installer-b --digest "$LEG_B_ARTIFACT"
+      - name: Read the committed release version
+        run: >-
+          VERSION="$(python3 src/scripts/ci/release_trust.py read --repo src --field version)" &&
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Compose the unsigned site from the tree and the byte-equal legs
+        run: >-
+          mkdir -p work/unsigned/site work/unsigned/verification && python3 src/scripts/ci/release_site.py compose
+          --source-commit "$GITHUB_SHA" --tree work/signed-release/release-tree --records work/signed-release/records
+          --leg-a work/installer-a/leg --leg-b work/installer-b/leg --profile "src/$PROFILE"
+          --output "work/unsigned/site/$VERSION"
+      - name: Check the unsigned site and its size budget
+        run: >-
+          python3 src/scripts/ci/release_site.py check --source-commit "$GITHUB_SHA" --site "work/unsigned/site/$VERSION"
+          --profile "src/$PROFILE" --stage unsigned --max-bytes "$SITE_BUDGET_BYTES"
+          --report work/unsigned/verification/verification-report.json
+      - name: Run the published install path and DNF against a local copy of the site
+        run: >-
+          python3 src/scripts/ci/release_serve.py serve-test --site-root work/unsigned/site
+          --expected-files work/unsigned/verification/verification-report.json
+          --report work/unsigned/verification/serve-report.json --work work/serve
+      - name: Seal the verified unsigned site
+        id: seal
+        run: python3 src/scripts/ci/release_artifact.py seal work/unsigned >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: unsigned-site
+          path: work/unsigned
+          if-no-files-found: error
+          retention-days: 7
+
+  finalize:
+    name: Sign the site and prepare publication (approval 2, go-live)
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      PROFILE: ${{ inputs.profile }}
+      UNSIGNED_ARTIFACT: ${{ needs.verify.outputs.unsigned_artifact }}
+      RELEASE_GNUPGHOME: /dev/shm/intel-npu-release-gnupg
+      RELEASE_PUBLIC_KEY: src/crates/stack-install/src/trust/release-public.asc
+    outputs:
+      publication_artifact: ${{ steps.seal.outputs.digest }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: unsigned-site
+          path: work/unsigned
+      - name: Check the handoff and read the committed release version
+        run: >-
+          python3 src/scripts/ci/release_artifact.py check work/unsigned --digest "$UNSIGNED_ARTIFACT" &&
+          VERSION="$(python3 src/scripts/ci/release_trust.py read --repo src --field version)" &&
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Check the unsigned site without any key
+        run: >-
+          python3 src/scripts/ci/release_site.py check --source-commit "$GITHUB_SHA" --site "work/unsigned/site/$VERSION"
+          --profile "src/$PROFILE" --stage unsigned
+      # The only step of this job that sees secrets.
+      - name: Import the signing key
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
+          RELEASE_SIGNING_FINGERPRINT: ${{ vars.RELEASE_SIGNING_FINGERPRINT }}
+        run: bash src/scripts/ci/release-keyring.sh import
+      - name: Sign the installer, install.sh and SHA256SUMS
+        run: >-
+          python3 src/scripts/ci/release_site.py sign --source-commit "$GITHUB_SHA" --site "work/unsigned/site/$VERSION"
+          --profile "src/$PROFILE" --expected-files work/unsigned/verification/verification-report.json
+          --gpg-home "$RELEASE_GNUPGHOME"
+          --fingerprint "$(python3 src/scripts/ci/release_trust.py read --repo src --field primary-fingerprint)"
+          --passphrase-file "$RELEASE_GNUPGHOME/passphrase" --require-passphrase
+      - name: Destroy the signing keyring
+        if: always()
+        run: bash src/scripts/ci/release-keyring.sh destroy
+      - name: Check the signed site
+        run: >-
+          python3 src/scripts/ci/release_site.py check --source-commit "$GITHUB_SHA" --site "work/unsigned/site/$VERSION"
+          --profile "src/$PROFILE" --stage signed --expected-files work/unsigned/verification/verification-report.json
+      - name: Archive the site and write the release notes
+        run: >-
+          mkdir -p work/publication/assets && python3 src/scripts/ci/release_site.py archive --source-commit "$GITHUB_SHA"
+          --site "work/unsigned/site/$VERSION" --profile "src/$PROFILE"
+          --expected-files work/unsigned/verification/verification-report.json
+          --output "work/publication/assets/intel-npu-stack-$VERSION.tar" &&
+          python3 src/scripts/ci/release_site.py notes --site "work/unsigned/site/$VERSION"
+          --archive "work/publication/assets/intel-npu-stack-$VERSION.tar" --output work/publication/notes.md &&
+          cp "work/unsigned/site/$VERSION/SHA256SUMS" "work/unsigned/site/$VERSION/SHA256SUMS.asc"
+          "work/unsigned/site/$VERSION/publication-manifest.json" work/publication/assets/
+      - name: Seal the publication
+        id: seal
+        run: python3 src/scripts/ci/release_artifact.py seal work/publication >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: publication
+          path: work/publication
+          if-no-files-found: error
+          retention-days: 7
+
+  attest:
+    name: Attest build provenance
+    needs: finalize
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      PUBLICATION_ARTIFACT: ${{ needs.finalize.outputs.publication_artifact }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: publication
+          path: work/publication
+      - name: Check the publication handoff
+        run: python3 src/scripts/ci/release_artifact.py check work/publication --digest "$PUBLICATION_ARTIFACT"
+      - name: Attest every file SHA256SUMS lists
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: work/publication/assets/SHA256SUMS
+      # The four release assets. With SHA256SUMS and its signature, the two steps cover every served file.
+      - name: Attest the release assets
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            work/publication/assets/intel-npu-stack-*.tar
+            work/publication/assets/SHA256SUMS
+            work/publication/assets/SHA256SUMS.asc
+            work/publication/assets/publication-manifest.json
+
+  publish-release:
+    name: Publish the immutable release
+    needs: [finalize, attest]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PUBLICATION_ARTIFACT: ${{ needs.finalize.outputs.publication_artifact }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: publication
+          path: work/publication
+      - name: Check the publication handoff
+        run: python3 src/scripts/ci/release_artifact.py check work/publication --digest "$PUBLICATION_ARTIFACT"
+      - name: Classify the release state
+        run: >-
+          python3 src/scripts/ci/release_publish.py check-unpublished --phase publish
+          --registry src/release/published-versions.json --assets work/publication/assets --sha "$GITHUB_SHA"
+      - name: Publish, read back and confirm immutability
+        run: >-
+          python3 src/scripts/ci/release_publish.py publish-release --registry src/release/published-versions.json
+          --assets work/publication/assets --notes work/publication/notes.md --sha "$GITHUB_SHA"
+
+  pages-build:
+    name: Compose the Pages site from immutable releases
+    needs: publish-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      pages_record_artifact: ${{ steps.seal.outputs.digest }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - name: Compose the site
+        run: >-
+          mkdir -p work/pages work/pages-record && python3 src/scripts/ci/release_publish.py compose-pages
+          --registry src/release/published-versions.json --output work/pages/_site
+          --manifest work/pages-record/pages-manifest.json
+          --new-version "$(python3 src/scripts/ci/release_trust.py read --repo src --field version)"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: work/pages/_site
+          retention-days: 7
+      - name: Seal the Pages record
+        id: seal
+        run: python3 src/scripts/ci/release_artifact.py seal work/pages-record >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pages-record
+          path: work/pages-record
+          if-no-files-found: error
+          retention-days: 7
+
+  pages-deploy:
+    name: Deploy the Pages site
+    needs: pages-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # contents: read checks out the registry and lists the releases and tags; pages and id-token deploy.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PAGES_RECORD_ARTIFACT: ${{ needs.pages-build.outputs.pages_record_artifact }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pages-record
+          path: work/pages-record
+      - name: Check the Pages record handoff
+        run: python3 src/scripts/ci/release_artifact.py check work/pages-record --digest "$PAGES_RECORD_ARTIFACT"
+      # Re-running this job alone deploys this run's Pages artifact again, even after a newer release.
+      - name: Refuse unless this composition is still what compose-pages would serve
+        run: >-
+          python3 src/scripts/ci/release_publish.py check-deploy --registry src/release/published-versions.json
+          --pages-manifest work/pages-record/pages-manifest.json
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  verify-live:
+    name: Verify the live site and install path
+    needs: [finalize, pages-build, pages-deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    container:
+      image: registry.fedoraproject.org/fedora@sha256:2f642b05977b30ec43dacb7a6706f3204a861d4a0d8f72cff734f111801ad461 # Fedora44 amd64
+      options: --cpus 4
+    env:
+      PUBLICATION_ARTIFACT: ${{ needs.finalize.outputs.publication_artifact }}
+      PAGES_RECORD_ARTIFACT: ${{ needs.pages-build.outputs.pages_record_artifact }}
+    steps:
+      - name: Bootstrap Git for a real repository checkout
+        run: dnf5 --assumeyes --setopt=install_weak_deps=False install git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: src
+      - name: Install release tools
+        run: bash src/scripts/ci/install-fedora-tools.sh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: publication
+          path: work/publication
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pages-record
+          path: work/pages-record
+      - name: Check the handoffs and read the committed release version
+        run: >-
+          python3 src/scripts/ci/release_artifact.py check work/publication --digest "$PUBLICATION_ARTIFACT" &&
+          python3 src/scripts/ci/release_artifact.py check work/pages-record --digest "$PAGES_RECORD_ARTIFACT" &&
+          VERSION="$(python3 src/scripts/ci/release_trust.py read --repo src --field version)" &&
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Compare the live site with the release
+        run: >-
+          mkdir -p work/live && python3 src/scripts/ci/release_publish.py verify-live
+          --archive "work/publication/assets/intel-npu-stack-$VERSION.tar"
+          --pages-manifest work/pages-record/pages-manifest.json --sha "$GITHUB_SHA" --fetched work/live
+      - name: Run the live install path and DNF
+        run: >-
+          python3 src/scripts/ci/release_serve.py serve-test --live --site-root work/live
+          --report work/live-serve.json --work work/live-serve

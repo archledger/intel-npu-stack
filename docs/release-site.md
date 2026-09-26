@@ -6,7 +6,7 @@ committed `BASE_URL` in `crates/stack-install/src/trust.rs`, for example
 index and no `latest` alias. `scripts/ci/release_site.py` composes, checks,
 signs and archives that directory. `scripts/ci/release_serve.py` serves it
 locally as the Pages host and runs the published install path against it. The
-release workflow does not call either tool yet.
+release workflow runs them as described in [release-process.md](release-process.md).
 
 ## Layout
 
@@ -49,14 +49,16 @@ tests = ["install lifecycle", "doctor"]
 Every tested kernel must lie inside the profile's kernel window and appear
 once. The support matrix always adds the requalification line for the window's
 upper bound, for example `kernel 7.3 series and later: requires
-requalification`.
+requalification`. The release workflow's preflight applies the same checks to
+the notes with `release_inputs.py dispatch-check`, before any key is used.
 
 ## Commands
 
 ```sh
 release_site.py compose --source-commit SHA --tree release-tree --records records \
     --leg-a installer-a --leg-b installer-b --profile PROFILE --output site/0.1.0
-release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage unsigned --report verification.json
+release_site.py check --source-commit SHA --site site/0.1.0 --profile PROFILE --stage unsigned \
+    --max-bytes 314572800 --report verification.json
 release_serve.py serve-test --site-root site --expected-files verification.json --report serve.json
 release_site.py sign --source-commit SHA --site site/0.1.0 --profile PROFILE --expected-files verification.json \
     --gpg-home DIR --fingerprint FPR --passphrase-file FILE --require-passphrase
@@ -106,6 +108,10 @@ trust seam and release key are the only trust anchors.
 - It re-renders `install.sh`, `primary-command.txt`, `support-matrix.json` and
   `publication-manifest.json` and requires byte equality, and it requires the
   exact file set.
+- It records the bytes of the site's regular files as `total_bytes` in its
+  result and `--report`. With `--max-bytes N` it refuses a site larger than N
+  bytes. The release workflow's `verify` passes `SITE_BUDGET_BYTES`, the bytes
+  its preflight reserves for the new version on Pages.
 
 The signed stage additionally requires:
 
@@ -155,13 +161,15 @@ exact DNF5 option syntax is proven in the release rehearsal.
 
 ## Publication
 
-`scripts/ci/release_inputs.py` fetches the prepared release inputs tarball and
-checks it before any key exists. The download is HTTPS only, including
-redirects, and the tarball must have the dispatched SHA-256. Extraction accepts
-only regular files and directories with plain relative names, each once, and
-uses the tarfile data filter. `release_sign.py --check-inputs` then validates
-the result. `extract-check` repeats this for the copy passed between jobs, which
-must also match the preflight job's digest.
+`scripts/ci/release_inputs.py dispatch-check` checks the dispatch against the
+committed trust seam and validates the support notes of the selected profile.
+`fetch-check` then fetches the prepared release inputs tarball and checks it
+before any key exists. The download is HTTPS only, including redirects, and the
+tarball must have the dispatched SHA-256. Extraction accepts only regular files
+and directories with plain relative names, each once, and uses the tarfile data
+filter. `release_sign.py --check-inputs` then validates the result.
+`extract-check` repeats this for the copy passed between jobs, which must also
+match the preflight job's digest.
 
 `scripts/ci/release_publish.py` publishes through the GitHub REST API, using
 only the standard library. Its options must be spelled in full, and `GH_TOKEN`
@@ -169,7 +177,7 @@ must be 1 to 4096 visible ASCII characters, without spaces or line breaks, so a
 malformed token is refused without being echoed.
 
 Versions are published in increasing order, and the gates `compose-pages`
-applies to the versions already served run before anything irreversible. Both
+applies to the other versions run before anything irreversible. Both
 `check-unpublished` phases and `publish-release` also run `compose-pages` dry
 into a temporary directory over every non-draft `vX.Y.Z` release but this one,
 before they classify or create anything: the preflight after its Pages, tag,
@@ -185,9 +193,12 @@ version's bytes must stay within 950 MiB. The preflight reserves
 publish phase and `publish-release` reserve the new site's size.
 
 - `check-unpublished --phase preflight` refuses unless Pages is served by
-  GitHub Actions at the committed base URL, no tag, release or draft exists for
-  the version, the live `release.json` returns exactly 404 and the dry
-  composition passes.
+  GitHub Actions at the committed base URL, no tag or release exists for the
+  version, the live `release.json` returns exactly 404 and the dry composition
+  passes. GitHub lists drafts only to a token that can push, and the release
+  workflow's preflight token can only read, so a draft left by an aborted run
+  is not seen there. The publish phase finds it and refuses it unless it can
+  resume it.
 - `check-unpublished --phase publish` first checks the publication itself. The
   three separate files must be the archive's own copies, and `SHA256SUMS.asc`
   must pass the release-key policy. The archive must hold exactly the files
@@ -240,22 +251,36 @@ publish phase and `publish-release` reserve the new site's size.
   of the release's `SHA256SUMS`; a retired release must be immutable too, and
   every retired entry must match such a release. A deleted release can
   therefore be neither served nor retired, and its entry and its tag have to be
-  removed by hand after review.
-  The one removal this cannot see is a release deleted together with its tag
-  before its version is recorded; a ruleset that blocks deleting `v*` tags
-  closes that. `--new-version` must be the committed version and the newest
-  composed version, so re-running an older run's `pages-build` cannot serve
-  again what a later registry retired. The live `SHA256SUMS` of the other
-  versions must be unchanged, and the site must stay within 950 MiB. The
-  manifest records each composed version with the digests of its archive and
-  `SHA256SUMS`, and each retired version left out with the files it could have
-  served: those its `SHA256SUMS` lists and the two sums files, or only the sums
-  files when its `SHA256SUMS` does not parse, lists an unsafe path or more than
-  20000 files, since such a release never passed `compose-pages`.
-  `--manifest` must be a new file in an existing directory, neither inside the
-  site nor containing it.
-  This is checked before anything is downloaded, and a refusal leaves neither
-  the site nor the manifest behind.
+  removed by hand after review. The one removal this cannot see is a release
+  deleted together with its tag before its version is recorded; a ruleset that
+  blocks deleting `v*` tags closes that. `--new-version` must be the committed
+  version and the newest composed version, so re-running an older run's
+  `pages-build` cannot serve again what a later registry retired. Every run
+  composes from its own commit's registry, so a `retired` entry takes effect
+  only when the next release's `pages-build` and `pages-deploy` run. The live
+  `SHA256SUMS` of the other versions must be unchanged, and the site must stay
+  within 950 MiB. The manifest records each composed version with the digests
+  of its archive and `SHA256SUMS`, and each retired version left out with the
+  files it could have served: those its `SHA256SUMS` lists and the two sums
+  files, or only the sums files when its `SHA256SUMS` does not parse, lists an
+  unsafe path or more than 20000 files, since such a release never passed
+  `compose-pages`. `--manifest` must be a new file in an existing directory,
+  neither inside the site nor containing it. This is checked before anything
+  is downloaded, and a refusal leaves neither the site nor the manifest behind.
+- `check-deploy` runs in `pages-deploy` right before the deployment, because a
+  re-run of an older run's `pages-deploy` would put that run's composition live
+  again. `--pages-manifest` must be the record of composing the committed
+  version, that version must be the newest non-draft `vX.Y.Z` release, retired
+  ones included, and the composed versions must be exactly the non-draft
+  `vX.Y.Z` releases that `--registry` does not retire, each with the
+  `SHA256SUMS` digest it was composed with. As in `compose-pages`, every other
+  `vX.Y.Z` tag must have an entry in `--registry`, so a newer release deleted
+  while its tag remains still stops it, and the live `SHA256SUMS` of every
+  composed version but the committed one must be the composed one, so a
+  version a later deployment removed is not served again even once that
+  release and its tag are deleted. Only the committed version is not checked
+  live, since it is not served before its first deployment; such a re-run can
+  therefore serve it again although the deleted release's registry retired it.
 - `verify-live` requires `--pages-manifest`, the record `compose-pages` wrote
   with this version as `--new-version`, and the 40-hex release commit from
   `--sha` or `GITHUB_SHA`. Before it fetches anything, the record's entry for
@@ -292,5 +317,5 @@ extension headers may come in a row. pax records that change a size or describe
 a sparse file are refused, and so is pax padding that is not zero, since
 `tarfile` would parse records there. Member data is skipped, not read. For
 the inputs, the declared member sizes must also fit the 8 GiB unpacked budget
-before any data is decompressed. The release workflow does not call these tools
-yet.
+before any data is decompressed. `release.yml` uses these tools; see
+[release-process.md](release-process.md).

@@ -122,3 +122,78 @@ Boundaries:
   from new RPM evidence, and the unchanged qualification gates. Merging the
   draft remains an explicit maintainer decision under the standard protected
   pipeline.
+
+## Release workflow
+
+`release.yml` runs only on manual dispatch from `main`. The top level grants
+no permissions, and every job asks for its own:
+
+| Job | Permissions | Environment | Secrets |
+|---|---|---|---|
+| preflight | contents: read, pages: read | none | none |
+| sign | contents: read | `release` (approval 1) | Import step only |
+| installer-a, installer-b | contents: read | none | none |
+| verify | contents: read | none | none |
+| finalize | contents: read | `release` (approval 2) | Import step only |
+| attest | contents: read, id-token: write, attestations: write | none | none |
+| publish-release | contents: write | none | none |
+| pages-build | contents: read | none | none |
+| pages-deploy | contents: read, pages: write, id-token: write | `github-pages` | none |
+| verify-live | contents: read | none | none |
+
+The signing key reaches only the two Import steps. They receive it as step
+environment and write it into a tmpfs keyring. A Destroy step that always runs
+removes the keyring right after the signing step, before the job's remaining
+checks and uploads. Jobs that hold the key have no write token, and they build
+nothing. They run no action but checkout and the two artifact actions and no
+service container, and only the signing step runs while the key is present.
+That step is one command, the signing tool with the reads it substitutes and no
+other program, and its tool calls are pinned, so every check of the job runs
+before the import or after the Destroy step. Every artifact passed between jobs
+with `upload-artifact` is sealed with `ARTIFACT-SHA256SUMS` and checked against
+the producing job's output. The Pages artifact is the exception: `deploy-pages`
+takes it straight from `upload-pages-artifact`, and `check-deploy` checks the
+sealed `pages-record` that describes it, not the tree. `pages-deploy` reads its
+checkout, the release and tag listings and the live `SHA256SUMS` of the other
+versions it composed, and deploys only while its run's composition is still
+current.
+
+`scripts/ci/test_release_workflow.py` enforces these rules, the action pins,
+the container image and the equality of the two installer legs. Every job runs
+once, without a matrix, on a GitHub-hosted `ubuntu-24.04` runner, never on a
+self-hosted one. Secrets may appear only in the two Import steps, never in the
+workflow or a job environment, a container, a service or another step. It pins
+the environment of the workflow, of every job and of every step, and every job
+container, and no job may run a service. It pins the actions each job runs with
+their inputs, so every checkout takes the run's commit and keeps no token, and
+`attest` covers every served file and every release asset. Every use of an
+action, in any workflow, must name the same full commit, so no single pin, such
+as that of a checkout in a job that holds the key, can change on its own. Each
+downloaded artifact is checked by the first step after its download that
+downloads nothing, before any other step or action reads it. It pins every
+`scripts/ci` tool call of each job, in order and with its arguments, because a
+tool refuses a missing required option only after parsing; the preflight's
+reserve must be the site budget `verify` enforces. No job or step may tolerate
+an error or choose its own shell, and none may carry a condition except the
+Destroy step right after each signing step, which always runs. A step has only
+the keys of a run block or of an action. Every step runs in the workspace,
+where each tool and script path names the checkout's file, except the profile
+validation, which runs `cargo` in the checkout. A Destroy step run from the
+fetched inputs, for example, would run their keyring script while the key is
+present. Step names are unique within a job.
+
+Each run block is one line of commands joined by `&&`, so it stops at the
+first command that fails. The shell does not check a tool whose output
+`$(...)` substitutes into an argument; the tool that receives the value refuses
+an empty one. The committed version is first assigned to a shell variable,
+which takes the status of its read, so a failed read stops the block and only
+that version is ever written to `$GITHUB_ENV`. Each command is a pinned tool
+call, a seal that writes its digest to `$GITHUB_OUTPUT`, or one of a fixed list
+of other commands. A seal names its work directory as a plain path, so no other
+program can follow it. A command substitution in a tool call may only run
+another `scripts/ci` tool, whose call is pinned too, so no other program can
+hide inside a tool call. No run block has a single quote, backslash or
+backquote, and every expansion is inside double quotes, so bash passes exactly
+the arguments the test pins. The test also parses every tool call with that
+tool's own arguments, options spelled in full. See
+[release-process.md](release-process.md).

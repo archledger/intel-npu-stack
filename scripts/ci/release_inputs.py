@@ -2,10 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 """Fetch or extract the prepared release inputs and check them before any key exists.
 
+  release_inputs.py dispatch-check --ref REF --version V --url URL --sha256 SHA --profile PATH [--repo DIR]
   release_inputs.py fetch-check --url URL --sha256 SHA --profile FILE --archive FILE --output DIR [--report FILE]
   release_inputs.py extract-check --archive FILE --sha256 SHA --expected SHA --profile FILE --output DIR
                                   [--report FILE]
 
+dispatch-check refuses a dispatch that is not from main, names another version
+than the committed trust seam, gives a non-HTTPS inputs URL or a malformed
+SHA-256, or selects a profile that is not a tracked .toml file under profiles/
+named without '..'. It also validates release/<version>/support-notes.toml as
+release_site.py compose does, which runs only after the first signing: a
+tracked file of this release and profile whose tested kernels lie inside the
+profile's kernel window. Both files are read from the --repo checkout.
 fetch-check downloads the tarball over HTTPS only (redirects included), requires
 its SHA-256 to equal the dispatch input, extracts it safely and runs the keyless
 inputs check of release_sign.py against the selected profile. extract-check
@@ -33,7 +41,11 @@ import urllib.parse
 import zlib
 
 import release_sign
+import release_site
 import release_tar
+import release_trust
+
+REPO = Path(__file__).resolve().parents[2]
 
 MAX_ARCHIVE = 4 << 30
 MAX_UNPACKED = 8 << 30
@@ -139,6 +151,33 @@ def extract_check(archive, digest, expected, profile, output):
     return {'archive_sha256': actual, 'members': members, 'inputs': result}
 
 
+def dispatch_check(repo, ref, version, url, digest, profile):
+    """The workflow_dispatch inputs, checked against the committed trust seam before anything is fetched.
+
+    The support notes get the validation release_site compose applies, which runs only after the first signing.
+    """
+    require(ref == 'refs/heads/main', 'releases are dispatched from refs/heads/main only')
+    values = release_trust.check_committed(repo)
+    require(version == values['version'], f"release_version must equal the committed VERSION {values['version']}")
+    check_url(url)
+    require(isinstance(digest, str) and DIGEST.fullmatch(digest), 'the inputs SHA-256 must be 64 lowercase hex')
+    relative = Path(profile)
+    # An absolute path starts with '/', not 'profiles'.
+    require(relative.parts[:1] == ('profiles',) and '..' not in relative.parts and relative.suffix == '.toml',
+            'the profile must be a TOML file under profiles/')
+    notes = Path('release') / values['version'] / 'support-notes.toml'
+    try:
+        release_site.tracked(repo, Path(repo) / relative, 'profile')
+        tested, _ = release_site.support_notes(
+            release_site.load_toml(release_site.tracked(repo, Path(repo) / notes, 'support notes')),
+            release_site.load_toml(Path(repo) / relative), {'stack_release': values['version']})
+    except release_site.SiteRefused as error:
+        raise InputsRefused(str(error)) from None
+    return {'version': version, 'base_url': values['base_url'], 'profile': relative.as_posix(),
+            'support_notes': notes.as_posix(), 'tested_kernels': [entry['release'] for entry in tested],
+            'inputs_url': url, 'inputs_sha256': digest}
+
+
 def fetch_check(url, digest, profile, archive, output, download=curl_download):
     check_url(url)
     require(isinstance(digest, str) and DIGEST.fullmatch(digest), 'the inputs SHA-256 must be 64 lowercase hex')
@@ -151,24 +190,30 @@ def fetch_check(url, digest, profile, archive, output, download=curl_download):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command', choices=['fetch-check', 'extract-check'])
+    parser.add_argument('command', choices=['dispatch-check', 'fetch-check', 'extract-check'])
+    parser.add_argument('--repo', type=Path, default=REPO)
+    parser.add_argument('--ref')
+    parser.add_argument('--version')
     parser.add_argument('--url')
     parser.add_argument('--sha256', required=True)
     parser.add_argument('--expected')
-    parser.add_argument('--profile', type=Path, required=True)
-    parser.add_argument('--archive', type=Path, required=True)
-    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--profile', required=True)
+    parser.add_argument('--archive', type=Path)
+    parser.add_argument('--output', type=Path)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args(argv)
-    if args.command == 'fetch-check' and args.url is None:
-        parser.error('fetch-check requires --url')
-    if args.command == 'extract-check' and args.expected is None:
-        parser.error('extract-check requires --expected')
+    needed = {'dispatch-check': ['ref', 'version', 'url'], 'fetch-check': ['url', 'archive', 'output'],
+              'extract-check': ['expected', 'archive', 'output']}[args.command]
+    missing = [name for name in needed if getattr(args, name) is None]
+    if missing:
+        parser.error(args.command + ' requires ' + ', '.join('--' + name for name in missing))
     try:
         if args.report is not None:
             require(not args.report.exists() and args.report.parent.is_dir(),
                     'the report must be a new file in an existing directory')
-        if args.command == 'fetch-check':
+        if args.command == 'dispatch-check':
+            result = dispatch_check(args.repo, args.ref, args.version, args.url, args.sha256, args.profile)
+        elif args.command == 'fetch-check':
             result = fetch_check(args.url, args.sha256, args.profile, args.archive, args.output)
         else:
             result = extract_check(args.archive, args.sha256, args.expected, args.profile, args.output)
@@ -176,7 +221,8 @@ def main(argv=None):
         if args.report is not None:
             with open(args.report, 'x') as stream:
                 stream.write(text)
-    except (InputsRefused, OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+    except (InputsRefused, release_trust.TrustRefused, OSError, ValueError, KeyError,
+            subprocess.SubprocessError) as error:
         parser.exit(1, f'release inputs {args.command} refused: {error}\n')
     sys.stdout.write(text)
     return 0

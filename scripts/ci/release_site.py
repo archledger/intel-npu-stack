@@ -5,7 +5,7 @@
   release_site.py compose --source-commit SHA --tree DIR --records DIR --leg-a DIR --leg-b DIR
                           --profile FILE [--support-notes FILE] --output site/<version>
   release_site.py check   --source-commit SHA --site DIR --profile FILE [--support-notes FILE]
-                          --stage unsigned|signed [--expected-files REPORT] [--report FILE]
+                          --stage unsigned|signed [--expected-files REPORT] [--max-bytes N] [--report FILE]
   release_site.py sign    --source-commit SHA --site DIR --profile FILE [--support-notes FILE]
                           --expected-files REPORT --gpg-home DIR --fingerprint FPR [--passphrase-file FILE]
                           [--require-passphrase]
@@ -17,6 +17,10 @@ The site is the signed release tree unchanged, the pinned installer set built
 by two independent legs, the build and signing records, a support matrix and a
 publication manifest. Everything except the tree, the installer binary and the
 signatures is a pure function of its inputs and is re-rendered by `check`.
+`check` records the bytes of the site's regular files as total_bytes in its
+result and --report, and with --max-bytes it refuses a site larger than N
+bytes; the release workflow's verify passes SITE_BUDGET_BYTES, the bytes its
+preflight reserves for the new version on Pages.
 `sign` adds exactly four files: the installer and install.sh signatures,
 SHA256SUMS over every other file, and its signature. `--repo` (default: this
 checkout) must be at --source-commit with unmodified tracked files; its
@@ -795,6 +799,7 @@ def main(argv=None):
     parser.add_argument('--stage', choices=['unsigned', 'signed'])
     parser.add_argument('--expected-files', type=Path, help='the unsigned-stage report of the verified site')
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--max-bytes', type=int, help='check: refuse a site larger than this many bytes')
     parser.add_argument('--gpg-home', type=Path)
     parser.add_argument('--fingerprint')
     parser.add_argument('--passphrase-file')
@@ -832,6 +837,9 @@ def main(argv=None):
                 expected = unsigned_report(args.expected_files)
             result = verify_site(args.site, args.repo, args.source_commit, args.profile, notes_path, args.stage,
                                  expected)
+            result['total_bytes'] = sum((args.site / name).stat().st_size for name in site_files(args.site))
+            require(args.max_bytes is None or result['total_bytes'] <= args.max_bytes,
+                    f"the site is {result['total_bytes']} bytes, above the {args.max_bytes}-byte size budget")
         elif args.command == 'sign':
             passphrase = (release_sign.check_passphrase_file(args.passphrase_file)
                           if args.passphrase_file else None)

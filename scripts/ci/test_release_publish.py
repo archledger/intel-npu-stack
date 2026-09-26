@@ -46,6 +46,8 @@ class FakeGitHub:
         self.immutable_on_publish, self.tag_override, self.page_size = True, None, 2
         self.corrupt, self.fail, self.storage_auth, self.next_id = set(), {}, [], 1
         self.frozen_notes, self.upload_bodies, self.undrafts = False, [], []
+        # Tokens that can only read, like the preflight job's: GitHub lists drafts only to a token that can push.
+        self.readers = set()
         # 'upload', 'readback', 'undraft' (as the undraft request arrives, before it applies) or 'publish': called
         # once with the release when that first happens
         self.hooks = {}
@@ -119,6 +121,9 @@ class FakeGitHub:
                 return 200, {}, b''
             return 200, {}, body
         path = parts.path
+        reader = (headers or {}).get('Authorization') in {'Bearer ' + token for token in self.readers}
+        if reader and method != 'GET':
+            return self.reply(403, {'message': 'Resource not accessible by integration'})
         for (fail_method, prefix), status in self.fail.items():
             if method == fail_method and path.startswith(prefix):
                 return self.reply(status, {'message': 'injected'})
@@ -150,7 +155,8 @@ class FakeGitHub:
                 return self.reply(404, {'message': 'Not Found'})
             return self.reply(200, {'object': {'type': 'commit', 'sha': self.annotated[tag_object]}})
         if rest == '/releases' and method == 'GET':
-            return self.listing(self.releases, query, f'{API}{repo}/releases?per_page=100&page=')
+            visible = [release for release in self.releases if not (reader and release['draft'])]
+            return self.listing(visible, query, f'{API}{repo}/releases?per_page=100&page=')
         if rest == '/releases' and method == 'POST':
             body = json.loads(data)
             release = self.add_release(body['tag_name'], draft=True, immutable=False, commit=body['target_commitish'])
@@ -163,6 +169,8 @@ class FakeGitHub:
             return self.reply(200, next(a for r in self.releases for a in r['assets'] if a['id'] == asset_id))
         if rest and rest.startswith('/releases/'):
             release = next(r for r in self.releases if r['id'] == int(rest.split('/')[2]))
+            if reader and release['draft']:
+                return self.reply(404, {'message': 'Not Found'})
             if method == 'PATCH':
                 body = json.loads(data)
                 if body.get('draft') is False:
@@ -277,6 +285,9 @@ class Publication(unittest.TestCase):
     def setUp(self):
         self.fake = FakeGitHub()
         self.gh = publish.GitHub(API, REPOSITORY, 'token-value', transport=self.fake)
+        # The preflight job's token can only read (contents: read); the publish job's can push.
+        self.fake.readers.add('read-token')
+        self.reader = publish.GitHub(API, REPOSITORY, 'read-token', transport=self.fake)
         self.values = {'version': '0.1.0', 'base_url': BASE_URL, 'primary_fingerprint': self.key.fingerprint}
         self.work = Path(tempfile.mkdtemp(prefix='case-', dir=self.tmp.name))
         self.addCleanup(shutil.rmtree, self.work, True)
@@ -302,9 +313,11 @@ class Publication(unittest.TestCase):
     def committed_registry(self):
         return self.registry(self.recorded, self.retired)
 
-    def preflight(self, **changes):
+    def preflight(self, gh=None, **changes):
+        """check-unpublished --phase preflight, by default under the preflight job's read-only token."""
         options = {'key': self.key.public, 'reserve': self.reserve, 'fetch': self.fetch, **changes}
-        return publish.check_unpublished(self.gh, self.values, 'preflight', self.committed_registry(), **options)
+        return publish.check_unpublished(gh or self.reader, self.values, 'preflight', self.committed_registry(),
+                                         **options)
 
     def publish_phase(self, **changes):
         options = {'assets_dir': self.assets_dir, 'commit': COMMIT, 'key': self.key.public, 'fetch': self.fetch}
@@ -352,14 +365,50 @@ class Publication(unittest.TestCase):
         self.fake.tags['v0.1.0'] = COMMIT
         self.refused('tag v0.1.0 already exists', preflight)
         del self.fake.tags['v0.1.0']
-        self.fake.add_release('v0.1.0', draft=True)
-        self.refused('release or draft', preflight)
+        self.fake.add_release('v0.1.0')
+        del self.fake.tags['v0.1.0']  # a published release whose tag was deleted
+        self.refused('a release or draft for v0.1.0 already exists', preflight)
         self.fake.releases.clear()
         self.live['/intel-npu-stack/0.1.0/release.json'] = b'{}'
         self.refused('HTTP 200', preflight)
         del self.live['/intel-npu-stack/0.1.0/release.json']
         self.fake.fail[('GET', f'/repos/{REPOSITORY}/releases')] = 502
         self.refused('HTTP 502', preflight)
+
+    def test_a_draft_the_preflight_cannot_see_is_resumed_or_refused_by_the_publish_phase(self):
+        # GitHub lists drafts only to a token that can push. The preflight job's token can only read, so a draft an
+        # aborted run left is first seen by the publish phase, after the signing and the attestation.
+        stale = self.fake.add_release('v0.1.0', draft=True, immutable=False,
+                                      assets={'publication-manifest.json': b'{"stale": true}\n'})
+        self.assertEqual(self.preflight(), 'fresh')
+        self.refused('a release or draft for v0.1.0 already exists', self.preflight, gh=self.gh)
+        self.refused('a stale draft is deleted by hand', self.publish_phase)
+        self.refused('a stale draft is deleted by hand', self.publish)
+        self.assertEqual((stale['draft'], len(stale['assets']), self.fake.upload_bodies, self.fake.undrafts),
+                         (True, 1, [], []))
+        with self.subTest('a draft of another commit'):
+            self.setUp()
+            self.fake.add_release('v0.1.0', draft=True, immutable=False, commit='d' * 40,
+                                  assets={'SHA256SUMS': self.assets['SHA256SUMS']})
+            self.assertEqual(self.preflight(), 'fresh')
+            self.refused('the v0.1.0 draft targets another commit than this publication', self.publish_phase)
+            self.refused('the v0.1.0 draft targets another commit than this publication', self.publish)
+        with self.subTest('a byte-identical subset of this publication at this commit'):
+            self.setUp()
+            draft = self.fake.add_release('v0.1.0', draft=True, immutable=False,
+                                          assets={'SHA256SUMS': self.assets['SHA256SUMS']})
+            self.assertEqual(self.preflight(), 'fresh')
+            self.assertEqual(self.publish_phase(), 'draft-resume')
+            self.assertEqual(self.publish()['state'], 'draft-resume')
+            self.assertEqual((draft['draft'], draft['immutable'], self.fake.tags['v0.1.0']), (False, True, COMMIT))
+
+    def test_the_preflight_token_cannot_write_or_see_drafts(self):
+        draft = self.fake.add_release('v0.1.0', draft=True, immutable=False)
+        self.assertEqual(self.reader.releases(), [])
+        self.assertEqual([release['id'] for release in self.gh.releases()], [draft['id']])
+        self.refused('returned HTTP 404', self.reader.call, 'GET', f"/releases/{draft['id']}")
+        self.refused('returned HTTP 403', self.reader.call, 'PATCH', f"/releases/{draft['id']}", {'draft': False})
+        self.assertTrue(draft['draft'])
 
     def test_preflight_requires_exactly_a_404_for_the_live_release_json(self):
         for code in (503, 403, 500, 301):
@@ -748,6 +797,24 @@ class Publication(unittest.TestCase):
             self.refused(f'the Pages site would be {full} bytes with 0.2.0, above the {full - 1}-byte budget',
                          self.publish_phase)
 
+    def test_the_room_check_leaves_out_a_retired_version_pages_still_serves(self):
+        # The registry of this run retires 0.1.0, and the site this run deploys leaves it out, so its bytes are not
+        # counted and whatever Pages still serves for it is not checked, neither by the room checks nor right before
+        # publish-release publishes the release.
+        for label, served in [('still served', self.assets['SHA256SUMS']), ('served with other bytes', b'other sums\n'),
+                              ('no longer served', None)]:
+            with self.subTest(label):
+                self.setUp()
+                self.pending()
+                self.recorded = []
+                self.retired = [{'version': '0.1.0', 'sha256sums_sha256': sha(self.assets['SHA256SUMS']),
+                                 'reason': 'withdrawn'}]
+                self.live = {} if served is None else {'/intel-npu-stack/0.1.0/SHA256SUMS': served}
+                with mock.patch.object(publish, 'MAX_SITE', publish.site_bytes(self.site2)):
+                    self.assertEqual(self.preflight(), 'fresh')
+                    self.assertEqual(self.publish_phase(), 'fresh')
+                    self.assertEqual(self.publish()['state'], 'fresh')
+
     def test_versions_are_ordered_by_number(self):
         for version in ['0.9.0', '0.10.0']:
             site, archive, assets = make_release(self.work / version, self.key, version)
@@ -1031,6 +1098,145 @@ class Publication(unittest.TestCase):
         self.refused('the new version 0.1.0 is not the newest release 0.2.0', self.compose, self.registry(),
                      new_version='0.1.0')
         self.assertFalse((self.work / 'out/_site').exists())
+
+    # check-deploy ------------------------------------------------------------------------------------
+
+    def check_deploy(self, manifest, registry=None, version='0.2.0'):
+        return publish.check_deploy(self.gh, self.version_values(version), registry or self.committed_registry(),
+                                    manifest, fetch=self.fetch)
+
+    def test_a_composition_is_deployed_only_while_it_is_still_current(self):
+        # A job re-run reuses its run's artifacts, so a re-run of an older run's pages-deploy would put that run's
+        # composition live again after a newer release changed what compose-pages serves.
+        def older():
+            return next(r for r in self.fake.releases if r['tag_name'] == 'v0.1.0')
+
+        def newer_retired():  # a newer release counts once it has left Pages too
+            self.published('0.3.0', self.assets3, self.site3, self.archive3)
+            self.retired.append({'version': '0.3.0', 'sha256sums_sha256': sha(self.assets3['SHA256SUMS']),
+                                 'reason': 'withdrawn'})
+
+        def other_sums():
+            next(a for a in older()['assets'] if a['name'] == 'SHA256SUMS').update(digest='sha256:' + '0' * 64)
+
+        def no_sums():  # such as a release deleted and created again on its tag
+            older()['assets'] = [asset for asset in older()['assets'] if asset['name'] != 'SHA256SUMS']
+
+        def newer_deleted():  # GitHub keeps the tag of a deleted release, and compose-pages refuses it unrecorded
+            self.fake.releases.remove(self.published('0.3.0', self.assets3, self.site3, self.archive3))
+        stale = 'the composition of 0.2.0 is out of date: '
+        unrecorded = 'tagged versions without an entry in published-versions.json: '
+        cases = [
+            ('a newer release', lambda: self.published('0.3.0', self.assets3, self.site3, self.archive3),
+             stale + 'the newest release is 0.3.0'),
+            ('a newer release that is retired', newer_retired, stale + 'the newest release is 0.3.0'),
+            ('a newer release deleted, its tag kept', newer_deleted, unrecorded + '0.3.0'),
+            ('an older tag without a registry entry', lambda: self.fake.tags.update({'v0.0.5': COMMIT}),
+             unrecorded + '0.0.5'),
+            ('a composed release deleted', lambda: self.fake.releases.remove(older()),
+             stale + 'compose-pages would serve 0.2.0, not 0.1.0, 0.2.0'),
+            ('an older release added', lambda: self.fake.add_release('v0.0.9', assets={'SHA256SUMS': b'sums\n'}),
+             stale + 'compose-pages would serve 0.0.9, 0.1.0, 0.2.0, not 0.1.0, 0.2.0'),
+            ('a composed release now with another SHA256SUMS', other_sums,
+             stale + 'release v0.1.0 is not the release it composed'),
+            ('a composed release now without its SHA256SUMS', no_sums,
+             stale + 'release v0.1.0 is not the release it composed'),
+            ('a composed older version no longer served', lambda: self.live.clear(),
+             'the live 0.1.0/SHA256SUMS differs from its release (HTTP 404)'),
+            ('a composed older version served with other bytes',
+             lambda: self.live.update({'/intel-npu-stack/0.1.0/SHA256SUMS': b'other sums\n'}),
+             'the live 0.1.0/SHA256SUMS differs from its release (HTTP 200)'),
+        ]
+        for label, change, message in cases:
+            with self.subTest(label):
+                self.setUp()
+                self.publish_both()
+                self.compose()
+                manifest = self.work / 'out/pages-manifest.json'
+                # The new version is not served before its first deployment, so only the older ones must be live.
+                self.assertEqual(self.check_deploy(manifest), {'new_version': '0.2.0', 'versions': ['0.1.0', '0.2.0']})
+                change()
+                self.refused(message, self.check_deploy, manifest)
+
+    def test_a_redeployment_cannot_serve_again_an_older_version_a_later_deployment_removed(self):
+        # The run of 0.2.0 composed 0.1.0 and 0.2.0. The run of 0.3.0 retired 0.1.0 and deployed, so 0.1.0 left
+        # Pages; then 0.3.0 was deleted, and its entry and its tag removed by hand. Every listing is again as the
+        # 0.2.0 run composed it, so only the live site shows that its composition is no longer current.
+        self.publish_both()
+        self.compose()
+        manifest = self.work / 'out/pages-manifest.json'
+        newer = self.published('0.3.0', self.assets3, self.site3, self.archive3)
+        self.live = {'/intel-npu-stack/0.2.0/SHA256SUMS': self.assets2['SHA256SUMS'],
+                     '/intel-npu-stack/0.3.0/SHA256SUMS': self.assets3['SHA256SUMS']}
+        self.fake.releases.remove(newer)
+        del self.fake.tags['v0.3.0']
+        self.refused('the live 0.1.0/SHA256SUMS differs from its release (HTTP 404)', self.check_deploy, manifest)
+        # Had 0.1.0 stayed on Pages, the re-run would serve what is live without the deleted release.
+        self.live['/intel-npu-stack/0.1.0/SHA256SUMS'] = self.assets['SHA256SUMS']
+        self.assertEqual(self.check_deploy(manifest)['versions'], ['0.1.0', '0.2.0'])
+
+    def test_the_deploy_check_orders_versions_by_number(self):
+        composed = {}
+        for version in ['0.9.0', '0.10.0']:
+            self.fake.add_release('v' + version, assets={'SHA256SUMS': f'{version} sums\n'.encode()})
+            composed[version] = {'sha256sums_sha256': sha(f'{version} sums\n'.encode())}
+        self.live['/intel-npu-stack/0.9.0/SHA256SUMS'] = b'0.9.0 sums\n'
+        registry = self.registry([{'version': '0.9.0', 'sha256sums_sha256': composed['0.9.0']['sha256sums_sha256']}])
+        manifest = self.pages_record(base_url=BASE_URL.replace('0.1.0', '0.10.0'), new_version='0.10.0',
+                                     versions=composed)
+        self.assertEqual(self.check_deploy(manifest, registry, '0.10.0'),
+                         {'new_version': '0.10.0', 'versions': ['0.9.0', '0.10.0']})
+        self.fake.add_release('v0.11.0', assets={'SHA256SUMS': b'0.11.0 sums\n'})
+        self.refused('the composition of 0.10.0 is out of date: the newest release is 0.11.0', self.check_deploy,
+                     manifest, registry, '0.10.0')
+
+    def test_the_deployed_versions_are_the_releases_the_run_registry_does_not_retire(self):
+        self.publish_both()
+        retired = self.registry(retired=[{'version': '0.1.0', 'sha256sums_sha256': sha(self.assets['SHA256SUMS']),
+                                          'reason': 'withdrawn'}])
+        manifest = self.work / 'out/pages-manifest.json'
+        self.compose(retired)
+        self.assertEqual(self.check_deploy(manifest, retired), {'new_version': '0.2.0', 'versions': ['0.2.0']})
+        # A retired version is not composed, so it is not checked live either: Pages may serve it, with any bytes,
+        # until a deployment leaves it out, and a re-run after that finds it gone.
+        for label, served in [('served with other bytes', b'other sums\n'), ('no longer served', None)]:
+            with self.subTest(label):
+                self.live = {} if served is None else {'/intel-npu-stack/0.1.0/SHA256SUMS': served}
+                self.assertEqual(self.check_deploy(manifest, retired)['versions'], ['0.2.0'])
+        # Drafts, releases of other tags and other tags are never composed, so they change nothing.
+        self.fake.add_release('v0.3.0', draft=True, immutable=False, assets=self.assets3)
+        self.fake.add_release('release-inputs-0.3.0', prerelease=True, assets={'release-inputs.tar.gz': b'x'})
+        self.fake.tags['v0.3.0-rc1'] = COMMIT
+        self.assertEqual(self.check_deploy(manifest, retired)['versions'], ['0.2.0'])
+        self.refused('the composition of 0.2.0 is out of date: compose-pages would serve 0.1.0, 0.2.0, not 0.2.0',
+                     self.check_deploy, manifest, self.registry(self.recorded))
+        invalid = self.work / 'invalid-registry.json'
+        invalid.write_text('{"schema_version": 1}')
+        self.refused('published-versions.json must be schema 1', self.check_deploy, manifest, invalid)
+
+    def test_the_deploy_check_first_requires_the_record_of_composing_this_version(self):
+        self.published('0.1.0', self.assets, self.site, self.archive)
+        self.fake.fail[('GET', f'/repos/{REPOSITORY}/releases')] = 500  # a listing before the record check fails
+        malformed = self.work / 'pages-manifest-list.json'
+        malformed.write_text('[]')
+        unretired = self.pages_record()
+        unretired.write_text(json.dumps({key: value for key, value in json.loads(unretired.read_text()).items()
+                                         if key != 'retired'}))
+        for label, record in [('not an object', malformed),
+                              ('another schema', self.pages_record(schema_version=2)),
+                              ('another base URL', self.pages_record(base_url=BASE_URL.replace('0.1.0', '0.0.9'))),
+                              ('composed without a new version', self.pages_record(new_version=None)),
+                              ('another new version', self.pages_record(new_version='0.0.9')),
+                              ('versions that are not an object', self.pages_record(versions=[])),
+                              # compose-pages records the retired versions it left out, if only as {}.
+                              ('no retired versions', unretired),
+                              ('retired versions in a list', self.pages_record(retired=['0.0.9']))]:
+            with self.subTest(label):
+                self.refused('the Pages manifest is not the record of composing 0.1.0', self.check_deploy, record,
+                             self.registry(), '0.1.0')
+        self.fake.fail.clear()
+        self.assertEqual(self.check_deploy(self.pages_record(), self.registry(), '0.1.0'),
+                         {'new_version': '0.1.0', 'versions': ['0.1.0']})
 
     def compose_into(self, output, manifest, fetch=None):
         return publish.compose_pages(self.gh, self.version_values('0.2.0'), self.key.public, self.key.fingerprint,
@@ -1865,6 +2071,18 @@ class Wiring(unittest.TestCase):
             self.assertEqual(self.main(options + ['--registry', 'r.json'], self.ENVIRONMENT)[0], 0)
         self.assertEqual(release.call_count, 1)
         self.assertEqual(release.call_args.args[6], Path('r.json'))
+
+    def test_check_deploy_takes_the_registry_and_the_pages_manifest(self):
+        with mock.patch.object(publish, 'check_deploy', return_value={'new_version': '0.1.0'}) as check:
+            self.assertEqual(self.main(['check-deploy', '--registry', 'r.json', '--pages-manifest', 'pages.json'],
+                                       self.ENVIRONMENT)[0], 0)
+            self.assertEqual(check.call_args.args[2:], (Path('r.json'), Path('pages.json')))
+            for options in [['--registry', 'r.json'], ['--pages-manifest', 'pages.json']]:
+                with self.subTest(options):
+                    code, stderr = self.main(['check-deploy', *options], self.ENVIRONMENT)
+                    self.assertEqual(code, 1)
+                    self.assertIn('check-deploy needs --registry and --pages-manifest', stderr)
+        self.assertEqual(check.call_count, 1)
 
     def test_options_are_spelled_in_full(self):
         with mock.patch.object(publish, 'check_unpublished', return_value='fresh') as check:

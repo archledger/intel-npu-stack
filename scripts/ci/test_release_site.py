@@ -463,6 +463,19 @@ class Refusals(Case):
                             handle.addfile(info, data)
                 self.refused('archive', site_tool.render_notes, self.f.signed, tar)
 
+    def test_site_size_budget_is_enforced_before_signing(self):
+        common = ['check', '--repo', str(self.f.repo), '--source-commit', self.f.commit, '--site', str(self.f.site),
+                  '--profile', str(self.f.profile), '--stage', 'unsigned']
+        size = sum(path.stat().st_size for path in self.f.site.rglob('*') if path.is_file())
+        report = self.work / 'verification-report.json'
+        # A site of exactly the budget passes, and the report records its size for the approver.
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(site_tool.main(common + ['--max-bytes', str(size), '--report', str(report)]), 0)
+        self.assertEqual(json.loads(report.read_text())['total_bytes'], size)
+        with contextlib.redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit):
+            site_tool.main(common + ['--max-bytes', str(size - 1)])
+        self.assertIn(f'the site is {size} bytes, above the {size - 1}-byte size budget', errors.getvalue())
+
     def test_signing_uses_only_the_committed_release_key(self):
         site = self.copy(self.f.site)
         with self.assertRaises(site_tool.REFUSALS) as caught:
