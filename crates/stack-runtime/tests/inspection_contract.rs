@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
@@ -428,6 +428,45 @@ fn doctor_runs_exact_level_zero_then_openvino_infer_modes() {
         diagnostic(&result, "runtime.activity").status,
         CheckStatus::Pass
     );
+}
+
+#[test]
+fn probe_requests_disable_the_driver_disk_cache() {
+    let fixture = Fixture::new();
+    let runner = FakeRunner::new([output(LEVEL_ZERO_PASS), output(OPENVINO_INFER_PASS)]);
+    let packages = passing_packages(&fixture.profile);
+    let devices = FakeDevices::passing();
+    let activity = FakeActivity::new([counter(&[5]), counter(&[8])]);
+
+    let status_runner = FakeRunner::new([output(LEVEL_ZERO_PASS), output(OPENVINO_ENUMERATE_PASS)]);
+    let status = inspect_status(&fixture, &status_runner, &packages, &devices, &activity);
+    let doctor = inspect_doctor(&fixture, &runner, &packages, &devices, &activity);
+    assert!(
+        status
+            .checks
+            .iter()
+            .all(|check| check.status == CheckStatus::Pass)
+            && doctor
+                .checks
+                .iter()
+                .all(|check| check.status == CheckStatus::Pass),
+        "fixture must pass for both commands"
+    );
+
+    let expected = [(
+        OsString::from("ZE_INTEL_NPU_CACHE_SIZE"),
+        OsString::from("0"),
+    )];
+    for request in status_runner
+        .requests()
+        .into_iter()
+        .chain(runner.requests())
+    {
+        assert_eq!(
+            request.environment, expected,
+            "every helper run must disable the NPU driver disk cache"
+        );
+    }
 }
 
 #[test]

@@ -7,6 +7,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -205,4 +206,55 @@ fn stdin_is_null() {
         .expect("run stdin fixture");
     assert_eq!(output.termination, Termination::Exit(0));
     assert_eq!(output.stdout, b"closed");
+}
+
+static WORKING_DIRECTORY_LOCK: Mutex<()> = Mutex::new(());
+
+#[test]
+fn helper_environment_leaves_the_callers_working_directory_untouched() {
+    let _guard = WORKING_DIRECTORY_LOCK
+        .lock()
+        .expect("working directory lock");
+    let fixture = TempDir::new().expect("temporary directory");
+    let helper = script(
+        fixture.path(),
+        "npu-disk-cache",
+        "if [ \"${ZE_INTEL_NPU_CACHE_SIZE-1}\" = \"0\" ]\nthen\n  printf 'cache-disabled'\nelse\n  mkdir -p .cache/ze_intel_npu_cache\n  printf 'cache-enabled'\nfi",
+    );
+    let mut overridden = request(helper.clone());
+    overridden.environment = vec![(
+        OsString::from("ZE_INTEL_NPU_CACHE_SIZE"),
+        OsString::from("0"),
+    )];
+
+    let inherited = TempDir::new().expect("inherited working directory");
+    let previous = std::env::current_dir().expect("caller working directory");
+    std::env::set_current_dir(inherited.path()).expect("enter inherited working directory");
+    let control = SystemProcessRunner
+        .run(&request(helper))
+        .expect("run cache fixture without the override");
+    std::env::set_current_dir(previous).expect("restore caller working directory");
+    assert_eq!(control.termination, Termination::Exit(0));
+    assert_eq!(control.stdout, b"cache-enabled");
+    assert!(
+        inherited.path().join(".cache/ze_intel_npu_cache").is_dir(),
+        "control must reproduce the helper writing into the inherited directory"
+    );
+
+    let isolated = TempDir::new().expect("overridden working directory");
+    let previous = std::env::current_dir().expect("caller working directory");
+    std::env::set_current_dir(isolated.path()).expect("enter overridden working directory");
+    let overridden_output = SystemProcessRunner
+        .run(&overridden)
+        .expect("run cache fixture with the override");
+    std::env::set_current_dir(previous).expect("restore caller working directory");
+    assert_eq!(overridden_output.termination, Termination::Exit(0));
+    assert_eq!(overridden_output.stdout, b"cache-disabled");
+    let entries = fs::read_dir(isolated.path())
+        .expect("list overridden working directory")
+        .count();
+    assert_eq!(
+        entries, 0,
+        "the caller's working directory must be left untouched"
+    );
 }

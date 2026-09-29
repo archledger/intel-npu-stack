@@ -23,6 +23,7 @@ const OPENVINO_ENUMERATE_TIMEOUT: Duration = Duration::from_secs(15);
 const OPENVINO_INFER_TIMEOUT: Duration = Duration::from_secs(120);
 const PROBE_STDOUT_LIMIT: usize = 65_536;
 const PROBE_STDERR_LIMIT: usize = 16_384;
+const DRIVER_DISK_CACHE_SIZE: (&str, &str) = ("ZE_INTEL_NPU_CACHE_SIZE", "0");
 
 /// Installed and injected paths used by runtime inspection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -403,7 +404,10 @@ impl<'a> RuntimeInspector<'a> {
                 timeout,
                 stdout_limit: PROBE_STDOUT_LIMIT,
                 stderr_limit: PROBE_STDERR_LIMIT,
-                environment: Vec::new(),
+                environment: vec![(
+                    OsString::from(DRIVER_DISK_CACHE_SIZE.0),
+                    OsString::from(DRIVER_DISK_CACHE_SIZE.1),
+                )],
             })
             .map_err(ProbeFailure::from_process)?;
         if output.stdout_overflow || output.stderr_overflow {
