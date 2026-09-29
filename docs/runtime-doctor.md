@@ -57,7 +57,7 @@ The fixed subprocess deadlines are:
 | OpenVINO enumeration | 15 seconds |
 | OpenVINO compile and inference | 120 seconds |
 
-The CLI launches the two native helpers directly by absolute package-owned path, clears their inherited environment, supplies only `LC_ALL=C`, closes stdin, drains stdout and stderr concurrently, and kills and reaps a helper that exceeds its deadline. Helper stdout is capped at 64 KiB and must be one strict version-1 JSON object. Stderr is drained with a 16 KiB cap but discarded.
+The CLI launches the two native helpers directly by absolute package-owned path, clears their inherited environment, supplies only `LC_ALL=C` and `ZE_INTEL_NPU_CACHE_SIZE=0` (without `HOME`, the NPU user-mode driver would otherwise create a `.cache/ze_intel_npu_cache` directory in the inherited working directory; a size of zero disables that cache, so diagnostics leave the directory untouched), closes stdin, drains stdout and stderr concurrently, and kills and reaps a helper that exceeds its deadline. Helper stdout is capped at 64 KiB and must be one strict version-1 JSON object. Stderr is drained with a 16 KiB cap but discarded.
 
 ## Stable error codes
 
