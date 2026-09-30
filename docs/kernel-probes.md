@@ -38,7 +38,6 @@ profile never covers another. A record applies only while its component-set
 digest, and for a qualification record its evidence digest, equals the
 profile's current one. Older records stay in the registry as history, are
 reported as stale and never cover a kernel.
-- `requalification-required`: above every qualified window.
 
 The workflow can only read the repository and write issues. Until a profile is
 qualified it reports nothing to watch.
