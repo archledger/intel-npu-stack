@@ -45,6 +45,15 @@
       "source": "probe",
       "evidence_sha256": "672e0f477deb1d2393fed54554531ce2b61eeb31b3516dda825ed23ecc8e0948",
       "recorded": "2026-09-30"
+    },
+    {
+      "kernel": "7.2.8-200.fc44",
+      "profile": "fedora-44-lunar-lake-x86_64",
+      "components_sha256": "3b3fb8ac13141c60b45178636be5accd09d56694ab58d0930954de5c966d0e2a",
+      "result": "pass",
+      "source": "probe",
+      "evidence_sha256": "85bea740c34d631f4c9431f11cfdd5dcce7777d0122d598bef1fcfcf7c5af2c6",
+      "recorded": "2026-10-08"
     }
   ]
 }

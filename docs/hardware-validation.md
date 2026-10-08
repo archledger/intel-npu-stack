@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Hardware validation progress
 
-Status as of **2026-09-26**: the matched Fedora 44 Lunar Lake pilot passed
+Status as of **2026-10-08**: the matched Fedora 44 Lunar Lake pilot passed
 upgrade, warm reboot, normal-user NPU diagnostics, removal, rollback,
 restoration and repeat installation on kernel **7.2.5-200.fc44.x86_64**, then
 suspend/resume and a user-confirmed cold boot on kernel
@@ -9,6 +9,9 @@ suspend/resume and a user-confirmed cold boot on kernel
 the profile is qualified for release 0.1.1, published on 2026-09-26 with the
 same provider, tools and metapackage RPMs as the retired 0.1.0, a new profile
 RPM and a fixed installer.
+
+A per-kernel probe of the unchanged published 0.1.1 stack also passed on
+**7.2.8-200.fc44.x86_64** on October 8, as recorded below.
 
 ## Current matched-stack observations
 
@@ -87,6 +90,28 @@ The retained archive `hardware-evidence-20260926-k727.tar.gz` has SHA256
 the September 19 archive. Raw journal captures, which carry network
 identifiers, remain in private storage. The two qualification-only package
 keys were removed from the test host after these runs.
+
+## Per-kernel probe on 7.2.8, October 8
+
+The published 0.1.1 profile and its 14 runtime packages were unchanged, with
+their pinned installation times and `rpm -V` clean. The running kernel's boot
+image carried the NPU firmware override and `intel_vpu` module byte-identical
+to the installed files, and the loaded firmware matched the pinned 1.38.0 build.
+
+The normal-user stable-channel doctor passed all 15 checks, including eight
+validated direct-NPU inference iterations, and reported no reboot requirement.
+The per-kernel probe passed all 13 environment preconditions and 13 outcomes;
+the NPU busy counter increased by 1,249 microseconds during the probe.
+
+The probe evidence SHA256 is
+`85bea740c34d631f4c9431f11cfdd5dcce7777d0122d598bef1fcfcf7c5af2c6`, bound to
+component-set digest
+`3b3fb8ac13141c60b45178636be5accd09d56694ab58d0930954de5c966d0e2a` in
+`release/kernel-probes.json`. This is a per-kernel probe under the existing
+qualified `[7.2.5, 7.3.0)` window, not a repeat of the installation, suspend or
+cold-boot matrix. Kernel 7.2.9 still needs its own probe, and 7.3 requires
+requalification. See [kernel probes](kernel-probes.md) and
+[issue #57](https://github.com/archledger/intel-npu-stack/issues/57).
 
 ## Earlier 1.35.0 pilot, September 13
 
