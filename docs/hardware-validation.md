@@ -10,8 +10,8 @@ the profile is qualified for release 0.1.1, published on 2026-09-26 with the
 same provider, tools and metapackage RPMs as the retired 0.1.0, a new profile
 RPM and a fixed installer.
 
-A per-kernel probe of the unchanged published 0.1.1 stack also passed on
-**7.2.8-200.fc44.x86_64** on October 8, as recorded below.
+Per-kernel probes of the unchanged published 0.1.1 stack also passed on
+**7.2.8-200.fc44.x86_64** and **7.2.9-200.fc44.x86_64** on October 8, as recorded below.
 
 ## Current matched-stack observations
 
@@ -109,9 +109,34 @@ component-set digest
 `3b3fb8ac13141c60b45178636be5accd09d56694ab58d0930954de5c966d0e2a` in
 `release/kernel-probes.json`. This is a per-kernel probe under the existing
 qualified `[7.2.5, 7.3.0)` window, not a repeat of the installation, suspend or
-cold-boot matrix. Kernel 7.2.9 still needs its own probe, and 7.3 requires
-requalification. See [kernel probes](kernel-probes.md) and
+cold-boot matrix. Each additional kernel needs its own probe, and 7.3 requires
+requalification. The subsequent 7.2.9 probe is recorded below. See [kernel probes](kernel-probes.md) and
 [issue #57](https://github.com/archledger/intel-npu-stack/issues/57).
+
+## Per-kernel probe on 7.2.9, October 8
+
+After an explicitly authorized one-time warm reboot from 7.2.8 into
+`7.2.9-200.fc44.x86_64`, the unchanged published 0.1.1 stack passed its
+normal-user stable-channel probe. The saved boot default remained 7.2.8,
+and the one-time boot entry was consumed.
+
+All 13 identity/environment preconditions, 13 kernel/runtime outcomes and
+15 doctor checks passed. The boot image carried the installed `intel_vpu`
+module and pinned 1.38.0 firmware byte-identical, and the loaded firmware
+matched the pinned build. Direct-NPU inference completed eight validated
+iterations; the busy counter increased by 6,357 microseconds. No reboot
+requirement was reported, and the 14 runtime packages plus profile retained
+their pinned identities, installation times and clean `rpm -V` results.
+
+The exact probe evidence SHA256 is
+`126f1bc3db16feb70ac6025ec9d3676827772257c26c2c2a11935188be0df3ab`, bound to
+component-set digest
+`3b3fb8ac13141c60b45178636be5accd09d56694ab58d0930954de5c966d0e2a` in
+`release/kernel-probes.json`. This records NPU operation under the existing
+qualified `[7.2.5, 7.3.0)` window, not a new lifecycle qualification. An
+already documented third-party virtual-camera signing rejection remained
+outside the NPU probe; no Secure Boot policy or key enrollment was changed.
+See [issue #62](https://github.com/archledger/intel-npu-stack/issues/62).
 
 ## Earlier 1.35.0 pilot, September 13
 
