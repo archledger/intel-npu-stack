@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Hardware validation progress
 
-Status as of **2026-10-08**: the matched Fedora 44 Lunar Lake pilot passed
+Status as of **2026-10-17**: the matched Fedora 44 Lunar Lake pilot passed
 upgrade, warm reboot, normal-user NPU diagnostics, removal, rollback,
 restoration and repeat installation on kernel **7.2.5-200.fc44.x86_64**, then
 suspend/resume and a user-confirmed cold boot on kernel
@@ -12,13 +12,19 @@ RPM and a fixed installer.
 
 Per-kernel probes of the unchanged published 0.1.1 stack also passed on
 **7.2.8-200.fc44.x86_64** and **7.2.9-200.fc44.x86_64** on October 8, as recorded below.
+Since October 9 the qualification host carries the **0.2.0 candidate**
+(see "Current matched-stack observations" and the October 17 section); the
+published 0.1.1 component set is therefore no longer installed there.
 
 ## Current matched-stack observations
 
-The installed set has 14 signed runtime packages: driver and firmware 1.38.0,
-Level Zero 1.32.0, OpenVINO/compiler 2026.2.0-2, and tools/metapackage 0.1.0-3.
-The optional development and profile RPMs are excluded from this hardware pilot.
-Its separately identified profile covers `[7.2.5, 7.2.6)` and stays a candidate.
+Since the owner-approved eleven-package upgrade of October 9, the installed set
+is the 0.2.0 candidate: 14 signed runtime packages with driver and firmware
+1.38.0, Level Zero 1.32.0, OpenVINO/compiler 2026.2.1-1, and
+tools/metapackage 0.2.0-3, verified unchanged through the October 17 probe
+below. The optional development and profile RPMs are excluded from this
+hardware pilot; its separately identified candidate profile is retargeted per
+kernel and stays unqualified.
 
 | Case | Observed result |
 |---|---|
@@ -137,6 +143,50 @@ qualified `[7.2.5, 7.3.0)` window, not a new lifecycle qualification. An
 already documented third-party virtual-camera signing rejection remained
 outside the NPU probe; no Secure Boot policy or key enrollment was changed.
 See [issue #62](https://github.com/archledger/intel-npu-stack/issues/62).
+
+## Per-kernel probe on 7.2.10, October 17
+
+The qualification host had drifted to `7.2.10-200.fc44.x86_64` (first booted
+October 15), outside the 0.2.0 candidate profile's original `[7.2.8, 7.2.9)`
+window, and the October 9 disposable qualification key `8BDBC73E…` had expired
+on October 16 as scheduled (its private half was destroyed at signing; the
+public half had also disappeared from host RPM trust through an unobserved
+change). The physical kit was therefore refreshed offline: the same 14
+candidate and 14 exact-rollback packages (25 unique bodies) were re-signed
+under a new disposable Ed25519 qualification key `96665C51…` valid to
+2026-11-16. An isolated public-only observer verified all 28 signatures,
+immutable headers and payload digests before staging; the new public
+certificate was then imported into host RPM trust (14 to 15 keys, exactly one
+addition) and all 28 packages verified against the actual host trust store.
+Per the candidate single-kernel-window policy, the profile was then retargeted
+with `xtask retarget-candidate` into the separately identified
+`fedora-44-lunar-lake-x86_64-0.2.0-kernel-7.2.10-candidate` covering
+`[7.2.10, 7.2.11)` (SHA-256 `75a2329d…`, components byte-identical to the
+re-signed set); both the rebound intermediate and the retargeted profile
+passed source-pinned schema validation at `bbdc829`, and the original
+October 9 profile is retained unchanged.
+
+On the running 7.2.10 kernel, with no power transition, the unchanged
+installed 0.2.0 candidate (OpenVINO/compiler `2026.2.1-1`, driver and firmware
+1.38.0, Level Zero 1.32.0, tools/metapackage `0.2.0-3`) passed the pinned
+normal-user probe against the retargeted profile: 15 of 15 checks, eight
+direct-NPU iterations on `intel-npu-stack-neutral-v1` (tolerance 0.001), busy
+counter increased by 4,746 microseconds, runtime 2026.2.1, empty stderr. The
+421 candidate payload files and 34 symlinks, all 14 package identities and
+install times, the boot id, and the initramfs-carried firmware (UD202638) and
+`intel_vpu` module bytes were verified unchanged before and after the probe.
+
+The exact probe evidence SHA256 is
+`f7adc701f7a959ca6bbcbe7d3a3595134b12288840cd523551148a31f9412efb`, bound to
+component-set digest
+`1ecfe48e610f4449c9617399c822dfab6140137a3ac90f8d9b275e96cbdef7e0` for the
+profile `fedora-44-lunar-lake-x86_64-0.2.0-kernel-7.2.10-candidate` in
+`release/kernel-probes.json`. This record is candidate history, not a probe of
+the published 0.1.1 component set: the qualification host no longer carries
+the published stack, so the production-profile probe for 7.2.10 requested by
+[issue #66](https://github.com/archledger/intel-npu-stack/issues/66) cannot be
+reproduced on this host and stays open until a promoted profile covers that
+kernel with its own evidence.
 
 ## Earlier 1.35.0 pilot, September 13
 
