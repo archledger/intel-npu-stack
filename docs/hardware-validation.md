@@ -138,6 +138,46 @@ already documented third-party virtual-camera signing rejection remained
 outside the NPU probe; no Secure Boot policy or key enrollment was changed.
 See [issue #62](https://github.com/archledger/intel-npu-stack/issues/62).
 
+## Per-kernel probe on 7.2.10, October 17
+
+The qualification host had drifted to `7.2.10-200.fc44.x86_64` (first booted
+October 15), outside the 0.2.0 candidate profile's original `[7.2.8, 7.2.9)`
+window, and the October 9 disposable qualification key `8BDBC73E…` had expired
+on October 16 as scheduled (its private half was destroyed at signing; the
+public half had also disappeared from host RPM trust through an unobserved
+change). The physical kit was therefore refreshed offline: the same 14
+candidate and 14 exact-rollback packages (25 unique bodies) were re-signed
+under a new disposable Ed25519 qualification key `96665C51…` valid to
+2026-11-16, and the candidate profile was rebound to the extended window
+`[7.2.8, 7.2.11)`. An isolated public-only observer verified all 28
+signatures, immutable headers and payload digests before staging; the new
+public certificate was then imported into host RPM trust (14 to 15 keys,
+exactly one addition) and all 28 packages verified against the actual host
+trust store.
+
+On the running 7.2.10 kernel, with no power transition, the unchanged
+installed 0.2.0 candidate (OpenVINO/compiler `2026.2.1-1`, driver and firmware
+1.38.0, Level Zero 1.32.0, tools/metapackage `0.2.0-3`) passed the pinned
+normal-user probe: 15 of 15 checks, eight direct-NPU iterations on
+`intel-npu-stack-neutral-v1` (tolerance 0.001), busy counter increased by
+4,746 microseconds, runtime 2026.2.1, empty stderr. The 421 candidate payload
+files and 34 symlinks, all 14 package identities and install times, the boot
+id, and the initramfs-carried firmware (UD202638) and `intel_vpu` module bytes
+were verified unchanged before and after the probe, and the candidate profile
+passed source-pinned schema validation at `bbdc829`.
+
+The exact probe evidence SHA256 is
+`80390dfdbbe21ea9df480c450ec10d94022a81832d92e784f91a1dafc24ecf80`, bound to
+component-set digest
+`1ecfe48e610f4449c9617399c822dfab6140137a3ac90f8d9b275e96cbdef7e0` for the
+profile `fedora-44-lunar-lake-x86_64-0.2.0-kernel-7.2.8-candidate` in
+`release/kernel-probes.json`. This record is candidate history, not a probe of
+the published 0.1.1 component set: the qualification host no longer carries
+the published stack, so the production-profile probe for 7.2.10 requested by
+[issue #66](https://github.com/archledger/intel-npu-stack/issues/66) cannot be
+reproduced on this host and stays open until a promoted profile covers that
+kernel with its own evidence.
+
 ## Earlier 1.35.0 pilot, September 13
 
 The target class is an Intel Core Ultra 200V-series NPU (`8086:643e`) with the
