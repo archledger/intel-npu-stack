@@ -93,6 +93,14 @@ if(NOT INTEL_NPU_OPENVINO_RUNTIME)
   message(FATAL_ERROR "OpenVINO runtime has no Release or RelWithDebInfo library")
 endif()
 intel_npu_require_in_sdk("${INTEL_NPU_OPENVINO_RUNTIME}" "OpenVINO runtime")
+if(OpenVINO_VERSION VERSION_EQUAL "2026.2.1")
+  set(INTEL_NPU_OPENVINO_SONAME "libopenvino.so.2621")
+elseif(OpenVINO_VERSION VERSION_EQUAL "2026.2.0")
+  set(INTEL_NPU_OPENVINO_SONAME "libopenvino.so.2620")
+else()
+  message(FATAL_ERROR "Unsupported OpenVINO SDK version: ${OpenVINO_VERSION}")
+endif()
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/openvino-soname.txt" "${INTEL_NPU_OPENVINO_SONAME}\n")
 get_filename_component(
   INTEL_NPU_OPENVINO_RUNTIME_DIR
   "${INTEL_NPU_OPENVINO_RUNTIME}"

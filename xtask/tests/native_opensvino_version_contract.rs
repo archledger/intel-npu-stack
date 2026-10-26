@@ -82,6 +82,18 @@ fn accepts_both_supported_opensvino_versions() {
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
+        let expected = if version == "2026.2.1" {
+            "2621"
+        } else {
+            "2620"
+        };
+        let metadata = root
+            .path()
+            .join(format!("build-sdk-{version}/openvino-soname.txt"));
+        assert_eq!(
+            fs::read_to_string(metadata).expect("selected SDK ABI metadata"),
+            format!("libopenvino.so.{expected}\n")
+        );
     }
 }
 
