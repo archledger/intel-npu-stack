@@ -151,9 +151,8 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
         ("gpu", options.omit_gpu_plugin),
     ]
     .into_iter()
-    .filter_map(|(device, omitted)| {
-        (!omitted).then(|| format!("libopenvino_intel_{device}_plugin.so"))
-    })
+    .filter(|(_, omitted)| !omitted)
+    .map(|(device, _)| format!("libopenvino_intel_{device}_plugin.so"))
     .collect::<Vec<_>>();
     for library in &preserved_plugins {
         compile_shared(
