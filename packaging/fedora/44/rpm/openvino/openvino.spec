@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-%global so_ver 2620
+%global so_ver 2621
 # Large DWARF payloads exceed the builder memory budget when processed together.
 # Keep compilation parallel while serializing debug extraction and compression.
 %global _find_debuginfo_opts %{?_find_debuginfo_opts} -j1
@@ -21,8 +21,8 @@ package or when debugging this package.\
 %{nil}
 
 Name:           openvino
-Version:        2026.2.0
-Release:        2.intelnpu.fc44
+Version:        2026.2.1
+Release:        1.intelnpu.fc44
 Summary:        Toolkit for optimizing and deploying AI inference
 
 License:        Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)
@@ -75,6 +75,8 @@ Source44:       install-provider-notices.py
 Source45:       provider-sources.toml
 Source46:       provider-license-evidence.tar
 Source47:       json-3.12.0-LICENSE.MIT
+Source48:       0015-check-unbounded-reshape-input-bounds.patch
+Source49:       check-unbounded-reshape-guard.py
 
 ExclusiveArch:  x86_64
 
@@ -246,6 +248,9 @@ mv intel-npu-nn-cost-model thirdparty/npu-compiler/thirdparty/vpucostmodel
 /usr/bin/patch --batch --forward --fuzz=0 -p1 \
     -d thirdparty/npu-compiler < %{SOURCE40}
 /usr/bin/patch --batch --forward --fuzz=0 -p1 < %{SOURCE42}
+/usr/bin/patch --batch --forward --fuzz=0 -p1 \
+    -d thirdparty/npu-compiler < %{SOURCE48}
+/usr/bin/python3 %{SOURCE49} "$PWD"
 
 /usr/bin/python3 %{SOURCE44} --kind openvino \
     --source "$PWD" --archives "$(dirname -- '%{SOURCE0}')" --spec %{_specdir}/openvino.spec \
@@ -326,7 +331,7 @@ export CMAKE_BUILD_PARALLEL_LEVEL=%{_smp_build_ncpus}
     -DENABLE_NPU_MONO=OFF \
     -DENABLE_PREBUILT_LLVM_MLIR_LIBS=OFF \
     -DENABLE_PRIVATE_TESTS=OFF \
-    -DNPU_COMPILER_SOURCE_COMMIT=6a7a7c531f54baed1dddfda1b80299413c4c6943 \
+    -DNPU_COMPILER_SOURCE_COMMIT=deb423b11b00af945fa788c9d38c51e30f0cf3d5 \
     -DNPU_LOADER_SOURCE_COMMIT=0c96256285114a596988bfa6e4face817165396c
 /usr/bin/python3 %{SOURCE26} %{_vpath_builddir}
 /usr/bin/python3 %{SOURCE28} %{_vpath_builddir}
@@ -433,6 +438,12 @@ cp -a ../provider-notices/openvino ../provider-notices/intel-npu-compiler \
 %{_libdir}/libopenvino_tensorflow_lite_frontend.so.%{so_ver}
 
 %changelog
+* Wed Sep 30 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 2026.2.1-1.intelnpu.fc44
+- OpenVINO 2026.2.1 (NPU plugin shared Level Zero command-queue priority fix)
+  and the NPU compiler from npu_ud_2026_28_rc2. Add 0015 to reject an
+  unbounded Reshape input with a diagnostic instead of a null dereference
+  (archledger/intel-npu-stack issue 20, proposed upstream as npu_compiler
+  issue 352).
 * Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 2026.2.0-2.intelnpu.fc44
 - Rebuild the coupled candidate: intel-npu-compiler requires the 1.38.0
   userspace driver. Sources are unchanged from 2026.2.0-1.

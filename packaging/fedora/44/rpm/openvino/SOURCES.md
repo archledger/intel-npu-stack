@@ -14,8 +14,8 @@ names expected by the source-built NPU compiler.
 
 | Archive | Destination | Purpose |
 |---|---|---|
-| `openvino.tar` | build root | OpenVINO `2026.2.0` |
-| `npu-compiler.tar` | `thirdparty/npu-compiler` | compiler tag `npu_ud_2026_28_rc1` |
+| `openvino.tar` | build root | OpenVINO `2026.2.1` |
+| `npu-compiler.tar` | `thirdparty/npu-compiler` | compiler tag `npu_ud_2026_28_rc2` |
 | `npu-compiler-elf-openvino.tar` | compiler `thirdparty/elf` | compiler ELF support |
 | `intel-npu-compiler-llvm.tar` | compiler `thirdparty/llvm-project` | source-built LLVM/MLIR |
 | `intel-npu-nn-cost-model.tar` | compiler `thirdparty/vpucostmodel` | NPU cost models |
@@ -273,6 +273,17 @@ with generated flags and requires warnings as errors without suppressing this
 diagnostic. Isolated candidate verification and complete package acceptance
 must pass before this correction is treated as release-qualified; GPU hardware
 inference tests remain a separate gate.
+
+Patch 0015 guards the dynamic Reshape importer's missing-bound inference in the
+NPU compiler: an unbounded input made the unchecked `dyn_cast` of
+`BoundedTensorType` dereference null and terminated the compiling process. The
+guard throws the importer's normal diagnostic instead (issue #20; proposed
+upstream as npu_compiler #352 and hardware-validated there: unbounded NPU
+compilation becomes a catchable error, static, bounded and plugin-batched
+behavior unchanged). The same defect is present in `npu_ud_2026_28_rc1` and
+`npu_ud_2026_38_rc1`; drop the patch when an upstream release carries the fix.
+`check-unbounded-reshape-guard.py` runs after `%prep` and refuses the unguarded
+spelling in the prepared source.
 
 The GPU component also installs its pinned `kernel_selector/cache/cache.json`
 tuning data beside the plugin. The Linux kernel selector looks up that exact

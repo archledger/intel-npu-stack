@@ -4,7 +4,7 @@
 %global _vpath_srcdir native
 
 Name:           intel-npu-stack-tools
-Version:        0.1.0
+Version:        0.2.0
 Release:        3.intelnpu.fc44
 Summary:        Read-only Intel NPU stack status and diagnostic tools
 License:        Apache-2.0 AND Artistic-2.0 AND BSD-3-Clause AND ISC AND MIT AND MPL-2.0 AND Unicode-3.0 AND (Apache-2.0 WITH LLVM-exception)
@@ -22,11 +22,11 @@ BuildRequires:  gcc-c++ = 16.2.1-2.fc44
 BuildRequires:  ninja-build = 1.13.2-2.fc44
 BuildRequires:  python3 = 3.14.7-1.fc44
 BuildRequires:  oneapi-level-zero-devel = 1.28.6-1.fc44
-BuildRequires:  openvino-devel = 2026.2.0-2.intelnpu.fc44
+BuildRequires:  openvino-devel = 2026.2.1-1.intelnpu.fc44
 BuildRequires:  util-linux-core = 2.41.5-1.fc44
 
 Requires:       oneapi-level-zero%{?_isa} = 1.32.0-1.intelnpu.fc44
-Requires:       openvino%{?_isa} = 2026.2.0-2.intelnpu.fc44
+Requires:       openvino%{?_isa} = 2026.2.1-1.intelnpu.fc44
 
 %description
 Read-only status CLI, isolated native probes, documentation and a manifest
@@ -41,9 +41,9 @@ Requires:       intel-npu-stack-tools(x86-64) = %{version}-%{release}
 Requires:       intel-npu-driver(x86-64) = 1.38.0-1.intelnpu.fc44
 Requires:       intel-npu-stack-firmware = 1.38.0-1.intelnpu.fc44
 Requires:       oneapi-level-zero(x86-64) = 1.32.0-1.intelnpu.fc44
-Requires:       openvino(x86-64) = 2026.2.0-2.intelnpu.fc44
-Requires:       openvino-plugins(x86-64) = 2026.2.0-2.intelnpu.fc44
-Requires:       intel-npu-compiler(x86-64) = 2026.2.0-2.intelnpu.fc44
+Requires:       openvino(x86-64) = 2026.2.1-1.intelnpu.fc44
+Requires:       openvino-plugins(x86-64) = 2026.2.1-1.intelnpu.fc44
+Requires:       intel-npu-compiler(x86-64) = 2026.2.1-1.intelnpu.fc44
 
 %description -n intel-npu-stack
 Metadata-only package selecting the exact candidate provider versions.
@@ -88,7 +88,7 @@ cp -pr LICENSE NOTICE vendor-licenses rust-stdlib-licenses %{buildroot}%{_datadi
 hardlink -t %{buildroot}%{_datadir}/licenses/%{name}
 
 %check
-test "$(target/release/intel-npu-stack version)" = '0.1.0'
+test "$(target/release/intel-npu-stack version)" = '0.1.1'
 ctest --test-dir %{__cmake_builddir} --output-on-failure --no-tests=error
 
 %files -n intel-npu-stack
@@ -104,6 +104,12 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure --no-tests=error
 %{_datadir}/intel-npu-stack/installed-manifest.toml
 
 %changelog
+* Tue Oct 06 2026 Wisbendji Fimerlus <archledger236@gmail.com> - 0.2.0-3.intelnpu.fc44
+- Move the tools and metapackage to 0.2.0-3 on the 2026.2.1-1 provider set:
+  the openvino 2026.2.1-1 rebuild whose compiler subpackage pins the 1.38.0
+  driver and its plugins. The CLI keeps the workspace 0.1.1 version, so
+  %check asserts that output while the package contract fixtures expect
+  the 0.2.0-3 NEVR surface.
 * Sat Sep 19 2026 Wisbendji Fimerlus <archledger236@gmail.com> - 0.1.0-3.intelnpu.fc44
 - Keep native probe JSON separate from SDK stdout and shutdown diagnostics.
 * Tue Sep 15 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 0.1.0-2.intelnpu.fc44

@@ -1,0 +1,35 @@
+Subject: [PATCH] Reject an unbounded Reshape input instead of dereferencing null
+
+This packaging patch applies only to the sealed NPU compiler source
+deb423b11b00af945fa788c9d38c51e30f0cf3d5 (npu_ud_2026_28_rc2). The
+dynamic Reshape importer infers a missing output bound from the input
+bounds. For an unbounded input the mlir::dyn_cast<BoundedTensorType>
+returns null and the direct .getBounds() dereference terminates the
+calling process (SIGSEGV) before the importer's post-walk rejection can
+run. Check the cast and throw the same style of diagnostic used a few
+lines above, so an unbounded model returns a normal API error.
+Proposed upstream as openvinotoolkit/npu_compiler issue 352; the fix was
+validated on hardware (issue archledger/intel-npu-stack 20): unbounded
+NPU compilation changes from SIGSEGV to a catchable error and static,
+bounded and plugin-batched cases are unchanged. The guard drops when an
+upstream release carries the fix.
+
+Regression: check-unbounded-reshape-guard.py refuses the unguarded
+spelling in the prepared source and requires the checked form.
+
+--- a/src/vpux_compiler/src/frontend/IE.cpp
++++ b/src/vpux_compiler/src/frontend/IE.cpp
+@@ -2076,7 +2076,12 @@
+                             "Reshape node '{0}': expected exactly 1 dynamic output bound dimension, got {1}", nodeName,
+                             dynamicDimCount);
+ 
+-            const auto& inputBounds = mlir::dyn_cast<Core::BoundedTensorType>(inputs[0].getType()).getBounds();
++            const auto boundedInputType = mlir::dyn_cast<Core::BoundedTensorType>(inputs[0].getType());
++            VPUX_THROW_WHEN(boundedInputType == nullptr,
++                            "Reshape node '{0}': input type carries no bounds, cannot infer the missing "
++                            "output bound",
++                            nodeName);
++            const auto& inputBounds = boundedInputType.getBounds();
+             const int64_t inputBoundsProduct =
+                     std::accumulate(inputBounds.begin(), inputBounds.end(), int64_t{1}, std::multiplies<int64_t>());
+             const int64_t outputBoundsProduct =

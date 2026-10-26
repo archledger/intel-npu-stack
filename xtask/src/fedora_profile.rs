@@ -128,7 +128,7 @@ fn expected_packages() -> BTreeMap<String, (String, String)> {
     ] {
         packages.insert(
             name.to_owned(),
-            ("0:2026.2.0-2.intelnpu.fc44".to_owned(), "x86_64".to_owned()),
+            ("0:2026.2.1-1.intelnpu.fc44".to_owned(), "x86_64".to_owned()),
         );
     }
     for (name, nevr, arch) in [
@@ -139,8 +139,8 @@ fn expected_packages() -> BTreeMap<String, (String, String)> {
             "noarch",
         ),
         ("oneapi-level-zero", "0:1.32.0-1.intelnpu.fc44", "x86_64"),
-        ("intel-npu-stack", "0:0.1.0-3.intelnpu.fc44", "noarch"),
-        ("intel-npu-stack-tools", "0:0.1.0-3.intelnpu.fc44", "x86_64"),
+        ("intel-npu-stack", "0:0.2.0-3.intelnpu.fc44", "noarch"),
+        ("intel-npu-stack-tools", "0:0.2.0-3.intelnpu.fc44", "x86_64"),
     ] {
         packages.insert(name.to_owned(), (nevr.to_owned(), arch.to_owned()));
     }
@@ -182,22 +182,22 @@ fn required_payload(name: &str) -> Vec<String> {
             "/usr/lib64/libze_validation_layer.so.1.32.0",
         ],
         "openvino" => &[
-            "/usr/lib64/libopenvino.so.2026.2.0",
-            "/usr/lib64/libopenvino_c.so.2026.2.0",
+            "/usr/lib64/libopenvino.so.2026.2.1",
+            "/usr/lib64/libopenvino_c.so.2026.2.1",
         ],
         "intel-npu-compiler" => &[
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_compiler.so",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_compiler_loader.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_compiler.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_compiler_loader.so",
         ],
         "openvino-plugins" => &[
-            "/usr/lib64/openvino-2026.2.0/cache.json",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_auto_plugin.so",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_hetero_plugin.so",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_cpu_plugin.so",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_gpu_plugin.so",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_plugin.so",
+            "/usr/lib64/openvino-2026.2.1/cache.json",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_auto_plugin.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_hetero_plugin.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_cpu_plugin.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_gpu_plugin.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_plugin.so",
         ],
-        _ => return vec![format!("/usr/lib64/{}.so.2026.2.0", name.replace('-', "_"))],
+        _ => return vec![format!("/usr/lib64/{}.so.2026.2.1", name.replace('-', "_"))],
     };
     files.iter().map(|file| (*file).to_owned()).collect()
 }
@@ -374,7 +374,7 @@ fn license_provider<'a>(
     let relationship = (
         "openvino(x86-64)".to_owned(),
         "=".to_owned(),
-        "2026.2.0-2.intelnpu.fc44".to_owned(),
+        "2026.2.1-1.intelnpu.fc44".to_owned(),
     );
     require(
         shared_family
@@ -559,19 +559,19 @@ pub fn generate_candidate(
             "npu_compiler",
             "intel-npu-compiler",
             "npu-compiler",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_compiler.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_compiler.so",
         ),
         (
             "openvino_runtime",
             "openvino",
             "openvino",
-            "/usr/lib64/libopenvino.so.2026.2.0",
+            "/usr/lib64/libopenvino.so.2026.2.1",
         ),
         (
             "openvino_npu_plugin",
             "openvino-plugins",
             "openvino",
-            "/usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_plugin.so",
+            "/usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_plugin.so",
         ),
     ];
     let mut components = BTreeMap::new();
@@ -649,7 +649,7 @@ pub fn generate_candidate(
     let profile = Profile {
         schema_version: 1,
         id: "fedora-44-lunar-lake-x86_64".to_owned(),
-        stack_release: "0.1.0".to_owned(),
+        stack_release: "0.2.0".to_owned(),
         status: ProfileStatus::Candidate,
         package_manager: PackageManager::Rpm,
         conflicts: Vec::new(),
