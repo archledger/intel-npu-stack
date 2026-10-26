@@ -1,0 +1,895 @@
+Subject: [PATCH] Schedule LP efficiency cores in the shared stream config
+
+When a process affinity mask leaves only LP efficiency cores,
+update_executor_config() omitted LP_EFFICIENT_CORE_PROC from the little-core
+count and allocation types. With more than one requested stream, the table
+could remain empty and its first-element access aborted GPU compilation.
+Reported upstream as openvinotoolkit/openvino issue 39088.
+
+Count LP cores as little cores, allocate them independently for ANY_CORE and
+ECORE_ONLY, and keep PCORE_ONLY free of LP cores when P cores are available.
+Choose the largest requested stream width that the eligible per-core-kind,
+per-NUMA-node pools can supply. Skip smaller unused pools rather than reducing
+otherwise feasible streams or emitting partial homogeneous rows. This also
+preserves explicit P-core requests when an unused SMT pool is smaller.
+
+Contribution rows after an ALL_PROC header carry zero streams. The zero-stream
+helper selects LP cores before hyperthreads, and an empty generated table
+raises a clear exception instead of reading element zero. Precomputed tables
+are unchanged. No-LP behavior is preserved except for the intended correction
+to mixed-stream contribution accounting.
+
+Keep generated unpinned ECORE_ONLY streams homogeneous: the existing arena
+interface cannot express an E/LP union. A single LP contribution becomes a
+typed row with its original locality. Correct singleton TBB type selection
+for the ordered [LP, E] pair only when the original table contains both
+efficient kinds and no P/HT cores; preserve existing no-LP, P-present,
+three-type and automatic mappings. Pinned mixed streams retain
+their observer-based binding. This does not add a new TBB union mode.
+
+Native regression tests cover LP-only preferences, reservation, pinning,
+fragmented pools, NUMA, default factories, arena routing, noncontiguous TBB
+type IDs and precomputed tables. The source
+guard runs after %prep; it does not replace these behavioral tests.
+Upstream acceptance remains open. Drop this patch when a release carries the
+corresponding fix.
+
+---
+diff --git a/src/inference/src/dev/threading/istreams_executor.cpp b/src/inference/src/dev/threading/istreams_executor.cpp
+--- a/src/inference/src/dev/threading/istreams_executor.cpp
++++ b/src/inference/src/dev/threading/istreams_executor.cpp
+@@ -95,7 +95,8 @@
+     if (proc_type_table.empty()) {
+         return 1;
+     }
+-    const auto num_cores = proc_type_table[0][MAIN_CORE_PROC] + proc_type_table[0][EFFICIENT_CORE_PROC];
++    const auto num_cores = proc_type_table[0][MAIN_CORE_PROC] + proc_type_table[0][EFFICIENT_CORE_PROC] +
++                           proc_type_table[0][LP_EFFICIENT_CORE_PROC];
+     if (0 == num_cores % 4)
+         return std::max(4, num_cores / 4);
+     else if (0 == num_cores % 5)
+@@ -116,20 +117,22 @@
+     }
+ 
+     int num_cores = proc_type_table[0][ALL_PROC];
++    const auto little_cores = proc_type_table[0][EFFICIENT_CORE_PROC] + proc_type_table[0][LP_EFFICIENT_CORE_PROC];
+ 
+-    if (proc_type_table[0][EFFICIENT_CORE_PROC] > 0 && proc_type_table[0][MAIN_CORE_PROC] > 0) {
++    if (little_cores > 0 && proc_type_table[0][MAIN_CORE_PROC] > 0) {
+         if (streamConfig._thread_preferred_core_type == ov::hint::SchedulingCoreType::ANY_CORE) {
+             num_cores = proc_type_table[0][ALL_PROC];
+         } else if (streamConfig._thread_preferred_core_type == ov::hint::SchedulingCoreType::PCORE_ONLY) {
+             num_cores = proc_type_table[0][MAIN_CORE_PROC];
+         } else if (streamConfig._thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY) {
+-            num_cores = proc_type_table[0][EFFICIENT_CORE_PROC];
++            num_cores = little_cores;
+         }
+     }
+ 
+     const auto threads = streamConfig._threads ? streamConfig._threads : num_cores;
+     int threads_per_stream = streamConfig._streams ? std::max(1, threads / streamConfig._streams) : threads;
+-    if (proc_type_table[0][EFFICIENT_CORE_PROC] > 0 && proc_type_table[0][MAIN_CORE_PROC] > 0 &&
++    if (proc_type_table[0][LP_EFFICIENT_CORE_PROC] == 0 && proc_type_table[0][EFFICIENT_CORE_PROC] > 0 &&
++        proc_type_table[0][MAIN_CORE_PROC] > 0 &&
+         streamConfig._thread_preferred_core_type == ov::hint::SchedulingCoreType::ANY_CORE) {
+         if (streamConfig._streams > 1) {
+             threads_per_stream =
+@@ -194,7 +197,8 @@
+ 
+         const auto total_num_cores = proc_type_table[0][ALL_PROC];
+         const auto total_num_big_cores = proc_type_table[0][MAIN_CORE_PROC] + proc_type_table[0][HYPER_THREADING_PROC];
+-        const auto total_num_little_cores = proc_type_table[0][EFFICIENT_CORE_PROC];
++        const auto total_num_little_cores =
++            proc_type_table[0][EFFICIENT_CORE_PROC] + proc_type_table[0][LP_EFFICIENT_CORE_PROC];
+ 
+         if ((total_num_little_cores == 0 && _thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY) ||
+             (total_num_big_cores == 0 && _thread_preferred_core_type == ov::hint::SchedulingCoreType::PCORE_ONLY) ||
+@@ -225,21 +229,54 @@
+             return;
+         }
+ 
++        const size_t start = proc_type_table.size() > 1 ? 1 : 0;
++        std::vector<int> core_types{MAIN_CORE_PROC, EFFICIENT_CORE_PROC, LP_EFFICIENT_CORE_PROC, HYPER_THREADING_PROC};
++        if (_thread_preferred_core_type == ov::hint::SchedulingCoreType::PCORE_ONLY) {
++            core_types = {MAIN_CORE_PROC, HYPER_THREADING_PROC};
++        } else if (_thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY) {
++            core_types = {EFFICIENT_CORE_PROC, LP_EFFICIENT_CORE_PROC};
++        }
++        // The unpinned arena interface selects one core kind, not an E/LP
++        // union. Keep an ECORE_ONLY stream representable by that interface.
++        const bool homogeneous_streams =
++            _streams > 1 || (_thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY && !_cpu_pinning);
++        if (proc_type_table[0][LP_EFFICIENT_CORE_PROC] > 0 && homogeneous_streams) {
++            // A typed stream must fit within one core kind and one NUMA node.
++            // Keep the requested width when the usable pools can supply it;
++            // an unused smaller pool must not reduce every stream's width.
++            while (_threads_per_stream > 1) {
++                int streams_num = 0;
++                for (int type : core_types) {
++                    for (size_t i = start; i < proc_type_table.size(); ++i) {
++                        streams_num += proc_type_table[i][type] / _threads_per_stream;
++                    }
++                }
++                if (streams_num >= _streams) {
++                    break;
++                }
++                --_threads_per_stream;
++            }
++        }
++
+         // create stream_info_table based on core type
+         std::vector<int> stream_info(CPU_STREAMS_TABLE_SIZE, 0);
+         stream_info[THREADS_PER_STREAM] = _threads_per_stream;
+         stream_info[STREAM_NUMA_NODE_ID] = 0;
+         stream_info[STREAM_SOCKET_ID] = 0;
+         int cur_threads = _streams * _threads_per_stream;
+-        if (_thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY) {
++        if (_thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY &&
++            proc_type_table[0][LP_EFFICIENT_CORE_PROC] == 0) {
+             stream_info[PROC_TYPE] = EFFICIENT_CORE_PROC;
+             stream_info[NUMBER_OF_STREAMS] = _streams;
+             _streams_info_table.push_back(std::move(stream_info));
+         } else {
+-            int start = proc_type_table.size() > 1 ? 1 : 0;
+-            std::vector<int> core_types;
+             // Using cores crossed sockets or hyper threads when streams = 1
+-            if (_streams == 1 && _threads_per_stream > proc_type_table[start][ov::MAIN_CORE_PROC]) {
++            const auto first_core_type = _thread_preferred_core_type == ov::hint::SchedulingCoreType::ECORE_ONLY
++                                             ? EFFICIENT_CORE_PROC
++                                             : MAIN_CORE_PROC;
++            const bool mixed_stream =
++                !homogeneous_streams && _streams == 1 && _threads_per_stream > proc_type_table[start][first_core_type];
++            if (mixed_stream) {
+                 stream_info[NUMBER_OF_STREAMS] = _streams;
+                 stream_info[PROC_TYPE] = ALL_PROC;
+                 stream_info[STREAM_NUMA_NODE_ID] = proc_type_table.size() > 1 ? -1 : 0;
+@@ -247,16 +284,19 @@
+                 _streams_info_table.push_back(stream_info);
+                 stream_info[NUMBER_OF_STREAMS] = 0;
+             }
+-            if (_thread_preferred_core_type == ov::hint::SchedulingCoreType::PCORE_ONLY &&
+-                proc_type_table[0][EFFICIENT_CORE_PROC] > 0) {
+-                core_types = {MAIN_CORE_PROC, HYPER_THREADING_PROC};
+-            } else {
+-                core_types = {MAIN_CORE_PROC, EFFICIENT_CORE_PROC, HYPER_THREADING_PROC};
+-            }
+             for (int j : core_types) {
+                 for (size_t i = start; i < proc_type_table.size(); i++) {
+                     if (proc_type_table[i][j] > 0 && cur_threads > 0) {
+-                        if (_threads_per_stream > proc_type_table[i][j]) {
++                        if (proc_type_table[0][LP_EFFICIENT_CORE_PROC] > 0 && homogeneous_streams &&
++                            _threads_per_stream > proc_type_table[i][j]) {
++                            continue;
++                        }
++                        if (mixed_stream || _threads_per_stream > proc_type_table[i][j]) {
++                            if (mixed_stream) {
++                                // Rows after an ALL_PROC header contribute to
++                                // that stream instead of naming new streams.
++                                stream_info[NUMBER_OF_STREAMS] = 0;
++                            }
+                             stream_info[THREADS_PER_STREAM] = std::min(proc_type_table[i][j], cur_threads);
+                             cur_threads -= stream_info[THREADS_PER_STREAM];
+                         } else {
+@@ -272,8 +312,23 @@
+                 }
+             }
+         }
++
++        if (_streams_info_table.size() == 2 && _streams_info_table[0][PROC_TYPE] == ALL_PROC &&
++            _streams_info_table[0][NUMBER_OF_STREAMS] == 1 &&
++            _streams_info_table[1][PROC_TYPE] == LP_EFFICIENT_CORE_PROC &&
++            _streams_info_table[1][NUMBER_OF_STREAMS] == 0 &&
++            _streams_info_table[0][THREADS_PER_STREAM] == _streams_info_table[1][THREADS_PER_STREAM]) {
++            // A single LP pool needs no mixed row; keep its arena restriction
++            // and locality even when explicit thread pinning is disabled.
++            _streams_info_table[0][PROC_TYPE] = LP_EFFICIENT_CORE_PROC;
++            _streams_info_table[0][STREAM_NUMA_NODE_ID] = _streams_info_table[1][STREAM_NUMA_NODE_ID];
++            _streams_info_table[0][STREAM_SOCKET_ID] = _streams_info_table[1][STREAM_SOCKET_ID];
++            _streams_info_table.pop_back();
++        }
+     }
+ 
++    OPENVINO_ASSERT(!_streams_info_table.empty(), "No streams could be configured for the available CPU resources.");
++
+     if (_cpu_pinning || _cpu_reservation) {
+         reserve_available_cpus(_streams_info_table, _stream_processor_ids, _cpu_reservation ? CPU_USED : NOT_USED);
+     }
+@@ -342,9 +397,10 @@
+     int socket_id = 0;
+ 
+     if (proc_type_table.size() > 0) {
+-        core_type = proc_type_table[0][MAIN_CORE_PROC] > 0
+-                        ? MAIN_CORE_PROC
+-                        : (proc_type_table[0][EFFICIENT_CORE_PROC] > 0 ? EFFICIENT_CORE_PROC : HYPER_THREADING_PROC);
++        core_type = proc_type_table[0][MAIN_CORE_PROC] > 0           ? MAIN_CORE_PROC
++                    : proc_type_table[0][EFFICIENT_CORE_PROC] > 0    ? EFFICIENT_CORE_PROC
++                    : proc_type_table[0][LP_EFFICIENT_CORE_PROC] > 0 ? LP_EFFICIENT_CORE_PROC
++                                                                     : HYPER_THREADING_PROC;
+         numa_id = std::max(0, proc_type_table[0][PROC_NUMA_NODE_ID]);
+         socket_id = std::max(0, proc_type_table[0][PROC_SOCKET_ID]);
+     }
+diff --git a/src/inference/src/dev/threading/cpu_streams_executor.cpp b/src/inference/src/dev/threading/cpu_streams_executor.cpp
+--- a/src/inference/src/dev/threading/cpu_streams_executor.cpp
++++ b/src/inference/src/dev/threading/cpu_streams_executor.cpp
+@@ -152,13 +152,8 @@
+                                                             .set_max_threads_per_core(max_threads_per_core)});
+             } else if (stream_type == STREAM_WITH_CORE_TYPE) {
+                 const auto core_types = custom::info::core_types();
+-                auto real_core_type = (core_type == MAIN_CORE_PROC || core_type == HYPER_THREADING_PROC)
+-                                          ? core_types.back()
+-                                          : core_types.front();
+-                // core_types=[LPECore, Ecore, Pcore]
+-                if (core_type == EFFICIENT_CORE_PROC && core_types.size() >= MIN_CORE_TYPES_FOR_PTL) {
+-                    real_core_type = *(core_types.end() - MIN_CORE_TYPES_FOR_PTL + 1);
+-                }
++                const auto proc_types = get_org_proc_type_table();
++                const auto real_core_type = get_tbb_core_type(core_type, core_types, proc_types);
+                 _taskArena.reset(new custom::task_arena{custom::task_arena::constraints{}
+                                                             .set_core_type(real_core_type)
+                                                             .set_max_concurrency(concurrency)
+diff --git a/src/inference/src/dev/threading/cpu_streams_executor_internal.cpp b/src/inference/src/dev/threading/cpu_streams_executor_internal.cpp
+--- a/src/inference/src/dev/threading/cpu_streams_executor_internal.cpp
++++ b/src/inference/src/dev/threading/cpu_streams_executor_internal.cpp
+@@ -81,6 +81,22 @@
+     }
+ }
+ 
++int get_tbb_core_type(int proc_type,
++                      const std::vector<int>& core_types,
++                      const std::vector<std::vector<int>>& proc_type_table) {
++    auto real_core_type =
++        (proc_type == MAIN_CORE_PROC || proc_type == HYPER_THREADING_PROC) ? core_types.back() : core_types.front();
++    if (proc_type == EFFICIENT_CORE_PROC && core_types.size() >= 3) {
++        real_core_type = *(core_types.end() - 2);
++    } else if (proc_type == EFFICIENT_CORE_PROC && core_types.size() == 2 && !proc_type_table.empty() &&
++               proc_type_table[0][EFFICIENT_CORE_PROC] > 0 && proc_type_table[0][LP_EFFICIENT_CORE_PROC] > 0 &&
++               proc_type_table[0][MAIN_CORE_PROC] == 0 && proc_type_table[0][HYPER_THREADING_PROC] == 0) {
++        // Without P cores the ordered pair is [LP, E], not [E, P].
++        real_core_type = core_types.back();
++    }
++    return real_core_type;
++}
++
+ void reserve_cpu_by_streams_info(const std::vector<std::vector<int>> _streams_info_table,
+                                  const int _numa_nodes,
+                                  std::vector<std::vector<int>>& _cpu_mapping_table,
+diff --git a/src/inference/dev_api/openvino/runtime/threading/cpu_streams_executor_internal.hpp b/src/inference/dev_api/openvino/runtime/threading/cpu_streams_executor_internal.hpp
+--- a/src/inference/dev_api/openvino/runtime/threading/cpu_streams_executor_internal.hpp
++++ b/src/inference/dev_api/openvino/runtime/threading/cpu_streams_executor_internal.hpp
+@@ -45,6 +45,12 @@
+                          int& socket_id,
+                          int& max_threads_per_core);
+ 
++// Map OpenVINO's processor kind to the ordered, nonempty type list returned
++// by oneTBB. IDs are runtime values, not necessarily contiguous integers.
++int get_tbb_core_type(int proc_type,
++                      const std::vector<int>& core_types,
++                      const std::vector<std::vector<int>>& proc_type_table);
++
+ /**
+  * @brief      Reserve cpu resource by streams info
+  * @param[in]  _streams_info_table streams info table
+@@ -74,4 +80,4 @@
+                             std::vector<std::vector<int>>& _proc_type_table);
+ 
+ }  // namespace threading
+-}  // namespace ov
+\ No newline at end of file
++}  // namespace ov
+diff --git a/src/inference/tests/unit/executor_config_test.cpp b/src/inference/tests/unit/executor_config_test.cpp
+--- a/src/inference/tests/unit/executor_config_test.cpp
++++ b/src/inference/tests/unit/executor_config_test.cpp
+@@ -4,7 +4,10 @@
+ 
+ #include <gtest/gtest.h>
+ 
++#include <algorithm>
++
+ #include "common_test_utils/test_common.hpp"
++#include "openvino/runtime/threading/cpu_streams_executor_internal.hpp"
+ #include "openvino/runtime/threading/cpu_streams_info.hpp"
+ #include "openvino/runtime/threading/istreams_executor.hpp"
+ #include "os/cpu_map_info.hpp"
+@@ -17,6 +20,517 @@
+ 
+ #if defined(__linux__) || defined(_WIN32)
+ 
++class LPExecutorConfigTest : public ov::test::TestsCommon {
++protected:
++    using Table = std::vector<std::vector<int>>;
++    using CoreType = ov::hint::SchedulingCoreType;
++    CPU& cpu = cpu_info();
++    const Table saved_proc = cpu._proc_type_table;
++    const Table saved_org_proc = cpu._org_proc_type_table;
++    const Table saved_mapping = cpu._cpu_mapping_table;
++    const int saved_numa_nodes = cpu._numa_nodes;
++    const int saved_sockets = cpu._sockets;
++
++    void TearDown() override {
++        cpu._proc_type_table = saved_proc;
++        cpu._org_proc_type_table = saved_org_proc;
++        cpu._cpu_mapping_table = saved_mapping;
++        cpu._numa_nodes = saved_numa_nodes;
++        cpu._sockets = saved_sockets;
++    }
++
++    void set_topology(int main, int efficient, int lp, int hyper = 0) {
++        cpu._proc_type_table = {{main + efficient + lp + hyper, main, efficient, lp, hyper, 0, 0}};
++        cpu._org_proc_type_table = cpu._proc_type_table;
++        cpu._cpu_mapping_table.clear();
++        cpu._numa_nodes = cpu._sockets = 1;
++        for (int type = MAIN_CORE_PROC; type <= HYPER_THREADING_PROC; ++type) {
++            for (int n = 0; n < cpu._proc_type_table[0][type]; ++n) {
++                const int core = static_cast<int>(cpu._cpu_mapping_table.size());
++                const int physical_core = type == HYPER_THREADING_PROC ? n : core;
++                cpu._cpu_mapping_table.push_back({core + 4, 0, 0, physical_core, type, physical_core, NOT_USED});
++            }
++        }
++    }
++
++    void check_config(const IStreamsExecutor::Config& config,
++                      const Table& expected_ids,
++                      bool reservation = true,
++                      bool pinning = true) {
++        EXPECT_EQ(reservation, config.get_cpu_reservation());
++        EXPECT_EQ(pinning, config.get_cpu_pinning());
++        const auto table = config.get_streams_info_table();
++        ASSERT_FALSE(table.empty());
++        std::vector<int> typed_threads(HYPER_THREADING_PROC + 1, 0);
++        int streams = 0;
++        int threads = 0;
++        bool all_proc = false;
++        for (size_t i = 0; i < table.size(); ++i) {
++            const auto& row = table[i];
++            ASSERT_EQ(CPU_STREAMS_TABLE_SIZE, row.size());
++            ASSERT_GE(row[PROC_TYPE], ALL_PROC);
++            ASSERT_LE(row[PROC_TYPE], HYPER_THREADING_PROC);
++            EXPECT_GT(row[THREADS_PER_STREAM], 0);
++            EXPECT_GE(row[NUMBER_OF_STREAMS], 0);
++            if (row[NUMBER_OF_STREAMS] > 0) {
++                streams += row[NUMBER_OF_STREAMS];
++                threads += row[NUMBER_OF_STREAMS] * row[THREADS_PER_STREAM];
++                all_proc = row[PROC_TYPE] == ALL_PROC;
++            } else {
++                EXPECT_TRUE(all_proc);
++            }
++            if (row[PROC_TYPE] == ALL_PROC) {
++                ASSERT_LT(i + 1, table.size());
++                EXPECT_EQ(0, table[i + 1][NUMBER_OF_STREAMS]);
++            } else {
++                typed_threads[row[PROC_TYPE]] += std::max(1, row[NUMBER_OF_STREAMS]) * row[THREADS_PER_STREAM];
++            }
++        }
++        std::vector<int> expected_typed_threads(HYPER_THREADING_PROC + 1, 0);
++        std::vector<int> selected_ids;
++        for (const auto& ids : expected_ids) {
++            ASSERT_FALSE(ids.empty());
++            for (int id : ids) {
++                ASSERT_GE(id, 4);
++                ASSERT_LT(static_cast<size_t>(id - 4), cpu._cpu_mapping_table.size());
++                ++expected_typed_threads[cpu._cpu_mapping_table[id - 4][CPU_MAP_CORE_TYPE]];
++                selected_ids.push_back(id);
++            }
++        }
++        EXPECT_EQ(expected_ids.size(), static_cast<size_t>(streams));
++        EXPECT_EQ(streams, config.get_streams());
++        EXPECT_EQ(selected_ids.size(), static_cast<size_t>(threads));
++        EXPECT_EQ(threads, config.get_threads());
++        EXPECT_EQ(table[0][THREADS_PER_STREAM], config.get_threads_per_stream());
++        EXPECT_EQ(expected_typed_threads, typed_threads);
++        EXPECT_EQ(pinning || reservation ? expected_ids : Table{}, config.get_stream_processor_ids());
++        auto remaining = cpu._org_proc_type_table;
++        if (reservation) {
++            remaining[0][ALL_PROC] -= static_cast<int>(selected_ids.size());
++            for (int type = MAIN_CORE_PROC; type <= HYPER_THREADING_PROC; ++type)
++                remaining[0][type] -= expected_typed_threads[type];
++            if (remaining[0][ALL_PROC] == 0)
++                remaining[0][PROC_SOCKET_ID] = -1;
++        }
++        EXPECT_EQ(remaining, cpu._proc_type_table);
++        for (const auto& row : cpu._cpu_mapping_table) {
++            const bool selected =
++                std::find(selected_ids.begin(), selected_ids.end(), row[CPU_MAP_PROCESSOR_ID]) != selected_ids.end();
++            EXPECT_EQ(reservation && selected ? CPU_USED : NOT_USED, row[CPU_MAP_USED_FLAG]);
++        }
++    }
++};
++
++TEST(TbbCoreTypeMappingTest, RegularEfficiencyTypeWithoutPerformanceCores) {
++    const std::vector<std::vector<int>> topology{{3, 0, 2, 1, 0, 0, 0}};
++    EXPECT_EQ(17, get_tbb_core_type(EFFICIENT_CORE_PROC, {5, 17}, topology));
++    EXPECT_EQ(5, get_tbb_core_type(LP_EFFICIENT_CORE_PROC, {5, 17}, topology));
++}
++
++TEST(TbbCoreTypeMappingTest, NoLPCoresKeepLegacyMappingWithoutPerformanceCores) {
++    // OpenVINO can have a narrower cached topology than TBB. No LP cores in
++    // that snapshot must leave the legacy two-type mapping unchanged.
++    EXPECT_EQ(5, get_tbb_core_type(EFFICIENT_CORE_PROC, {5, 17}, {{2, 0, 2, 0, 0, 0, 0}}));
++}
++
++TEST(TbbCoreTypeMappingTest, PreservesExistingTwoTypeMapping) {
++    const std::vector<std::vector<int>> topology{{4, 2, 2, 0, 0, 0, 0}};
++    EXPECT_EQ(5, get_tbb_core_type(EFFICIENT_CORE_PROC, {5, 17}, topology));
++    EXPECT_EQ(5, get_tbb_core_type(LP_EFFICIENT_CORE_PROC, {5, 17}, topology));
++    EXPECT_EQ(17, get_tbb_core_type(MAIN_CORE_PROC, {5, 17}, topology));
++    EXPECT_EQ(17, get_tbb_core_type(HYPER_THREADING_PROC, {5, 17}, topology));
++}
++
++TEST(TbbCoreTypeMappingTest, HyperThreadsPreventEfficiencyPairMapping) {
++    EXPECT_EQ(5, get_tbb_core_type(EFFICIENT_CORE_PROC, {5, 17}, {{4, 0, 2, 1, 1, 0, 0}}));
++}
++
++TEST(TbbCoreTypeMappingTest, PreservesExistingThreeTypeMapping) {
++    const std::vector<std::vector<int>> topology{{6, 2, 2, 2, 0, 0, 0}};
++    EXPECT_EQ(5, get_tbb_core_type(LP_EFFICIENT_CORE_PROC, {5, 11, 17}, topology));
++    EXPECT_EQ(11, get_tbb_core_type(EFFICIENT_CORE_PROC, {5, 11, 17}, topology));
++    EXPECT_EQ(17, get_tbb_core_type(MAIN_CORE_PROC, {5, 11, 17}, topology));
++}
++
++TEST(TbbCoreTypeMappingTest, PreservesSingleAutomaticType) {
++    const std::vector<std::vector<int>> topology{{3, 0, 2, 1, 0, 0, 0}};
++    EXPECT_EQ(-1, get_tbb_core_type(LP_EFFICIENT_CORE_PROC, {-1}, topology));
++    EXPECT_EQ(-1, get_tbb_core_type(EFFICIENT_CORE_PROC, {-1}, topology));
++}
++
++class LPOnlyExecutorConfigTest
++    : public LPExecutorConfigTest,
++      public testing::WithParamInterface<std::tuple<ov::hint::SchedulingCoreType, int, bool, bool>> {};
++
++TEST_P(LPOnlyExecutorConfigTest, PreservesLPResourcesAndBinding) {
++    const auto core_type = std::get<0>(GetParam());
++    const int streams = std::get<1>(GetParam());
++    const bool reservation = std::get<2>(GetParam());
++    const bool pinning = std::get<3>(GetParam());
++    set_topology(0, 0, 4);
++    IStreamsExecutor::Config config{"lp only", streams, streams == 1 ? 4 : 1, core_type, reservation, pinning};
++    check_config(config, streams == 1 ? Table{{4, 5, 6, 7}} : Table{{4}, {5}, {6}, {7}}, reservation, pinning);
++}
++
++INSTANTIATE_TEST_SUITE_P(smoke_LPOnlyExecutorConfig,
++                         LPOnlyExecutorConfigTest,
++                         testing::Combine(testing::Values(ov::hint::SchedulingCoreType::ANY_CORE,
++                                                          ov::hint::SchedulingCoreType::ECORE_ONLY,
++                                                          ov::hint::SchedulingCoreType::PCORE_ONLY),
++                                          testing::Values(1, 4, 8),
++                                          testing::Bool(),
++                                          testing::Bool()));
++
++TEST_F(LPExecutorConfigTest, PCoreOnlyExcludesLPCores) {
++    set_topology(2, 0, 4, 2);
++    IStreamsExecutor::Config config{"pcore only", 8, 1, CoreType::PCORE_ONLY, true, true};
++    check_config(config, {{4}, {5}, {10}, {11}});
++}
++
++TEST_F(LPExecutorConfigTest, PCoreOnlyIgnoresUnusedSmallHyperThreadPool) {
++    for (bool reservation : {false, true}) {
++        for (bool pinning : {false, true}) {
++            SCOPED_TRACE(reservation);
++            SCOPED_TRACE(pinning);
++            set_topology(6, 1, 2, 1);
++            IStreamsExecutor::Config config{"pcore capacity", 2, 3, CoreType::PCORE_ONLY, reservation, pinning};
++            check_config(config, {{4, 5, 6}, {7, 8, 9}}, reservation, pinning);
++            EXPECT_EQ(3, config.get_threads_per_stream());
++            EXPECT_EQ((Table{{2, MAIN_CORE_PROC, 3, 0, 0}}), config.get_streams_info_table());
++        }
++    }
++}
++
++TEST_F(LPExecutorConfigTest, DefaultPCoreOnlyKeepsFeasibleThreadCount) {
++    set_topology(6, 1, 2, 1);
++    IStreamsExecutor::Config initial{"default pcore capacity", 2, 0, CoreType::PCORE_ONLY, false, false};
++    const auto config = IStreamsExecutor::Config::make_default_multi_threaded(initial);
++    check_config(config, {{4, 5, 6}, {7, 8, 9}}, false, false);
++    EXPECT_EQ(3, config.get_threads_per_stream());
++    EXPECT_EQ((Table{{2, MAIN_CORE_PROC, 3, 0, 0}}), config.get_streams_info_table());
++}
++
++TEST_F(LPExecutorConfigTest, UnpinnedLPOnlyStreamKeepsEfficientArenaConstraint) {
++    set_topology(2, 0, 4);
++    IStreamsExecutor::Config config{"unpinned lp", 1, 4, CoreType::ECORE_ONLY, false, false};
++    EXPECT_EQ((Table{{1, LP_EFFICIENT_CORE_PROC, 4, 0, 0}}), config.get_streams_info_table());
++    StreamCreateType type = STREAM_WITHOUT_PARAM;
++    int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++    get_cur_stream_info(0,
++                        false,
++                        cpu._org_proc_type_table,
++                        config.get_streams_info_table(),
++                        type,
++                        concurrency,
++                        core_type,
++                        numa_node,
++                        socket,
++                        max_threads);
++    EXPECT_EQ(4, concurrency);
++    EXPECT_EQ(STREAM_WITH_CORE_TYPE, type);
++    EXPECT_EQ(LP_EFFICIENT_CORE_PROC, core_type);
++    EXPECT_FALSE(config.get_cpu_pinning());
++    EXPECT_FALSE(config.get_cpu_reservation());
++    EXPECT_TRUE(config.get_stream_processor_ids().empty());
++}
++
++TEST_F(LPExecutorConfigTest, UnpinnedMixedEfficientStreamKeepsRestrictedArena) {
++    for (bool reservation : {false, true}) {
++        set_topology(2, 2, 2);
++        IStreamsExecutor::Config config{"unpinned mixed ecore", 1, 4, CoreType::ECORE_ONLY, reservation, false};
++        check_config(config, {{6, 7}}, reservation, false);
++        EXPECT_EQ((Table{{1, EFFICIENT_CORE_PROC, 2, 0, 0}}), config.get_streams_info_table());
++        StreamCreateType type = STREAM_WITHOUT_PARAM;
++        int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++        get_cur_stream_info(0,
++                            false,
++                            cpu._org_proc_type_table,
++                            config.get_streams_info_table(),
++                            type,
++                            concurrency,
++                            core_type,
++                            numa_node,
++                            socket,
++                            max_threads);
++        EXPECT_EQ(2, concurrency);
++        EXPECT_EQ(STREAM_WITH_CORE_TYPE, type);
++        EXPECT_EQ(EFFICIENT_CORE_PROC, core_type);
++    }
++}
++
++TEST_F(LPExecutorConfigTest, UnpinnedEfficientStreamUsesLargerLPPool) {
++    for (bool reservation : {false, true}) {
++        set_topology(2, 1, 6);
++        IStreamsExecutor::Config config{"unpinned large lp", 1, 4, CoreType::ECORE_ONLY, reservation, false};
++        check_config(config, {{7, 8, 9, 10}}, reservation, false);
++        EXPECT_EQ((Table{{1, LP_EFFICIENT_CORE_PROC, 4, 0, 0}}), config.get_streams_info_table());
++        StreamCreateType type = STREAM_WITHOUT_PARAM;
++        int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++        get_cur_stream_info(0,
++                            false,
++                            cpu._org_proc_type_table,
++                            config.get_streams_info_table(),
++                            type,
++                            concurrency,
++                            core_type,
++                            numa_node,
++                            socket,
++                            max_threads);
++        EXPECT_EQ(4, concurrency);
++        EXPECT_EQ(STREAM_WITH_CORE_TYPE, type);
++        EXPECT_EQ(LP_EFFICIENT_CORE_PROC, core_type);
++    }
++}
++
++TEST_F(LPExecutorConfigTest, UnpinnedRegularEfficiencyStreamWithoutPerformanceCores) {
++    for (bool reservation : {false, true}) {
++        set_topology(0, 2, 1);
++        IStreamsExecutor::Config config{"unpinned regular ecore", 1, 3, CoreType::ECORE_ONLY, reservation, false};
++        check_config(config, {{4, 5}}, reservation, false);
++        EXPECT_EQ((Table{{1, EFFICIENT_CORE_PROC, 2, 0, 0}}), config.get_streams_info_table());
++        StreamCreateType type = STREAM_WITHOUT_PARAM;
++        int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++        get_cur_stream_info(0,
++                            false,
++                            cpu._org_proc_type_table,
++                            config.get_streams_info_table(),
++                            type,
++                            concurrency,
++                            core_type,
++                            numa_node,
++                            socket,
++                            max_threads);
++        EXPECT_EQ(2, concurrency);
++        EXPECT_EQ(STREAM_WITH_CORE_TYPE, type);
++        EXPECT_EQ(17, get_tbb_core_type(core_type, {5, 17}, cpu._org_proc_type_table));
++    }
++}
++
++TEST_F(LPExecutorConfigTest, UnpinnedNoLPEfficiencyStreamKeepsLegacyMapping) {
++    set_topology(0, 2, 0);
++    IStreamsExecutor::Config config{"unpinned no lp", 1, 2, CoreType::ECORE_ONLY, false, false};
++    check_config(config, {{4, 5}}, false, false);
++    EXPECT_EQ((Table{{1, EFFICIENT_CORE_PROC, 2, 0, 0}}), config.get_streams_info_table());
++    StreamCreateType type = STREAM_WITHOUT_PARAM;
++    int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++    get_cur_stream_info(0,
++                        false,
++                        cpu._org_proc_type_table,
++                        config.get_streams_info_table(),
++                        type,
++                        concurrency,
++                        core_type,
++                        numa_node,
++                        socket,
++                        max_threads);
++    EXPECT_EQ(STREAM_WITH_CORE_TYPE, type);
++    EXPECT_EQ(2, concurrency);
++    EXPECT_EQ(5, get_tbb_core_type(core_type, {5, 17}, cpu._org_proc_type_table));
++}
++
++TEST_F(LPExecutorConfigTest, PinnedMixedEfficientStreamKeepsObserver) {
++    for (bool reservation : {false, true}) {
++        set_topology(2, 2, 2);
++        IStreamsExecutor::Config config{"pinned mixed ecore", 1, 4, CoreType::ECORE_ONLY, reservation, true};
++        check_config(config, {{6, 7, 8, 9}}, reservation, true);
++        EXPECT_EQ(
++            (Table{{1, ALL_PROC, 4, 0, 0}, {0, EFFICIENT_CORE_PROC, 2, 0, 0}, {0, LP_EFFICIENT_CORE_PROC, 2, 0, 0}}),
++            config.get_streams_info_table());
++        StreamCreateType type = STREAM_WITHOUT_PARAM;
++        int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++        get_cur_stream_info(0,
++                            true,
++                            cpu._org_proc_type_table,
++                            config.get_streams_info_table(),
++                            type,
++                            concurrency,
++                            core_type,
++                            numa_node,
++                            socket,
++                            max_threads);
++        EXPECT_EQ(4, concurrency);
++        EXPECT_EQ(STREAM_WITH_OBSERVE, type);
++    }
++}
++
++TEST_F(LPExecutorConfigTest, SingleLPEfficiencyPoolPreservesLocality) {
++    const Table topology{{6, 2, 0, 4, 0, -1, -1}, {2, 2, 0, 0, 0, 0, 0}, {4, 0, 0, 4, 0, 1, 1}};
++    for (bool pinning : {false, true}) {
++        cpu._proc_type_table = cpu._org_proc_type_table = topology;
++        cpu._numa_nodes = cpu._sockets = 2;
++        cpu._cpu_mapping_table = {{4, 0, 0, 0, MAIN_CORE_PROC, 0, NOT_USED},
++                                  {5, 0, 0, 1, MAIN_CORE_PROC, 1, NOT_USED},
++                                  {6, 1, 1, 2, LP_EFFICIENT_CORE_PROC, 2, NOT_USED},
++                                  {7, 1, 1, 3, LP_EFFICIENT_CORE_PROC, 3, NOT_USED},
++                                  {8, 1, 1, 4, LP_EFFICIENT_CORE_PROC, 4, NOT_USED},
++                                  {9, 1, 1, 5, LP_EFFICIENT_CORE_PROC, 5, NOT_USED}};
++        IStreamsExecutor::Config config{"local lp pool", 1, 4, CoreType::ECORE_ONLY, false, pinning};
++        EXPECT_EQ((Table{{1, LP_EFFICIENT_CORE_PROC, 4, 1, 1}}), config.get_streams_info_table());
++        EXPECT_EQ((pinning ? Table{{6, 7, 8, 9}} : Table{}), config.get_stream_processor_ids());
++        EXPECT_EQ(topology, cpu._proc_type_table);
++        EXPECT_EQ(4, config.get_threads());
++        StreamCreateType type = STREAM_WITHOUT_PARAM;
++        int concurrency = 0, core_type = 0, numa_node = 0, socket = 0, max_threads = 0;
++        get_cur_stream_info(0,
++                            pinning,
++                            cpu._org_proc_type_table,
++                            config.get_streams_info_table(),
++                            type,
++                            concurrency,
++                            core_type,
++                            numa_node,
++                            socket,
++                            max_threads);
++        EXPECT_EQ(pinning ? STREAM_WITH_OBSERVE : STREAM_WITH_CORE_TYPE, type);
++        EXPECT_EQ(LP_EFFICIENT_CORE_PROC, core_type);
++        EXPECT_EQ(1, numa_node);
++        EXPECT_EQ(1, socket);
++    }
++}
++
++TEST_F(LPExecutorConfigTest, PrecomputedMixedEfficientStreamsRemainUnchanged) {
++    set_topology(2, 2, 2);
++    const Table streams{{1, ALL_PROC, 4, 0, 0},
++                        {0, EFFICIENT_CORE_PROC, 2, 0, 0},
++                        {0, LP_EFFICIENT_CORE_PROC, 2, 0, 0}};
++    IStreamsExecutor::Config config{"precomputed mixed ecore", 1, 4, CoreType::ECORE_ONLY, false, false, true, streams};
++    EXPECT_EQ(streams, config.get_streams_info_table());
++    check_config(config, {{6, 7, 8, 9}}, false, false);
++}
++
++TEST_F(LPExecutorConfigTest, ECoreOnlySkipsUnusedSmallRegularCorePool) {
++    for (bool reservation : {false, true}) {
++        for (bool pinning : {false, true}) {
++            SCOPED_TRACE(reservation);
++            SCOPED_TRACE(pinning);
++            set_topology(0, 1, 6);
++            IStreamsExecutor::Config config{"ecore capacity", 2, 3, CoreType::ECORE_ONLY, reservation, pinning};
++            check_config(config, {{5, 6, 7}, {8, 9, 10}}, reservation, pinning);
++            EXPECT_EQ(3, config.get_threads_per_stream());
++            EXPECT_EQ((Table{{2, LP_EFFICIENT_CORE_PROC, 3, 0, 0}}), config.get_streams_info_table());
++        }
++    }
++}
++
++TEST_F(LPExecutorConfigTest, SkipsUnusedSmallNumaPoolWithoutReducingThreads) {
++    const Table topology{{9, 7, 0, 2, 0, -1, -1}, {3, 1, 0, 2, 0, 0, 0}, {6, 6, 0, 0, 0, 1, 1}};
++    cpu._proc_type_table = cpu._org_proc_type_table = topology;
++    cpu._numa_nodes = cpu._sockets = 2;
++    cpu._cpu_mapping_table = {{4, 0, 0, 0, MAIN_CORE_PROC, 0, NOT_USED},
++                              {5, 1, 1, 1, MAIN_CORE_PROC, 1, NOT_USED},
++                              {6, 1, 1, 2, MAIN_CORE_PROC, 2, NOT_USED},
++                              {7, 1, 1, 3, MAIN_CORE_PROC, 3, NOT_USED},
++                              {8, 1, 1, 4, MAIN_CORE_PROC, 4, NOT_USED},
++                              {9, 1, 1, 5, MAIN_CORE_PROC, 5, NOT_USED},
++                              {10, 1, 1, 6, MAIN_CORE_PROC, 6, NOT_USED},
++                              {11, 0, 0, 7, LP_EFFICIENT_CORE_PROC, 7, NOT_USED},
++                              {12, 0, 0, 8, LP_EFFICIENT_CORE_PROC, 8, NOT_USED}};
++    IStreamsExecutor::Config config{"numa capacity", 2, 3, CoreType::ANY_CORE, false, true};
++    EXPECT_EQ(2, config.get_streams());
++    EXPECT_EQ(6, config.get_threads());
++    EXPECT_EQ(3, config.get_threads_per_stream());
++    EXPECT_EQ((Table{{2, MAIN_CORE_PROC, 3, 1, 1}}), config.get_streams_info_table());
++    EXPECT_EQ((Table{{5, 6, 7}, {8, 9, 10}}), config.get_stream_processor_ids());
++    EXPECT_EQ(topology, cpu._proc_type_table);
++}
++
++TEST_F(LPExecutorConfigTest, ECoreOnlyIncludesBothEfficientKinds) {
++    for (int streams : {1, 4}) {
++        SCOPED_TRACE(streams);
++        set_topology(2, 2, 2);
++        IStreamsExecutor::Config config{"ecore only", streams, 4 / streams, CoreType::ECORE_ONLY, true, true};
++        check_config(config, streams == 1 ? Table{{6, 7, 8, 9}} : Table{{6}, {7}, {8}, {9}});
++    }
++}
++
++TEST_F(LPExecutorConfigTest, ZeroStreamsUsesLPHelperWithoutBindingOrReservation) {
++    set_topology(0, 0, 4);
++    IStreamsExecutor::Config config{"zero streams", 0, 4, CoreType::ANY_CORE, true, true};
++    EXPECT_EQ(0, config.get_streams());
++    EXPECT_EQ((Table{{1, LP_EFFICIENT_CORE_PROC, 1, 0, 0}}), config.get_streams_info_table());
++    EXPECT_FALSE(config.get_cpu_pinning());
++    EXPECT_FALSE(config.get_cpu_reservation());
++    EXPECT_TRUE(config.get_stream_processor_ids().empty());
++    EXPECT_EQ(cpu._org_proc_type_table, cpu._proc_type_table);
++}
++
++TEST_F(LPExecutorConfigTest, PrecomputedLPStreamsOverrideCorePreference) {
++    set_topology(0, 0, 4);
++    const Table streams{{2, LP_EFFICIENT_CORE_PROC, 2, 0, 0}};
++    IStreamsExecutor::Config config{"precomputed", 2, 2, CoreType::PCORE_ONLY, true, true, true, streams};
++    EXPECT_EQ(streams, config.get_streams_info_table());
++    check_config(config, {{4, 5}, {6, 7}});
++}
++
++TEST_F(LPExecutorConfigTest, RejectsOversubscribedPrecomputedLPStreams) {
++    set_topology(0, 0, 4);
++    const Table streams{{1, LP_EFFICIENT_CORE_PROC, 5, 0, 0}};
++    EXPECT_THROW(IStreamsExecutor::Config("oversubscribed", 1, 5, CoreType::ANY_CORE, true, true, true, streams),
++                 ov::Exception);
++    EXPECT_EQ(cpu._org_proc_type_table, cpu._proc_type_table);
++    for (const auto& row : cpu._cpu_mapping_table)
++        EXPECT_EQ(NOT_USED, row[CPU_MAP_USED_FLAG]);
++}
++
++TEST_F(LPExecutorConfigTest, FragmentedEfficientKindsUseFeasibleStreams) {
++    for (bool reservation : {false, true}) {
++        for (bool pinning : {false, true}) {
++            SCOPED_TRACE(reservation);
++            SCOPED_TRACE(pinning);
++            set_topology(0, 1, 3);
++            IStreamsExecutor::Config config{"fragmented", 2, 2, CoreType::ECORE_ONLY, reservation, pinning};
++            check_config(config, {{4}, {5}}, reservation, pinning);
++            EXPECT_EQ(1, config.get_threads_per_stream());
++        }
++    }
++}
++
++TEST_F(LPExecutorConfigTest, FragmentedNumaNodesUseFeasibleStreams) {
++    const Table topology{{4, 0, 2, 2, 0, -1, -1}, {2, 0, 1, 1, 0, 0, 0}, {2, 0, 1, 1, 0, 1, 1}};
++    for (bool reservation : {false, true}) {
++        for (bool pinning : {false, true}) {
++            SCOPED_TRACE(reservation);
++            SCOPED_TRACE(pinning);
++            cpu._proc_type_table = cpu._org_proc_type_table = topology;
++            cpu._numa_nodes = cpu._sockets = 2;
++            cpu._cpu_mapping_table = {{4, 0, 0, 0, EFFICIENT_CORE_PROC, 0, NOT_USED},
++                                      {5, 0, 0, 1, LP_EFFICIENT_CORE_PROC, 1, NOT_USED},
++                                      {6, 1, 1, 2, EFFICIENT_CORE_PROC, 2, NOT_USED},
++                                      {7, 1, 1, 3, LP_EFFICIENT_CORE_PROC, 3, NOT_USED}};
++            IStreamsExecutor::Config config{"fragmented numa", 2, 2, CoreType::ECORE_ONLY, reservation, pinning};
++            EXPECT_EQ(2, config.get_streams());
++            EXPECT_EQ(2, config.get_threads());
++            EXPECT_EQ(1, config.get_threads_per_stream());
++            EXPECT_EQ((Table{{1, EFFICIENT_CORE_PROC, 1, 0, 0}, {1, EFFICIENT_CORE_PROC, 1, 1, 1}}),
++                      config.get_streams_info_table());
++            EXPECT_EQ((reservation || pinning ? Table{{4}, {6}} : Table{}), config.get_stream_processor_ids());
++            const Table remaining{{2, 0, 0, 2, 0, -1, -1}, {1, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 1, 0, 1, 1}};
++            EXPECT_EQ(reservation ? remaining : topology, cpu._proc_type_table);
++        }
++    }
++}
++
++TEST_F(LPExecutorConfigTest, DefaultStreamCountIncludesLPCores) {
++    set_topology(2, 0, 6);
++    EXPECT_EQ(4, IStreamsExecutor::Config::get_default_num_streams());
++    set_topology(0, 0, 4);
++    EXPECT_EQ(4, IStreamsExecutor::Config::get_default_num_streams());
++    set_topology(1, 1, 2);
++    EXPECT_EQ(4, IStreamsExecutor::Config::get_default_num_streams());
++}
++
++TEST_F(LPExecutorConfigTest, NoLPPartialPoolKeepsIndependentStreams) {
++    for (bool reservation : {false, true}) {
++        for (bool pinning : {false, true}) {
++            SCOPED_TRACE(reservation);
++            SCOPED_TRACE(pinning);
++            set_topology(3, 1, 0);
++            IStreamsExecutor::Config config{"no lp partial pool", 2, 2, CoreType::ANY_CORE, reservation, pinning};
++            check_config(config, {{4, 5}, {7}}, reservation, pinning);
++        }
++    }
++}
++
+ struct ExecutorConfigTestCase {
+     std::vector<std::vector<int>> _proc_type_table;
+     std::vector<std::vector<int>> _cpu_mapping_table;
+diff --git a/src/inference/tests/unit/make_default_multi_threaded_test.cpp b/src/inference/tests/unit/make_default_multi_threaded_test.cpp
+--- a/src/inference/tests/unit/make_default_multi_threaded_test.cpp
++++ b/src/inference/tests/unit/make_default_multi_threaded_test.cpp
+@@ -6,6 +6,7 @@
+ 
+ #include <common_test_utils/test_common.hpp>
+ 
++#include "openvino/runtime/threading/cpu_streams_info.hpp"
+ #include "openvino/runtime/threading/istreams_executor.hpp"
+ #include "os/cpu_map_info.hpp"
+ 
+@@ -17,6 +18,73 @@
+ 
+ #if defined(__linux__) || defined(_WIN32)
+ 
++struct LPDefaultMultiThreadsTestCase {
++    std::vector<int> topology;
++    int threads;
++    std::vector<std::vector<int>> streams;
++};
++
++class LPDefaultMultiThreadsTest : public ov::test::TestsCommon,
++                                  public testing::WithParamInterface<LPDefaultMultiThreadsTestCase> {
++protected:
++    CPU& cpu = cpu_info();
++    const std::vector<std::vector<int>> saved_proc = cpu._proc_type_table;
++    const std::vector<std::vector<int>> saved_org_proc = cpu._org_proc_type_table;
++    const int saved_numa_nodes = cpu._numa_nodes;
++    const int saved_sockets = cpu._sockets;
++
++    void TearDown() override {
++        cpu._proc_type_table = saved_proc;
++        cpu._org_proc_type_table = saved_org_proc;
++        cpu._numa_nodes = saved_numa_nodes;
++        cpu._sockets = saved_sockets;
++    }
++};
++
++TEST_P(LPDefaultMultiThreadsTest, UsesTwoFeasibleHomogeneousStreams) {
++    const auto& test_data = GetParam();
++    const auto& topology = test_data.topology;
++    cpu._org_proc_type_table = cpu._proc_type_table = {topology};
++    cpu._numa_nodes = cpu._sockets = 1;
++    const auto core_type = topology[EFFICIENT_CORE_PROC] > 0 ? ov::hint::SchedulingCoreType::ECORE_ONLY
++                                                             : ov::hint::SchedulingCoreType::ANY_CORE;
++    IStreamsExecutor::Config initial{"lp default", 2, 0, core_type};
++    const auto config = IStreamsExecutor::Config::make_default_multi_threaded(initial);
++    const auto table = config.get_streams_info_table();
++    ASSERT_FALSE(table.empty());
++    EXPECT_EQ(test_data.streams, table);
++    int streams = 0;
++    int threads = 0;
++    for (const auto& row : table) {
++        ASSERT_EQ(CPU_STREAMS_TABLE_SIZE, row.size());
++        ASSERT_GT(row[PROC_TYPE], ALL_PROC);
++        ASSERT_LE(row[PROC_TYPE], HYPER_THREADING_PROC);
++        ASSERT_GT(row[NUMBER_OF_STREAMS], 0);
++        EXPECT_GT(row[THREADS_PER_STREAM], 0);
++        streams += row[NUMBER_OF_STREAMS];
++        threads += row[NUMBER_OF_STREAMS] * row[THREADS_PER_STREAM];
++    }
++    EXPECT_EQ(2, streams);
++    EXPECT_EQ(2, config.get_streams());
++    EXPECT_EQ(test_data.threads, threads);
++    EXPECT_EQ(test_data.threads, config.get_threads());
++    EXPECT_EQ(test_data.streams[0][THREADS_PER_STREAM], config.get_threads_per_stream());
++    EXPECT_TRUE(config.get_stream_processor_ids().empty());
++    EXPECT_EQ(cpu._org_proc_type_table, cpu._proc_type_table);
++}
++
++INSTANTIATE_TEST_SUITE_P(
++    smoke_LPDefaultMultiThreads,
++    LPDefaultMultiThreadsTest,
++    testing::Values(LPDefaultMultiThreadsTestCase{{4, 0, 0, 4, 0, 0, 0}, 4, {{2, LP_EFFICIENT_CORE_PROC, 2, 0, 0}}},
++                    // Width four cannot supply two streams; width three can
++                    // use the LP pool without consuming the smaller MAIN pool.
++                    LPDefaultMultiThreadsTestCase{{8, 2, 0, 6, 0, 0, 0}, 6, {{2, LP_EFFICIENT_CORE_PROC, 3, 0, 0}}},
++                    LPDefaultMultiThreadsTestCase{
++                        {4, 0, 1, 3, 0, 0, 0},
++                        2,
++                        {{1, EFFICIENT_CORE_PROC, 1, 0, 0}, {1, LP_EFFICIENT_CORE_PROC, 1, 0, 0}}}));
++
+ struct MakeDefaultMultiThreadsTestCase {
+     std::vector<std::vector<int>> _proc_type_table;
+     int _num_streams;

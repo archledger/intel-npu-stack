@@ -22,7 +22,7 @@ package or when debugging this package.\
 
 Name:           openvino
 Version:        2026.2.1
-Release:        1.intelnpu.fc44
+Release:        2.intelnpu.fc44
 Summary:        Toolkit for optimizing and deploying AI inference
 
 License:        Apache-2.0 AND MIT AND BSL-1.0 AND HPND AND BSD-3-Clause AND (GPL-2.0-only OR BSD-3-Clause)
@@ -77,6 +77,8 @@ Source46:       provider-license-evidence.tar
 Source47:       json-3.12.0-LICENSE.MIT
 Source48:       0015-check-unbounded-reshape-input-bounds.patch
 Source49:       check-unbounded-reshape-guard.py
+Source50:       0016-schedule-lp-efficiency-cores.patch
+Source51:       check-lp-ecore-executor-guard.py
 
 ExclusiveArch:  x86_64
 
@@ -251,6 +253,8 @@ mv intel-npu-nn-cost-model thirdparty/npu-compiler/thirdparty/vpucostmodel
 /usr/bin/patch --batch --forward --fuzz=0 -p1 \
     -d thirdparty/npu-compiler < %{SOURCE48}
 /usr/bin/python3 %{SOURCE49} "$PWD"
+/usr/bin/patch --batch --forward --fuzz=0 -p1 < %{SOURCE50}
+/usr/bin/python3 %{SOURCE51} "$PWD"
 
 /usr/bin/python3 %{SOURCE44} --kind openvino \
     --source "$PWD" --archives "$(dirname -- '%{SOURCE0}')" --spec %{_specdir}/openvino.spec \
@@ -438,6 +442,11 @@ cp -a ../provider-notices/openvino ../provider-notices/intel-npu-compiler \
 %{_libdir}/libopenvino_tensorflow_lite_frontend.so.%{so_ver}
 
 %changelog
+* Sat Oct 24 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 2026.2.1-2.intelnpu.fc44
+- Add 0016 to schedule LP efficiency cores in the shared stream config, so
+  GPU compile_model no longer aborts when the process affinity leaves only
+  LP efficiency cores (reported upstream as openvino issue 39088).
+- Preserve feasible stream widths when unused core pools are smaller.
 * Wed Sep 30 2026 Intel NPU Stack maintainers <maintainers@example.invalid> - 2026.2.1-1.intelnpu.fc44
 - OpenVINO 2026.2.1 (NPU plugin shared Level Zero command-queue priority fix)
   and the NPU compiler from npu_ud_2026_28_rc2. Add 0015 to reject an
