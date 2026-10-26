@@ -50,7 +50,7 @@ find_file(
   INTEL_NPU_OPENVINO_CONFIG
   NAMES OpenVINOConfig.cmake
   PATHS "${INTEL_NPU_SDK_PREFIX_REAL}"
-  PATH_SUFFIXES openvino/runtime/cmake openvino/cmake lib64/cmake/openvino2026.2.0
+  PATH_SUFFIXES openvino/runtime/cmake openvino/cmake lib64/cmake/openvino2026.2.0 lib64/cmake/openvino2026.2.1
   NO_DEFAULT_PATH
   REQUIRED
 )
@@ -61,11 +61,22 @@ intel_npu_require_in_sdk("${INTEL_NPU_OPENVINO_CONFIG}" "OpenVINO package config
 
 get_filename_component(INTEL_NPU_OPENVINO_CONFIG_DIR "${INTEL_NPU_OPENVINO_CONFIG}" DIRECTORY)
 find_package(
-  OpenVINO 2026.2.0 EXACT
-  CONFIG REQUIRED
+  OpenVINO 2026.2.1 EXACT
+  CONFIG QUIET
   PATHS "${INTEL_NPU_OPENVINO_CONFIG_DIR}"
   NO_DEFAULT_PATH
 )
+if(NOT OpenVINO_FOUND)
+  find_package(
+    OpenVINO 2026.2.0 EXACT
+    CONFIG QUIET
+    PATHS "${INTEL_NPU_OPENVINO_CONFIG_DIR}"
+    NO_DEFAULT_PATH
+  )
+endif()
+if(NOT OpenVINO_FOUND)
+  message(FATAL_ERROR "OpenVINO 2026.2.1 or 2026.2.0 required: found ${INTEL_NPU_OPENVINO_CONFIG}")
+endif()
 get_target_property(
   INTEL_NPU_OPENVINO_RUNTIME
   openvino::runtime
