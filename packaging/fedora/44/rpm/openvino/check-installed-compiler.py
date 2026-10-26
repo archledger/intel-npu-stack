@@ -13,7 +13,7 @@ parent = Path(sys.argv[5]).resolve()
 parent.mkdir(parents=True, exist_ok=True)
 evidence = Path(tempfile.mkdtemp(prefix='run-', dir=parent))
 lib = root / 'usr/lib64'
-plugins = lib / 'openvino-2026.2.0'
+plugins = lib / 'openvino-2026.2.1'
 env = dict(os.environ, LD_LIBRARY_PATH=str(lib) + ':' + str(plugins),
            LD_DEBUG='libs', LD_DEBUG_OUTPUT=str(evidence / 'loader-trace'))
 command = ['/usr/bin/python3', str(checker), str(binary), str(config), str(evidence / 'tests')]
@@ -24,7 +24,7 @@ for trace in evidence.glob('loader-trace.*'):
     for line in trace.read_text().splitlines():
         if 'calling init:' in line:
             initialized.add(line.split('calling init:', 1)[1].strip())
-required = {str(lib / 'libopenvino.so.2620'),
+required = {str(lib / 'libopenvino.so.2621'),
             str(plugins / 'libopenvino_intel_npu_compiler_loader.so'),
             str(plugins / 'libopenvino_intel_npu_compiler.so')}
 missing = sorted(required - initialized)

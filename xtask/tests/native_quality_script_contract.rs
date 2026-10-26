@@ -76,6 +76,7 @@ else
   done
   [ -n "$build" ]
   printf '%s\n' configured > "$build/.fake-configured"
+  printf '%s\n' libopenvino.so.2620 > "$build/openvino-soname.txt"
 fi
 "#,
         );
@@ -193,5 +194,10 @@ printf '\n' >> "$TRACE_PATH"
             .output()
             .expect("execute RPATH-negative gate");
         assert!(!bad.status.success());
+        assert!(
+            String::from_utf8_lossy(&bad.stderr).contains("RPATH or RUNPATH"),
+            "RPATH-negative case must reach the ELF check: {}",
+            String::from_utf8_lossy(&bad.stderr)
+        );
     }
 }

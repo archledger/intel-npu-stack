@@ -7,13 +7,13 @@ import stat
 import sys
 
 root = Path(sys.argv[1]).resolve(strict=True)
-version = '2026.2.0'
+version = '2026.2.1'
 lib = 'usr/lib64/'
 plugins = lib + 'openvino-' + version + '/'
 frontends = ['ir', 'onnx', 'paddle', 'pytorch', 'tensorflow', 'tensorflow_lite']
 libraries = ['openvino', 'openvino_c'] + ['openvino_' + x + '_frontend' for x in frontends]
 expected = {lib + 'lib' + name + '.so' + suffix for name in libraries
-            for suffix in ['', '.2620', '.' + version]}
+            for suffix in ['', '.2621', '.' + version]}
 expected |= {plugins + 'libopenvino_' + name + '.so' for name in
              ['auto_plugin', 'hetero_plugin', 'intel_cpu_plugin', 'intel_gpu_plugin', 'intel_npu_plugin',
               'intel_npu_compiler', 'intel_npu_compiler_loader']}

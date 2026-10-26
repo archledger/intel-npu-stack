@@ -6,7 +6,7 @@ use std::process::{Command, Output};
 
 use tempfile::TempDir;
 
-const PLUGINS: &str = "usr/lib64/openvino-2026.2.0/";
+const PLUGINS: &str = "usr/lib64/openvino-2026.2.1/";
 
 fn write(root: &Path, relative: &str) {
     let path = root.join(relative);
@@ -26,7 +26,7 @@ fn fixture() -> TempDir {
         "openvino_tensorflow_frontend",
         "openvino_tensorflow_lite_frontend",
     ] {
-        for suffix in ["", ".2620", ".2026.2.0"] {
+        for suffix in ["", ".2621", ".2026.2.1"] {
             if name != "openvino_ir_frontend" || !suffix.is_empty() {
                 write(root.path(), &format!("usr/lib64/lib{name}.so{suffix}"));
             }
@@ -59,14 +59,14 @@ fn fixture() -> TempDir {
     ] {
         write(
             root.path(),
-            &format!("usr/share/doc/{name}-2026.2.0/copyright"),
+            &format!("usr/share/doc/{name}-2026.2.1/copyright"),
         );
     }
     for name in [
         "usr/include/npu_driver_compiler.h",
         "usr/include/openvino/openvino.hpp",
         "usr/lib64/pkgconfig/openvino.pc",
-        "usr/lib64/cmake/openvino2026.2.0/OpenVINOConfig.cmake",
+        "usr/lib64/cmake/openvino2026.2.1/OpenVINOConfig.cmake",
     ] {
         write(root.path(), name);
     }

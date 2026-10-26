@@ -98,5 +98,11 @@ check_elf() {
     esac
 }
 
+openvino_soname=$(/usr/bin/cat "$build_directory/openvino-soname.txt") || fail "OpenVINO ABI metadata cannot be read"
+case "$openvino_soname" in
+    libopenvino.so.2620|libopenvino.so.2621) ;;
+    *) fail "OpenVINO ABI metadata is unsupported" ;;
+esac
+
 check_elf "$build_directory/intel-npu-level-zero-probe" "libze_loader.so.1"
-check_elf "$build_directory/intel-npu-openvino-probe" "libopenvino.so.2620"
+check_elf "$build_directory/intel-npu-openvino-probe" "$openvino_soname"

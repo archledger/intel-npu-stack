@@ -26,7 +26,7 @@ FEDORA = REPO/'packaging/fedora/44'
 RECIPES = {'firmware': ('intel-npu-stack-firmware', '1.38.0-1.intelnpu.fc44', 'noarch'),
            'driver': ('intel-npu-driver', '1.38.0-1.intelnpu.fc44', 'x86_64'),
            'level-zero': ('oneapi-level-zero', '1.32.0-1.intelnpu.fc44', 'x86_64'),
-           'openvino': ('openvino', '2026.2.0-2.intelnpu.fc44', 'x86_64')}
+           'openvino': ('openvino', '2026.2.1-1.intelnpu.fc44', 'x86_64')}
 
 
 def require(value, message):
@@ -300,7 +300,7 @@ def orchestrate(args):
     for phase, build_name in [('prepare', ''), ('build', 'build1'), ('build', 'build2'), ('compare', '')]:
         image = args.builder_image if phase == 'build' else args.audit_image
         command = [args.runtime, 'run', '--pull=never', '--restart=no', '--network=none', '--cpus='+str(args.jobs),
-                   '--cpuset-cpus='+args.cpuset, '--memory=22g', '--memory-swap=30g', '--user='+str(os.getuid())+':'+str(os.getgid()),
+                   '--cpuset-cpus='+args.cpuset, '--memory=22g', '--memory-swap=52g', '--user='+str(os.getuid())+':'+str(os.getgid()),
                    '--cap-drop=ALL', '--security-opt=no-new-privileges', '--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g,mode=1777']
         if args.runtime == 'podman':
             command += ['--userns=keep-id']

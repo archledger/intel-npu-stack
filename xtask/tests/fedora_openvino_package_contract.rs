@@ -63,7 +63,7 @@ fn package_name(package: &Path) -> String {
 
 fn policy() -> OpenvinoPackagePolicy {
     OpenvinoPackagePolicy {
-        openvino_nevr: "0:2026.2.0-2.intelnpu.fc44".to_owned(),
+        openvino_nevr: "0:2026.2.1-1.intelnpu.fc44".to_owned(),
         driver_requirement: "intel-npu-driver(x86-64) = 1.38.0-1.intelnpu.fc44".to_owned(),
     }
 }
@@ -126,13 +126,13 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
 
     compile_shared(
         &sources,
-        "libopenvino.so.2026.2.0",
+        "libopenvino.so.2026.2.1",
         if options.omit_runtime_soname {
             ""
         } else {
-            "libopenvino.so.2620"
+            "libopenvino.so.2621"
         },
-        "int ov_runtime(void) { return 2620; }\n",
+        "int ov_runtime(void) { return 2621; }\n",
         &[],
     );
     compile_shared(
@@ -151,9 +151,8 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
         ("gpu", options.omit_gpu_plugin),
     ]
     .into_iter()
-    .filter_map(|(device, omitted)| {
-        (!omitted).then(|| format!("libopenvino_intel_{device}_plugin.so"))
-    })
+    .filter(|(_, omitted)| !omitted)
+    .map(|(device, _)| format!("libopenvino_intel_{device}_plugin.so"))
     .collect::<Vec<_>>();
     for library in &preserved_plugins {
         compile_shared(
@@ -161,7 +160,7 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
             library,
             "",
             "extern int ov_runtime(void); int preserved_plugin(void) { return ov_runtime(); }\n",
-            &["-Wl,--no-as-needed", "-l:libopenvino.so.2026.2.0"],
+            &["-Wl,--no-as-needed", "-l:libopenvino.so.2026.2.1"],
         );
     }
     compile_shared(
@@ -196,7 +195,7 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
         "extern int ov_runtime(void); extern int npu_load(void); int npu_plugin(void) { return ov_runtime() + npu_load(); }\n",
         &[
             "-Wl,--no-as-needed",
-            "-l:libopenvino.so.2026.2.0",
+            "-l:libopenvino.so.2026.2.1",
             "-l:libopenvino_intel_npu_compiler_loader.so",
         ],
     );
@@ -234,8 +233,8 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
         "tensorflow",
         "tensorflow_lite",
     ] {
-        let output = format!("libopenvino_{frontend}_frontend.so.2026.2.0");
-        let soname = format!("libopenvino_{frontend}_frontend.so.2620");
+        let output = format!("libopenvino_{frontend}_frontend.so.2026.2.1");
+        let soname = format!("libopenvino_{frontend}_frontend.so.2621");
         compile_shared(
             &sources,
             &output,
@@ -247,28 +246,28 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
 
     let payload_root = root.path().join("payload");
     let library_root = payload_root.join("usr/lib64");
-    let plugin_root = library_root.join("openvino-2026.2.0");
+    let plugin_root = library_root.join("openvino-2026.2.1");
     fs::create_dir_all(&plugin_root).expect("create extracted fixture library roots");
     fs::create_dir_all(payload_root.join("usr/include/openvino"))
         .expect("create extracted fixture include root");
     for library in [
-        "libopenvino.so.2026.2.0",
-        "libopenvino_ir_frontend.so.2026.2.0",
-        "libopenvino_onnx_frontend.so.2026.2.0",
-        "libopenvino_paddle_frontend.so.2026.2.0",
-        "libopenvino_pytorch_frontend.so.2026.2.0",
-        "libopenvino_tensorflow_frontend.so.2026.2.0",
-        "libopenvino_tensorflow_lite_frontend.so.2026.2.0",
+        "libopenvino.so.2026.2.1",
+        "libopenvino_ir_frontend.so.2026.2.1",
+        "libopenvino_onnx_frontend.so.2026.2.1",
+        "libopenvino_paddle_frontend.so.2026.2.1",
+        "libopenvino_pytorch_frontend.so.2026.2.1",
+        "libopenvino_tensorflow_frontend.so.2026.2.1",
+        "libopenvino_tensorflow_lite_frontend.so.2026.2.1",
     ] {
         fs::copy(sources.join(library), library_root.join(library))
             .expect("copy extracted fixture library");
     }
     symlink(
-        "libopenvino.so.2026.2.0",
-        library_root.join("libopenvino.so.2620"),
+        "libopenvino.so.2026.2.1",
+        library_root.join("libopenvino.so.2621"),
     )
     .expect("create runtime SONAME link");
-    symlink("libopenvino.so.2620", library_root.join("libopenvino.so"))
+    symlink("libopenvino.so.2621", library_root.join("libopenvino.so"))
         .expect("create runtime development link");
     for frontend in [
         "ir",
@@ -279,8 +278,8 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
         "tensorflow_lite",
     ] {
         symlink(
-            format!("libopenvino_{frontend}_frontend.so.2026.2.0"),
-            library_root.join(format!("libopenvino_{frontend}_frontend.so.2620")),
+            format!("libopenvino_{frontend}_frontend.so.2026.2.1"),
+            library_root.join(format!("libopenvino_{frontend}_frontend.so.2621")),
         )
         .expect("create frontend SONAME link");
     }
@@ -306,22 +305,22 @@ fn build_fixture_packages_with(options: &FixtureOptions) -> FixtureRpms {
 %global debug_package %{nil}
 %global __strip /usr/bin/true
 Name: openvino
-Version: 2026.2.0
-Release: 2.intelnpu.fc44
+Version: 2026.2.1
+Release: 1.intelnpu.fc44
 Summary: OpenVINO fixture
 License: Apache-2.0
 Source0: LICENSE
 Source1: openvino.hpp
-Source2: libopenvino.so.2026.2.0
+Source2: libopenvino.so.2026.2.1
 Source3: libopenvino_intel_npu_plugin.so
 Source4: libopenvino_intel_npu_compiler.so
 Source5: libopenvino_intel_npu_compiler_loader.so
-Source6: libopenvino_ir_frontend.so.2026.2.0
-Source7: libopenvino_onnx_frontend.so.2026.2.0
-Source8: libopenvino_paddle_frontend.so.2026.2.0
-Source9: libopenvino_pytorch_frontend.so.2026.2.0
-Source10: libopenvino_tensorflow_frontend.so.2026.2.0
-Source11: libopenvino_tensorflow_lite_frontend.so.2026.2.0
+Source6: libopenvino_ir_frontend.so.2026.2.1
+Source7: libopenvino_onnx_frontend.so.2026.2.1
+Source8: libopenvino_paddle_frontend.so.2026.2.1
+Source9: libopenvino_pytorch_frontend.so.2026.2.1
+Source10: libopenvino_tensorflow_frontend.so.2026.2.1
+Source11: libopenvino_tensorflow_lite_frontend.so.2026.2.1
 Requires: libopenvino-ir-frontend%{?_isa} = %{version}-%{release}
 Requires: libopenvino-onnx-frontend%{?_isa} = %{version}-%{release}
 Requires: libopenvino-paddle-frontend%{?_isa} = %{version}-%{release}
@@ -394,25 +393,25 @@ Package-contract fixture.
 %install
 install -Dm0644 %{SOURCE0} %{buildroot}%{_licensedir}/%{name}/LICENSE
 install -Dm0644 %{SOURCE1} %{buildroot}%{_includedir}/openvino/openvino.hpp
-install -Dm0755 %{SOURCE2} %{buildroot}%{_libdir}/libopenvino.so.2026.2.0
-ln -s libopenvino.so.2026.2.0 %{buildroot}%{_libdir}/libopenvino.so.2620
-ln -s libopenvino.so.2620 %{buildroot}%{_libdir}/libopenvino.so
-install -Dm0755 %{SOURCE3} %{buildroot}%{_libdir}/openvino-2026.2.0/libopenvino_intel_npu_plugin.so
-install -Dm0755 %{SOURCE4} %{buildroot}%{_libdir}/openvino-2026.2.0/libopenvino_intel_npu_compiler.so
-install -Dm0755 %{SOURCE5} %{buildroot}%{_libdir}/openvino-2026.2.0/libopenvino_intel_npu_compiler_loader.so
-install -Dm0755 %{SOURCE6} %{buildroot}%{_libdir}/libopenvino_ir_frontend.so.2026.2.0
-install -Dm0755 %{SOURCE7} %{buildroot}%{_libdir}/libopenvino_onnx_frontend.so.2026.2.0
-install -Dm0755 %{SOURCE8} %{buildroot}%{_libdir}/libopenvino_paddle_frontend.so.2026.2.0
-install -Dm0755 %{SOURCE9} %{buildroot}%{_libdir}/libopenvino_pytorch_frontend.so.2026.2.0
-install -Dm0755 %{SOURCE10} %{buildroot}%{_libdir}/libopenvino_tensorflow_frontend.so.2026.2.0
-install -Dm0755 %{SOURCE11} %{buildroot}%{_libdir}/libopenvino_tensorflow_lite_frontend.so.2026.2.0
+install -Dm0755 %{SOURCE2} %{buildroot}%{_libdir}/libopenvino.so.2026.2.1
+ln -s libopenvino.so.2026.2.1 %{buildroot}%{_libdir}/libopenvino.so.2621
+ln -s libopenvino.so.2621 %{buildroot}%{_libdir}/libopenvino.so
+install -Dm0755 %{SOURCE3} %{buildroot}%{_libdir}/openvino-2026.2.1/libopenvino_intel_npu_plugin.so
+install -Dm0755 %{SOURCE4} %{buildroot}%{_libdir}/openvino-2026.2.1/libopenvino_intel_npu_compiler.so
+install -Dm0755 %{SOURCE5} %{buildroot}%{_libdir}/openvino-2026.2.1/libopenvino_intel_npu_compiler_loader.so
+install -Dm0755 %{SOURCE6} %{buildroot}%{_libdir}/libopenvino_ir_frontend.so.2026.2.1
+install -Dm0755 %{SOURCE7} %{buildroot}%{_libdir}/libopenvino_onnx_frontend.so.2026.2.1
+install -Dm0755 %{SOURCE8} %{buildroot}%{_libdir}/libopenvino_paddle_frontend.so.2026.2.1
+install -Dm0755 %{SOURCE9} %{buildroot}%{_libdir}/libopenvino_pytorch_frontend.so.2026.2.1
+install -Dm0755 %{SOURCE10} %{buildroot}%{_libdir}/libopenvino_tensorflow_frontend.so.2026.2.1
+install -Dm0755 %{SOURCE11} %{buildroot}%{_libdir}/libopenvino_tensorflow_lite_frontend.so.2026.2.1
 @PRESERVED_PLUGIN_INSTALL@
 @OPT_INSTALL@
 
 %files
 %license %{_licensedir}/%{name}/LICENSE
-%{_libdir}/libopenvino.so.2026.2.0
-%{_libdir}/libopenvino.so.2620
+%{_libdir}/libopenvino.so.2026.2.1
+%{_libdir}/libopenvino.so.2621
 
 %files devel
 %{_includedir}/openvino/openvino.hpp
@@ -420,39 +419,39 @@ install -Dm0755 %{SOURCE11} %{buildroot}%{_libdir}/libopenvino_tensorflow_lite_f
 @DUPLICATE_FILE@
 
 %files plugins
-%{_libdir}/openvino-2026.2.0/libopenvino_intel_npu_plugin.so
+%{_libdir}/openvino-2026.2.1/libopenvino_intel_npu_plugin.so
 @PRESERVED_PLUGIN_FILES@
 @OPT_FILE@
 
 %files -n intel-npu-compiler
-%{_libdir}/openvino-2026.2.0/libopenvino_intel_npu_compiler.so
-%{_libdir}/openvino-2026.2.0/libopenvino_intel_npu_compiler_loader.so
+%{_libdir}/openvino-2026.2.1/libopenvino_intel_npu_compiler.so
+%{_libdir}/openvino-2026.2.1/libopenvino_intel_npu_compiler_loader.so
 
 %files -n libopenvino-ir-frontend
-%{_libdir}/libopenvino_ir_frontend.so.2026.2.0
-%{_libdir}/libopenvino_ir_frontend.so.2620
+%{_libdir}/libopenvino_ir_frontend.so.2026.2.1
+%{_libdir}/libopenvino_ir_frontend.so.2621
 %files -n libopenvino-onnx-frontend
-%{_libdir}/libopenvino_onnx_frontend.so.2026.2.0
-%{_libdir}/libopenvino_onnx_frontend.so.2620
+%{_libdir}/libopenvino_onnx_frontend.so.2026.2.1
+%{_libdir}/libopenvino_onnx_frontend.so.2621
 %files -n libopenvino-paddle-frontend
-%{_libdir}/libopenvino_paddle_frontend.so.2026.2.0
-%{_libdir}/libopenvino_paddle_frontend.so.2620
+%{_libdir}/libopenvino_paddle_frontend.so.2026.2.1
+%{_libdir}/libopenvino_paddle_frontend.so.2621
 %files -n libopenvino-pytorch-frontend
-%{_libdir}/libopenvino_pytorch_frontend.so.2026.2.0
-%{_libdir}/libopenvino_pytorch_frontend.so.2620
+%{_libdir}/libopenvino_pytorch_frontend.so.2026.2.1
+%{_libdir}/libopenvino_pytorch_frontend.so.2621
 %files -n libopenvino-tensorflow-frontend
-%{_libdir}/libopenvino_tensorflow_frontend.so.2026.2.0
-%{_libdir}/libopenvino_tensorflow_frontend.so.2620
+%{_libdir}/libopenvino_tensorflow_frontend.so.2026.2.1
+%{_libdir}/libopenvino_tensorflow_frontend.so.2621
 %files -n libopenvino-tensorflow-lite-frontend
-%{_libdir}/libopenvino_tensorflow_lite_frontend.so.2026.2.0
-%{_libdir}/libopenvino_tensorflow_lite_frontend.so.2620
+%{_libdir}/libopenvino_tensorflow_lite_frontend.so.2026.2.1
+%{_libdir}/libopenvino_tensorflow_lite_frontend.so.2621
 @SCRIPTLET@
 "#
         .replace(
             "@PRESERVED_PLUGIN_INSTALL@",
             &preserved_plugins
                 .iter()
-                .map(|library| format!("install -Dm0755 %{{_sourcedir}}/{library} %{{buildroot}}%{{_libdir}}/openvino-2026.2.0/{library}"))
+                .map(|library| format!("install -Dm0755 %{{_sourcedir}}/{library} %{{buildroot}}%{{_libdir}}/openvino-2026.2.1/{library}"))
                 .collect::<Vec<_>>()
                 .join("\n"),
         )
@@ -460,7 +459,7 @@ install -Dm0755 %{SOURCE11} %{buildroot}%{_libdir}/libopenvino_tensorflow_lite_f
             "@PRESERVED_PLUGIN_FILES@",
             &preserved_plugins
                 .iter()
-                .map(|library| format!("%{{_libdir}}/openvino-2026.2.0/{library}"))
+                .map(|library| format!("%{{_libdir}}/openvino-2026.2.1/{library}"))
                 .collect::<Vec<_>>()
                 .join("\n"),
         )
@@ -491,7 +490,7 @@ install -Dm0755 %{SOURCE11} %{buildroot}%{_libdir}/libopenvino_tensorflow_lite_f
         .replace(
             "@DUPLICATE_FILE@",
             if options.duplicate_runtime_file {
-                "%{_libdir}/libopenvino.so.2026.2.0"
+                "%{_libdir}/libopenvino.so.2026.2.1"
             } else {
                 ""
             },
@@ -559,7 +558,7 @@ fn fixture_rpm_and_elf_construction_succeeds_before_contract_work() {
     assert!(
         fixture
             .payload_root
-            .join("usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_plugin.so")
+            .join("usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_plugin.so")
             .is_file()
     );
 }
@@ -588,7 +587,7 @@ fn accepts_exact_openvino_runtime_compiler_and_frontend_closure() {
     let payload = fs::read(
         fixture
             .payload_root
-            .join("usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_plugin.so"),
+            .join("usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_plugin.so"),
     )
     .expect("read extracted fixture plugin");
     let payload_digest = format!("{:x}", Sha256::digest(payload));
@@ -648,7 +647,7 @@ fn rejects_a_missing_or_unbound_npu_plugin_payload() {
     fs::remove_file(
         fixture
             .payload_root
-            .join("usr/lib64/openvino-2026.2.0/libopenvino_intel_npu_plugin.so"),
+            .join("usr/lib64/openvino-2026.2.1/libopenvino_intel_npu_plugin.so"),
     )
     .expect("remove extracted NPU plugin fixture");
     assert_eq!(
@@ -735,8 +734,8 @@ fn production_spec_declares_the_source_built_openvino_npu_boundary() {
 
     for required in [
         "Name:           openvino",
-        "Version:        2026.2.0",
-        "Release:        2.intelnpu.fc44",
+        "Version:        2026.2.1",
+        "Release:        1.intelnpu.fc44",
         "ExclusiveArch:  x86_64",
         "openvino.tar",
         "npu-compiler.tar",
@@ -764,7 +763,7 @@ fn production_spec_declares_the_source_built_openvino_npu_boundary() {
         "-DENABLE_SYSTEM_PROTOBUF=OFF",
         "-Dprotobuf_BUILD_TESTS=OFF",
         "-DBUILD_COMPILER_FOR_DRIVER=ON",
-        "-DNPU_COMPILER_SOURCE_COMMIT=6a7a7c531f54baed1dddfda1b80299413c4c6943",
+        "-DNPU_COMPILER_SOURCE_COMMIT=deb423b11b00af945fa788c9d38c51e30f0cf3d5",
         "-DNPU_LOADER_SOURCE_COMMIT=0c96256285114a596988bfa6e4face817165396c",
         "libopenvino_intel_npu_plugin.so",
         "libopenvino_intel_npu_compiler.so",
