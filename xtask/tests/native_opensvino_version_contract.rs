@@ -2,7 +2,7 @@
 
 //! Regression contract for the native SDK probe's OpenVINO version acceptance.
 //!
-//! The tools package builds against the 2026.2.1-1 providers while local SDK
+//! The tools package builds against the 2026.2.1 providers while local SDK
 //! checks against an installed 0.1.1 stack resolve OpenVINO 2026.2.0, so the
 //! native configure step must accept exactly those two versions and refuse
 //! any other one instead of silently taking whatever the SDK ships.
