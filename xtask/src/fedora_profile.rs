@@ -128,7 +128,7 @@ fn expected_packages() -> BTreeMap<String, (String, String)> {
     ] {
         packages.insert(
             name.to_owned(),
-            ("0:2026.2.1-1.intelnpu.fc44".to_owned(), "x86_64".to_owned()),
+            ("0:2026.2.1-2.intelnpu.fc44".to_owned(), "x86_64".to_owned()),
         );
     }
     for (name, nevr, arch) in [
@@ -139,8 +139,8 @@ fn expected_packages() -> BTreeMap<String, (String, String)> {
             "noarch",
         ),
         ("oneapi-level-zero", "0:1.32.0-1.intelnpu.fc44", "x86_64"),
-        ("intel-npu-stack", "0:0.2.0-3.intelnpu.fc44", "noarch"),
-        ("intel-npu-stack-tools", "0:0.2.0-3.intelnpu.fc44", "x86_64"),
+        ("intel-npu-stack", "0:0.2.0-4.intelnpu.fc44", "noarch"),
+        ("intel-npu-stack-tools", "0:0.2.0-4.intelnpu.fc44", "x86_64"),
     ] {
         packages.insert(name.to_owned(), (nevr.to_owned(), arch.to_owned()));
     }
@@ -374,7 +374,7 @@ fn license_provider<'a>(
     let relationship = (
         "openvino(x86-64)".to_owned(),
         "=".to_owned(),
-        "2026.2.1-1.intelnpu.fc44".to_owned(),
+        "2026.2.1-2.intelnpu.fc44".to_owned(),
     );
     require(
         shared_family

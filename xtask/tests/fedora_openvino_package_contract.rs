@@ -735,7 +735,7 @@ fn production_spec_declares_the_source_built_openvino_npu_boundary() {
     for required in [
         "Name:           openvino",
         "Version:        2026.2.1",
-        "Release:        1.intelnpu.fc44",
+        "Release:        2.intelnpu.fc44",
         "ExclusiveArch:  x86_64",
         "openvino.tar",
         "npu-compiler.tar",

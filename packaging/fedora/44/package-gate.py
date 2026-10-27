@@ -26,7 +26,7 @@ FEDORA = REPO/'packaging/fedora/44'
 RECIPES = {'firmware': ('intel-npu-stack-firmware', '1.38.0-1.intelnpu.fc44', 'noarch'),
            'driver': ('intel-npu-driver', '1.38.0-1.intelnpu.fc44', 'x86_64'),
            'level-zero': ('oneapi-level-zero', '1.32.0-1.intelnpu.fc44', 'x86_64'),
-           'openvino': ('openvino', '2026.2.1-1.intelnpu.fc44', 'x86_64')}
+           'openvino': ('openvino', '2026.2.1-2.intelnpu.fc44', 'x86_64')}
 
 
 def require(value, message):

@@ -37,23 +37,23 @@ def case(mutation):
         spec.write_text('''%global debug_package %{nil}
 Name: intel-npu-stack-tools
 Version: 0.2.0
-Release: 3.intelnpu.fc44
+Release: 4.intelnpu.fc44
 Summary: Contract fixture
 License: Apache-2.0
-Requires: openvino(x86-64) = 2026.2.1-1.intelnpu.fc44
+Requires: openvino(x86-64) = 2026.2.1-2.intelnpu.fc44
 Requires: oneapi-level-zero(x86-64) = 1.32.0-1.intelnpu.fc44
 %description
 Tool fixture.
 %package -n intel-npu-stack
 Summary: Metadata fixture
 BuildArch: noarch
-Requires: intel-npu-stack-tools(x86-64) = 0.2.0-3.intelnpu.fc44
+Requires: intel-npu-stack-tools(x86-64) = 0.2.0-4.intelnpu.fc44
 Requires: intel-npu-driver(x86-64) = ''' + requirement + '''-1.intelnpu.fc44
 Requires: intel-npu-stack-firmware = 1.38.0-1.intelnpu.fc44
 Requires: oneapi-level-zero(x86-64) = 1.32.0-1.intelnpu.fc44
-Requires: openvino(x86-64) = 2026.2.1-1.intelnpu.fc44
-Requires: openvino-plugins(x86-64) = 2026.2.1-1.intelnpu.fc44
-Requires: intel-npu-compiler(x86-64) = 2026.2.1-1.intelnpu.fc44
+Requires: openvino(x86-64) = 2026.2.1-2.intelnpu.fc44
+Requires: openvino-plugins(x86-64) = 2026.2.1-2.intelnpu.fc44
+Requires: intel-npu-compiler(x86-64) = 2026.2.1-2.intelnpu.fc44
 %description -n intel-npu-stack
 Metadata fixture.
 %install

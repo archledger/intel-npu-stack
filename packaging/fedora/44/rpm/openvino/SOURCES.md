@@ -285,6 +285,37 @@ behavior unchanged). The same defect is present in `npu_ud_2026_28_rc1` and
 `check-unbounded-reshape-guard.py` runs after `%prep` and refuses the unguarded
 spelling in the prepared source.
 
+Patch 0016 schedules LP efficiency cores in the shared stream configuration.
+With a process affinity mask holding only LP efficiency cores (Lunar Lake
+`taskset -c 4-7` and `4,5`), `update_executor_config()` omitted
+`LP_EFFICIENT_CORE_PROC` from its counts and allocation types, produced an
+empty streams table and dereferenced element zero: the GPU plugin's
+`compile_model` aborts before any inference. Reported upstream as openvino
+issue 39088. The patch counts and allocates LP cores, selects the largest
+feasible homogeneous stream width across core kinds and NUMA nodes, skips
+unused pools too small for that width, scopes zero-count contribution rows
+to their ALL_PROC header, and raises a clear exception
+instead of reading an empty table. Precomputed streams tables are unchanged.
+No-LP behavior is preserved except for the intended correction to mixed-stream
+contribution accounting. Regression tests cover requested stream widths,
+unused small pools, reservation, pinning and default configurations.
+Generated unpinned `ECORE_ONLY` streams use one efficient core kind per stream,
+since the existing arena interface cannot represent an E/LP union. A single
+LP contribution becomes a typed LP row with its NUMA/socket locality retained.
+Pinned mixed streams keep observer-based binding. Singleton TBB mapping also
+handles the ordered `[LP, E]` pair only when the original table contains both
+efficient kinds and no P/HT cores, without
+assuming contiguous type IDs. This does not enable a new TBB union mode or
+change precomputed-table contents. Physical enforcement of the core-type hint
+depends on TBB topology support; process-affinity GPU tests do not prove it.
+As with the existing mapping, OpenVINO and TBB must initialize against a
+stable process affinity; changing it between their cached snapshots is not
+covered by this backport.
+Upstream acceptance is open; drop the patch when an upstream release carries
+the fix.
+`check-lp-ecore-executor-guard.py` runs after `%prep` and requires the
+LP-aware scheduling in the prepared source.
+
 The GPU component also installs its pinned `kernel_selector/cache/cache.json`
 tuning data beside the plugin. The Linux kernel selector looks up that exact
 path. `openvino-plugins` owns it and the staged-layout check requires it; the
